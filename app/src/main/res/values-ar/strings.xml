@@ -1,0 +1,100 @@
+<resources>
+    <string name="app_name">منبه البطارية البسيط</string>
+    <string name="action_settings">الإعدادات</string>
+    <string name="title_activity_settings">الإعدادات</string>
+    <string name="charger_connected">الشاحن موصول</string>
+    <string name="charger_connected_ac">AC charger connected</string>
+    <string name="charger_connected_usb">USB charger connected</string>
+    <string name="charger_connected_wireless">Wireless charger connected</string>
+    <string name="charger_disconnected">Charger Disconnected</string>
+    <string name="charging">تشحن</string>
+    <string name="discharging">تستهلك</string>
+    <string name="full">كامل</string>
+    <string name="charged">مشحونة</string>
+
+    <string name="temperature">الحرارة</string>
+    <string name="technology">التكنولوجيا</string>
+    <string name="voltage">الفولتية</string>
+    <string name="health">الصحة</string>
+    <string name="capacity">السعة</string>
+    <string name="battery_health_good">جيدة</string>
+    <string name="battery_health_dead">منتهية</string>
+    <string name="battery_health_cold">باردة</string>
+    <string name="battery_health_overheat">حارة</string>
+    <string name="battery_health_over_voltage">فولتية زائدة</string>
+    <string name="battery_health_unspecified_failure">فشل مجهول</string>
+    <string name="celsius"> مئوي‏ (°C)</string>
+    <string name="celsius_short">°C</string>
+    <string name="fahrenheit"> فهرنهايتي‏ (°F)</string>
+    <string name="fahrenheit_short">°F</string>
+    <string name="power_source">مصدر الطاقة</string>
+
+    <string name="battery">على البطارية</string>
+    <string name="charger_ac">مقبس طاقة</string>
+    <string name="charger_usb">مدخل يو اس بي</string>
+    <string name="charger_wireless">شاحن لاسلكي</string>
+    <string name="charger">شاحن</string>
+
+    <string name="pref_header_general">عام</string>
+    <string name="pref_header_notifications">التنبيهات والأصوات</string>
+    <string name="pref_header_time_settings">اعدادات الوقت</string>
+    <string name="pref_header_summary_general">إعدادات التطبيق العامة, ويمكنك تحديد المستويات</string>
+    <string name="pref_header_summary_notifications">اعدادات كيفية وصول التبيهات, وتحديدها, والاصوات</string>
+    <string name="pref_header_summary_time_settings">اعدادات الوقت للتنبيهات</string>
+
+    <string name="pref_title_ringtone">الرنين</string>
+    <string name="pref_ringtone_silent">صامت</string>
+    <string name="pref_title_vibrate">الرجاج</string>
+
+    <string name="warn_start_level">مستوى التحذير يبدأ من</string>
+    <string name="alert_start_level">المستوى الحرج يبدأ من</string>
+    <string name="temperature_unit">وحدة الحرارة</string>
+    <string name="off">اطفاء</string>
+    <string name="on">تشغيل</string>
+    <string name="notification_is_sticky">التنبيهات ثابتة</string>
+    <string name="notification_is_not_sticky">التنبيهات غير ثابتة</string>
+    <string name="sticky_notification">تنبيه ثابت</string>
+    <string name="notifications_apply_silent_mode_summary_off">صوت التنبيه سيسمع حتى لو في وضعية الصامت</string>
+    <string name="notifications_apply_silent_mode_summary_on">وضعية الصامت لن يتم تجاهلها ولن تسمع التنبيهات في وضعية صامت</string>
+    <string name="notifications_apply_silent_mode">تفعيل وضعية صامت</string>
+    <string name="notifications_time_range_summary_off">التنبيه الصوتي في أي وصت من اليوم</string>
+    <string name="notifications_time_range_summary_on">التنبيه الصوتي محدود بفترة محددة في اليوم</string>
+    <string name="notifications_time_range">وقت محدد للتنبيهات</string>
+    <string name="notifications_time_range_start">وقت البداية للتنبيه</string>
+    <string name="notifications_time_range_end">وقت النهاية للتنبيه</string>
+    <string name="notifications_vibrate_summary_off">التنبيه بالرجاج مفعل</string>
+    <string name="notifications_vibrate_summary_on">التنبيه بالرجاج معطل</string>
+    <string name="notifications_alert_sound_ringtone">صوت المستوى الحرج</string>
+    <string name="notifications_warning_sound_ringtone">صوت مستوى التنبيه</string>
+    <string name="notifications_full_sound_ringtone">صوت تبيه اكتمال الشحن</string>
+    <string name="notifications_sound">التنبيه بالصوت</string>
+    <string name="notifications_sound_summary_on">التنبيه بالصوت مفعل</string>
+    <string name="notifications_sound_summary_off">التنبيه بالصوت معطل</string>
+    <string name="notify_for_warning_level">التنبيه لمستوى التحذير</string>
+    <string name="notify_for_warning_level_summary_on">مستوى التحذير مفعل</string>
+    <string name="notify_for_warning_level_summary_off">مستوى التخذير معطل</string>
+    <string name="notify_for_full_level">التنبيه لاكتمال الشحن</string>
+    <string name="notify_for_full_level_summary_on">تنبيه اكتمال الشحن مفعل</string>
+    <string name="notify_for_full_level_summary_off">تنبيه اكتمال الشحن معطل</string>
+    <string name="notify_every_tick">االتنبيه للوضع الحرج كل (1%)</string>
+    <string name="notify_every_tick_summary_on">التنبيه كل درجة (1%) للمستوى الحرج مفعل</string>
+    <string name="notify_every_tick_summary_off">التنبيه كل درجة (1%) للمستوى الحرج معطل</string>
+
+    <string name="notification_critical_ticker">مستوى حرج للبطارية أقل من  %1$d%%</string>
+    <string name="notification_critical_title">وقت الشحن الصحي</string>
+    <string name="notification_critical_content">البطارية على وشك النفاذ</string>
+    <string name="notification_critical_content_big">البطارية في مستوى حرج وأقل من (%1$d%%) حان الوقت لشحن الهاتف</string>
+    <string name="notification_warning_ticker">البطارية في منتصف الطريق اقل من %1$d%%</string>
+    <string name="notification_warning_title">اقتصد في الاستخدام</string>
+    <string name="notification_warning_content">تحتاج فقط للانتباه للبطارية</string>
+    <string name="notification_warning_content_big">لا تحتاج للشاحن بعد, لكن انتبه لاستهلاك البطارية</string>
+    <string name="notification_full_level_ticker">البطارية تم شحنها بالكامل, بامكانك فصل الشاحن</string>
+    <string name="notification_full_level_title_healthy">الشحن الصحي اكتمل</string>
+    <string name="notification_full_level_title_regular">الشحن الاعتيادي اكتمل</string>
+    <string name="notification_full_level_content">استخدم هاتفك بحرية الآن</string>
+    <string name="notification_full_level_content_big">بامكانك استخدام الهاتف الآن, ولا يضر ان ابقيت الشاحن, لا تخف لن تصاب البطارية بالتخمة:D</string>
+
+    <string name="notification_charge_started_title_healthy">شحن صحي بدأ</string>
+    <string name="notification_charge_started_title_regular">شحن اعتيادي بدأ</string>
+    <string name="notification_charge_started_content">البطارية تشحن بواسطة  %1$s </string>
+</resources>

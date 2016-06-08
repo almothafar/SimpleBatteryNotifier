@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+        <style name="CustomActionBar" parent="Widget.AppCompat.Light.ActionBar.Solid.Inverse">
+                <item name="android:background">@color/title_bar_background_color</item>
+                <item name="android:colorPrimaryDark">@color/title_bar_background_color_dark</item>
+
+                <!-- Support library compatibility -->
+                <item name="background">@color/title_bar_background_color</item>
+                <item name="colorPrimaryDark">@color/title_bar_background_color_dark</item>
+        </style>
+</resources>

@@ -1,0 +1,128 @@
+<resources>
+    <string name="app_name">Simple Battery Notifier</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="charger_connected">Charger connected</string>
+    <string name="charger_connected_ac">AC charger connected</string>
+    <string name="charger_connected_usb">USB charger connected</string>
+    <string name="charger_connected_wireless">Wireless charger connected</string>
+    <string name="charger_disconnected">Charger Disconnected</string>
+    <string name="charging">Charging</string>
+    <string name="discharging">Discharging</string>
+    <string name="full">Full</string>
+    <string name="charged">Charged</string>
+
+    <string name="temperature">Temperature</string>
+    <string name="technology">Technology</string>
+    <string name="voltage">Voltage</string>
+    <string name="health">Health</string>
+    <string name="capacity">Capacity</string>
+    <string name="battery_health_good">Good</string>
+    <string name="battery_health_dead">Dead</string>
+    <string name="battery_health_cold">Cold</string>
+    <string name="battery_health_overheat">Overheat</string>
+    <string name="battery_health_over_voltage">Over Voltage</string>
+    <string name="battery_health_unspecified_failure">Failure</string>
+    <string name="celsius">Celsius (°C)</string>
+    <string name="celsius_short">°C</string>
+    <string name="fahrenheit">Fahrenheit (°F)</string>
+    <string name="fahrenheit_short">°F</string>
+    <string name="power_source">Power Source</string>
+
+    <string name="battery">On Battery</string>
+    <string name="charger_ac">AC Charger</string>
+    <string name="charger_usb">USB Port</string>
+    <string name="charger_wireless">Wireless Charger</string>
+    <string name="charger">Charger</string>
+
+    <string name="pref_header_general">General</string>
+    <string name="pref_header_notifications">Notifications &amp; Sounds</string>
+    <string name="pref_header_time_settings">Notification Time Settings</string>
+    <string name="pref_header_summary_general">General app settings, and you can set the levels here</string>
+    <string name="pref_header_summary_notifications">Settings for how to get your notifications, what you want to notify, and sounds</string>
+    <string name="pref_header_summary_time_settings">When to get notifications</string>
+
+    <string name="pref_title_ringtone">Ringtone</string>
+    <string name="pref_ringtone_silent">Silent</string>
+    <string name="pref_title_vibrate">Vibrate</string>
+
+    <string name="warn_start_level">Warning Level Start From</string>
+    <string name="alert_start_level">Critical Level Start From</string>
+    <string name="temperature_unit">Temperature Unit</string>
+    <string name="off">OFF</string>
+    <string name="on">ON</string>
+    <string name="notification_is_sticky">Notification is Sticky</string>
+    <string name="notification_is_not_sticky">Notification is not Sticky</string>
+    <string name="sticky_notification">Sticky Notification</string>
+    <string name="notifications_apply_silent_mode_summary_off">Notification sound will play even if phone in silent mode</string>
+    <string name="notifications_apply_silent_mode_summary_on">Silent mode will not be ignored and you will NOT hear notification sound if phone in silent mode</string>
+    <string name="notifications_apply_silent_mode">Apply Silent Mode</string>
+    <string name="notifications_time_range_summary_off">Notification sounds any moment of a Day</string>
+    <string name="notifications_time_range_summary_on">Notification sounds only within specific time in a Day</string>
+    <string name="notifications_time_range">Limited Notifications Time Range</string>
+    <string name="notifications_time_range_start">Notify Start Time</string>
+    <string name="notifications_time_range_end">Notify End Time</string>
+    <string name="notifications_vibrate_summary_off">Notifications Vibration Disabled</string>
+    <string name="notifications_vibrate_summary_on">Notifications Vibration Enabled</string>
+    <string name="notifications_alert_sound_ringtone">Critical Level Sound</string>
+    <string name="notifications_warning_sound_ringtone">Warning Level Sound</string>
+    <string name="notifications_full_sound_ringtone">Full Level Sound</string>
+    <string name="notifications_sound">Notifications with Sound</string>
+    <string name="notifications_sound_summary_on">Notifications Sound Enabled</string>
+    <string name="notifications_sound_summary_off">Notifications Sound Disabled</string>
+    <string name="notify_for_warning_level">Notify for Warning level</string>
+    <string name="notify_for_warning_level_summary_on">Warning Sound Enabled</string>
+    <string name="notify_for_warning_level_summary_off">Warning Sound Disabled</string>
+    <string name="notify_for_full_level">Notify for Full level</string>
+    <string name="notify_for_full_level_summary_on">Full Level Sound Enabled</string>
+    <string name="notify_for_full_level_summary_off">Full Level Sound Disabled</string>
+    <string name="notify_every_tick">Notify for critical every (1%)</string>
+    <string name="notify_every_tick_summary_on">Notify every tick (1%) for critical level enabled</string>
+    <string name="notify_every_tick_summary_off">Notify every tick (1%) for critical level disabled</string>
+
+    <string name="notification_critical_ticker">Your battery in critical level and below %1$d%%</string>
+    <string name="notification_critical_title">Healthy charge time</string>
+    <string name="notification_critical_content">Battery almost run out of power</string>
+    <string name="notification_critical_content_big">Your battery level is below critical level (%1$d%%), its time to connect your charger</string>
+    <string name="notification_warning_ticker">Your battery in midway and below %1$d%%</string>
+    <string name="notification_warning_title">Watch your usage</string>
+    <string name="notification_warning_content">You just need to watch your usage</string>
+    <string name="notification_warning_content_big">You just need to watch your usage for your smartphone, but still no need for charger now</string>
+    <string name="notification_full_level_ticker">Your battery fully charged, you can disconnect your charger</string>
+    <string name="notification_full_level_title_healthy">Healthy charge completed</string>
+    <string name="notification_full_level_title_regular">Regular charge completed</string>
+    <string name="notification_full_level_content">You can use your phone</string>
+    <string name="notification_full_level_content_big">You can use your phone, you may disconnect your charger, or keep it and don\'t worry the battery will not get indigestion :P</string>
+
+    <string name="notification_charge_started_title_healthy">Healthy charging started</string>
+    <string name="notification_charge_started_title_regular">Regular charging started</string>
+    <string name="notification_charge_started_content">Battery charging with %1$s </string>
+
+
+    <!-- Below this line to the end of file is for coding not for labeling -->
+    <string name="extra_category">category</string>
+    <string name="pref_category_general">pref_category_general</string>
+    <string name="pref_category_notifications">pref_category_notifications</string>
+    <string name="pref_category_time_settings">pref_category_time_settings</string>
+
+    <string name="_pref_key_warn_battery_level">key_warn_battery_level</string>
+    <string name="_pref_key_critical_battery_level">key_critical_battery_level</string>
+    <string name="_pref_key_notifications_sticky">key_notifications_sticky</string>
+    <string name="_pref_key_temperatures_unit">key_temperatures_unit</string>
+    <string name="_pref_key_notifications_vibrate">key_notifications_vibrate</string>
+    <string name="_pref_key_notifications_alert_sound_ringtone">key_notifications_alert_sound_ringtone</string>
+    <string name="_pref_key_notify_for_full_level">key_notify_for_full_level</string>
+    <string name="_pref_key_notifications_full_sound_ringtone">key_notifications_full_sound_ringtone</string>
+    <string name="_pref_key_notify_for_warning_level">key_notify_for_warning_level</string>
+    <string name="_pref_key_notifications_warning_sound_ringtone">key_notifications_warning_sound_ringtone</string>
+    <string name="_pref_key_notifications_time_range">key_notifications_time_range</string>
+    <string name="_pref_key_notifications_time_range_start">key_notifications_time_range_start</string>
+    <string name="_pref_key_notifications_time_range_end">key_notifications_time_range_end</string>
+    <string name="_pref_key_notifications_apply_silent_mode">key_notifications_apply_silent_mode</string>
+    <string name="_pref_key_notify_every_tick">key_notify_every_tick</string>
+
+    <string name="_pref_value_temperatures_unit_c">celsius</string>
+    <string name="_pref_value_temperatures_unit_f">fahrenheit</string>
+    <string name="_pref_value_notifications_time_range_end">23:00</string>
+    <string name="_pref_value_notifications_time_range_start">08:00</string>
+</resources>

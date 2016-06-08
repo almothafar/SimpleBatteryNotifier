@@ -1,0 +1,25 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreference
+        android:defaultValue="true"
+        android:key="@string/_pref_key_notifications_time_range"
+        android:summaryOff="@string/notifications_time_range_summary_off"
+        android:summaryOn="@string/notifications_time_range_summary_on"
+        android:switchTextOff="@string/off"
+        android:switchTextOn="@string/on"
+        android:title="@string/notifications_time_range" />
+
+    <com.almothafar.simplebatterynotifier.ui.widgets.TimePickerPreference
+        android:dependency="@string/_pref_key_notifications_time_range"
+        android:defaultValue="@string/_pref_value_notifications_time_range_start"
+        android:key="@string/_pref_key_notifications_time_range_start"
+        android:title="@string/notifications_time_range_start" />
+
+    <com.almothafar.simplebatterynotifier.ui.widgets.TimePickerPreference
+        android:dependency="@string/_pref_key_notifications_time_range"
+        android:defaultValue="@string/_pref_value_notifications_time_range_end"
+        android:key="@string/_pref_key_notifications_time_range_end"
+        android:title="@string/notifications_time_range_end" />
+
+
+</PreferenceScreen>

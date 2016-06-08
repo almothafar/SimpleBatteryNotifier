@@ -1,0 +1,39 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <ListPreference
+        android:defaultValue="@string/_pref_value_temperatures_unit_c"
+        android:entries="@array/preference_list_temperatures"
+        android:entryValues="@array/preference_list_temperatures_values"
+        android:key="@string/_pref_key_temperatures_unit"
+        android:summary="%s"
+        android:title="@string/preference_title_temperature" />
+
+    <com.almothafar.simplebatterynotifier.ui.widgets.NumberPickerPreference
+        android:defaultValue="40"
+        android:key="@string/_pref_key_warn_battery_level"
+        valuePostfix="&#37;"
+        valuePrefix=""
+        minRangeValue="30"
+        maxRangeValue="50"
+        android:title="@string/warn_start_level" />
+
+    <com.almothafar.simplebatterynotifier.ui.widgets.NumberPickerPreference
+        android:defaultValue="20"
+        android:key="@string/_pref_key_critical_battery_level"
+        valuePostfix="&#37;"
+        valuePrefix=""
+        minRangeValue="10"
+        maxRangeValue="20"
+        android:title="@string/alert_start_level" />
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="@string/_pref_key_notifications_apply_silent_mode"
+        android:summaryOff="@string/notifications_apply_silent_mode_summary_off"
+        android:summaryOn="@string/notifications_apply_silent_mode_summary_on"
+        android:switchTextOff="@string/off"
+        android:switchTextOn="@string/on"
+        android:title="@string/notifications_apply_silent_mode" />
+
+    
+</PreferenceScreen>

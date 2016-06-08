@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <Preference
+        android:summary="@string/pref_header_summary_general"
+        android:title="@string/pref_header_general">
+        <intent
+            android:action="@string/pref_category_general"
+            android:targetClass="com.almothafar.simplebatterynotifier.activities.SettingsActivity"
+            android:targetPackage="com.almothafar.simplebatterynotifier.activities" />
+    </Preference>
+    <Preference
+        android:summary="@string/pref_header_summary_notifications"
+        android:title="@string/pref_header_notifications">
+        <intent
+            android:action="@string/pref_category_notifications"
+            android:targetClass="com.almothafar.simplebatterynotifier.activities.SettingsActivity"
+            android:targetPackage="com.almothafar.simplebatterynotifier.activities" />
+    </Preference>
+    <Preference
+        android:summary="@string/pref_header_summary_time_settings"
+        android:title="@string/pref_header_time_settings">
+        <intent
+            android:action="@string/pref_category_time_settings"
+            android:targetClass="com.almothafar.simplebatterynotifier.activities.SettingsActivity"
+            android:targetPackage="com.almothafar.simplebatterynotifier.activities" />
+    </Preference>
+</PreferenceScreen>
