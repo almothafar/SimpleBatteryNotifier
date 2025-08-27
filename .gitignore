@@ -1,1 +1,35 @@
+# -------------------------
+# OS cruft
+# -------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+._*
+
+# -------------------------
+# IDE (IntelliJ/Android Studio)
+# -------------------------
+*.iml
+.idea/
+
+# VS Code (if you happen to open it there)
+.vscode/
+
+# -------------------------
+# Gradle
+# -------------------------
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar   # keep the wrapper JAR in VCS
+# (do NOT ignore gradle/wrapper/** — commit wrapper files)
+
+# Kotlin incremental / caches
+.kotlinc/
+.ksp/
+.kotlin/
+
+# -------------------------
+# Android bui
+
 *.lock
