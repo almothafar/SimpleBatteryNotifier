@@ -33,11 +33,8 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 
         boolean usbCharge = (plugged == BatteryManager.BATTERY_PLUGGED_USB);
         boolean acCharge = (plugged == BatteryManager.BATTERY_PLUGGED_AC);
-        boolean wirelessCharge = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            wirelessCharge = plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
-        }
-        String charger, chargerSource;
+        boolean wirelessCharge = plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
+	    String charger, chargerSource;
         if (plugged > 0) {
             if (usbCharge) {
                 charger = context.getResources().getString(R.string.charger_connected_usb);

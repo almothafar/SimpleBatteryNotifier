@@ -45,9 +45,8 @@ public class SystemService {
 
         boolean usbCharge = (plugged == BatteryManager.BATTERY_PLUGGED_USB);
         boolean acCharge = (plugged == BatteryManager.BATTERY_PLUGGED_AC);
-        boolean isApi17 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1;
         @SuppressLint("InlinedApi")
-        boolean wirelessCharge = isApi17 && (plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS);
+        boolean wirelessCharge = plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
         String charger = "";
         if (plugged > 0) {
             if (usbCharge) {

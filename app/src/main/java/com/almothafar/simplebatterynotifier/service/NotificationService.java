@@ -1,6 +1,7 @@
 package com.almothafar.simplebatterynotifier.service;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -29,6 +30,8 @@ import java.util.Date;
  */
 public class NotificationService {
     private static final String TAG = "com.almothafar";
+    private static final String CHANNEL_ID = "battery_notifications";
+    private static final String CHANNEL_NAME = "Battery Notifications";
     private static final long[] VIBRATION_PATTERN = {0, 500, 250, 500, 250};
     private static final int UNIQUE_ID = 1641987;
     private static final int UNIQUE_ID_STICKY = 1648719;
@@ -43,7 +46,25 @@ public class NotificationService {
     public static final String ZEN_MODE = "zen_mode";
     public static final int ZEN_MODE_IMPORTANT_INTERRUPTIONS = 1;
 
+    private static void createNotificationChannel(Context context) {
+	    NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+	    if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+	        NotificationChannel channel = new NotificationChannel(
+	                CHANNEL_ID,
+	                CHANNEL_NAME,
+	                NotificationManager.IMPORTANCE_HIGH
+	        );
+	        channel.setDescription("Battery level notifications");
+	        channel.enableLights(true);
+	        channel.enableVibration(true);
+	        channel.setVibrationPattern(VIBRATION_PATTERN);
+	        manager.createNotificationChannel(channel);
+	    }
+    }
+
     public static void sendNotification(Context context, int type) {
+        createNotificationChannel(context);
+
         Notification.Builder notification;
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
         boolean vibrationEnabled = sharedPref.getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
@@ -66,9 +87,11 @@ public class NotificationService {
         Thread playSoundThread = null;
 
         String alarmSound = "content://settings/system/notification_sound"; // initial with default value
-        notification = new Notification.Builder(context);
 
-        switch (type) {
+        // Create notification builder with channel support for Android O+
+	    notification = new Notification.Builder(context, CHANNEL_ID);
+
+	    switch (type) {
             case CRITICAL_TYPE:
                 alarmSound = sharedPref.getString(context.getString(R.string._pref_key_notifications_alert_sound_ringtone), alarmSound);
                 notification
@@ -124,8 +147,8 @@ public class NotificationService {
             // if silent must ignored then play it as media
             if (ignoreSilent && isNotNormalRingerMode) {
                 class RunnableWithContextUri implements Runnable {
-                    private Context context;
-                    private Uri uri;
+                    private final Context context;
+                    private final Uri uri;
 
                     public RunnableWithContextUri(Context context, Uri uri) {
                         this.context = context;
@@ -158,7 +181,9 @@ public class NotificationService {
 
 
         Intent intent = new Intent(context, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+	    flags |= PendingIntent.FLAG_IMMUTABLE;
+	    PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, flags);
         notification.setContentIntent(pendingIntent);
         notification.setVisibility(Notification.VISIBILITY_PUBLIC);
 
@@ -180,9 +205,12 @@ public class NotificationService {
     }
 
     public static void sendChargeNotification(Context context, String chargeSource) {
-        Notification.Builder notification = new Notification.Builder(context);
+        createNotificationChannel(context);
 
-        String ticker, title, content;
+        Notification.Builder notification;
+	    notification = new Notification.Builder(context, CHANNEL_ID);
+
+	    String ticker, title, content;
 
         notification.setOnlyAlertOnce(true);
 
@@ -206,7 +234,9 @@ public class NotificationService {
                 .setLargeIcon(bm);
 
         Intent intent = new Intent(context, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+	    flags |= PendingIntent.FLAG_IMMUTABLE;
+	    PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, flags);
         notification.setContentIntent(pendingIntent);
         notification.setVisibility(Notification.VISIBILITY_PUBLIC);
 

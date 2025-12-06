@@ -5,12 +5,12 @@ plugins {
 android {
     namespace 'com.almothafar.simplebatterynotifier'
 
-    compileSdk 36
+    compileSdk = 36
 
     defaultConfig {
         applicationId "com.almothafar.simplebatterynotifier"
-        minSdk 24
-        targetSdk 36
+        minSdk = 26
+        targetSdk = 36
         versionCode 69
         versionName "1.1.69"
     }
@@ -25,8 +25,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_25
+        targetCompatibility JavaVersion.VERSION_25
     }
 }
 
@@ -38,7 +38,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.13.0'
 
     implementation 'androidx.preference:preference:1.2.1'     // AndroidX settings UI
-    implementation 'androidx.activity:activity:1.11.0'        // Activity Result API (for ringtone picker)
+    implementation 'androidx.activity:activity:1.12.1'        // Activity Result API (for ringtone picker)
 
     // Add more AndroidX as you update imports (e.g., constraintlayout)
     // implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
