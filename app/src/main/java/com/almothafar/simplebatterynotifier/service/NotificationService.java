@@ -13,7 +13,7 @@ import android.graphics.Color;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.provider.Settings;
 
 import com.almothafar.simplebatterynotifier.R;

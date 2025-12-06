@@ -43,7 +43,7 @@
             android:layout_marginBottom="-10dp" />
     </LinearLayout>
 
-    <fragment
+    <androidx.fragment.app.FragmentContainerView
         android:id="@+id/detailsFragmentLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

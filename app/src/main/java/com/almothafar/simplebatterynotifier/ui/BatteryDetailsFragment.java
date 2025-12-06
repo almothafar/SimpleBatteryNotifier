@@ -2,8 +2,8 @@ package com.almothafar.simplebatterynotifier.ui;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.app.Fragment;
-import android.preference.PreferenceManager;
+import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;

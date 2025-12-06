@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.service.NotificationService;

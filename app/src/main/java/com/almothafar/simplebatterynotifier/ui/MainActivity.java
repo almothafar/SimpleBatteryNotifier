@@ -1,12 +1,12 @@
 package com.almothafar.simplebatterynotifier.ui;
 
-import android.app.FragmentManager;
+import androidx.fragment.app.FragmentManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.WindowCompat;
@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                         c2.setTitle(batteryPercentage + "%");
                         c2.setSubTitle(subTitle);
 
-                        FragmentManager fragmentManager = getFragmentManager();
+                        FragmentManager fragmentManager = getSupportFragmentManager();
                         BatteryDetailsFragment batteryDetailsFragment = (BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
                         batteryDetailsFragment.updateBatteryDetails(batteryDO);
                     }
