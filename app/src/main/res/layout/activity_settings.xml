@@ -3,23 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:fitsSystemWindows="true">
+    android:orientation="vertical">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="wrap_content"
         android:minHeight="?attr/actionBarSize"
-        android:theme="@style/ToolBarStyle"
-        android:popupTheme="@style/AppTheme"
-        app:popupTheme="@style/AppTheme"
-        app:theme="@style/ToolBarStyle"
         android:background="@color/title_bar_background_color"
-        android:elevation="4dp" />
+        android:elevation="4dp"
+        android:fitsSystemWindows="true"
+        android:theme="@style/ToolBarStyle"
+        app:popupTheme="@style/AppTheme" />
 
     <FrameLayout
-        android:id="@+id/content_wrapper"
+        android:id="@+id/settings_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 

@@ -8,6 +8,8 @@ import android.os.Build;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.WindowCompat;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -39,12 +41,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Enable edge-to-edge display
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
         setContentView(R.layout.activity_main);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            getWindow().setStatusBarColor(GeneralHelper.getColor(getResources(), R.color.title_bar_background_color_dark));
-        }
+        // Set up the Toolbar
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+        // Set status bar to transparent to show toolbar color behind it
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+
+        // Set navigation bar color to semi-transparent for better visibility
+        getWindow().setNavigationBarColor(0x80000000); // 50% transparent black
 
         // If not started will start it.
         // TODO check if service is running before do this.

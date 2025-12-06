@@ -55,7 +55,7 @@ public class NotificationService {
         String startTime = sharedPref.getString(context.getString(R.string._pref_key_notifications_time_range_start), context.getString(R.string._pref_value_notifications_time_range_start));
         String endTime = sharedPref.getString(context.getString(R.string._pref_key_notifications_time_range_end), context.getString(R.string._pref_value_notifications_time_range_end));
 
-        boolean withInTime = (isWithinTime(startTime, endTime) && limitedTime) || !limitedTime;
+        boolean withInTime = isWithinTime(startTime, endTime) || !limitedTime;
         boolean ignoreSilent = !sharedPref.getBoolean(context.getString(R.string._pref_key_notifications_apply_silent_mode), false);
 
         String ticker = "";
@@ -113,15 +113,13 @@ public class NotificationService {
 
             AudioManager mobileMode = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
             boolean isNotNormalRingerMode = mobileMode.getRingerMode() != AudioManager.RINGER_MODE_NORMAL;
-            // The following is a workaround for Lollipop priority mode.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                try {
-                    // If 0 means in sound, if 1 means in priority , if 2 means silent.
-                    isNotNormalRingerMode = isNotNormalRingerMode
-                            || ZEN_MODE_IMPORTANT_INTERRUPTIONS == Settings.Global.getInt(context.getContentResolver(), ZEN_MODE);
-                } catch (Settings.SettingNotFoundException e) {
-                    isNotNormalRingerMode = true;
-                }
+            // Check for priority mode (Do Not Disturb)
+            try {
+                // If 0 means in sound, if 1 means in priority , if 2 means silent.
+                isNotNormalRingerMode = isNotNormalRingerMode
+                        || ZEN_MODE_IMPORTANT_INTERRUPTIONS == Settings.Global.getInt(context.getContentResolver(), ZEN_MODE);
+            } catch (Settings.SettingNotFoundException e) {
+                isNotNormalRingerMode = true;
             }
             // if silent must ignored then play it as media
             if (ignoreSilent && isNotNormalRingerMode) {
@@ -162,21 +160,13 @@ public class NotificationService {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         notification.setContentIntent(pendingIntent);
+        notification.setVisibility(Notification.VISIBILITY_PUBLIC);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            notification.setVisibility(Notification.VISIBILITY_PUBLIC);
-        }
-
-        Notification n;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            notification
-                    .setPriority(Notification.PRIORITY_HIGH)
-                    .setStyle(new Notification.BigTextStyle().bigText(bigContent));
-            n = notification.build();
-        } else {
-            //noinspection deprecation
-            n = notification.getNotification();
-        }
+        // Build notification with priority and style
+        notification
+                .setPriority(Notification.PRIORITY_HIGH)
+                .setStyle(new Notification.BigTextStyle().bigText(bigContent));
+        Notification n = notification.build();
 
         if (stickyNotification) {
             n.flags |= Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT;
@@ -218,20 +208,11 @@ public class NotificationService {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         notification.setContentIntent(pendingIntent);
+        notification.setVisibility(Notification.VISIBILITY_PUBLIC);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            notification.setVisibility(Notification.VISIBILITY_PUBLIC);
-        }
-
-        Notification n;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            notification
-                    .setStyle(new Notification.BigTextStyle().bigText(content));
-            n = notification.build();
-        } else {
-            //noinspection deprecation
-            n = notification.getNotification();
-        }
+        // Build notification with style
+        notification.setStyle(new Notification.BigTextStyle().bigText(content));
+        Notification n = notification.build();
 
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         manager.notify(UNIQUE_ID, n);

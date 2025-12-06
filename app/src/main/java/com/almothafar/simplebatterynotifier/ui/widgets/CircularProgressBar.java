@@ -95,57 +95,59 @@ public class CircularProgressBar extends ProgressBar {
         //so that shadow shows up properly for lines and arcs
         setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 
-        TypedArray a = getContext().obtainStyledAttributes(attrs,
-                R.styleable.CircularProgressBar, style, 0);
+        try (TypedArray obtainStyledAttributes = getContext().obtainStyledAttributes(attrs, R.styleable.CircularProgressBar, style, 0)) {
+	        int color;
+	        Resources res = getResources();
 
-        int color;
-        Resources res = getResources();
+	        this.mHasShadow = obtainStyledAttributes.getBoolean(R.styleable.CircularProgressBar_cpb_hasShadow, true);
 
-        this.mHasShadow = a.getBoolean(R.styleable.CircularProgressBar_cpb_hasShadow, true);
-
-        color = a.getColor(R.styleable.CircularProgressBar_cpb_progressColor, GeneralHelper.getColor(res, R.color.circular_progress_default_progress));
-        mProgressColorPaint.setColor(color);
-        color = a.getColor(R.styleable.CircularProgressBar_cpb_backgroundColor, GeneralHelper.getColor(res, R.color.circular_progress_default_background));
-        mBackgroundColorPaint.setColor(color);
-        color = a.getColor(R.styleable.CircularProgressBar_cpb_titleColor, GeneralHelper.getColor(res, R.color.circular_progress_default_title));
-        mTitlePaint.setColor(color);
-        color = a.getColor(R.styleable.CircularProgressBar_cpb_subtitleColor, GeneralHelper.getColor(res, R.color.circular_progress_default_subtitle));
-        mSubtitlePaint.setColor(color);
+	        color = obtainStyledAttributes.getColor(R.styleable.CircularProgressBar_cpb_progressColor, GeneralHelper.getColor(res, R.color.circular_progress_default_progress));
+	        mProgressColorPaint.setColor(color);
+	        color = obtainStyledAttributes.getColor(R.styleable.CircularProgressBar_cpb_backgroundColor, GeneralHelper.getColor(res, R.color.circular_progress_default_background));
+	        mBackgroundColorPaint.setColor(color);
+	        color = obtainStyledAttributes.getColor(R.styleable.CircularProgressBar_cpb_titleColor, GeneralHelper.getColor(res, R.color.circular_progress_default_title));
+	        mTitlePaint.setColor(color);
+	        color = obtainStyledAttributes.getColor(R.styleable.CircularProgressBar_cpb_subtitleColor, GeneralHelper.getColor(res, R.color.circular_progress_default_subtitle));
+	        mSubtitlePaint.setColor(color);
 
 
-        String t = a.getString(R.styleable.CircularProgressBar_cpb_title);
-        if (t != null)
-            mTitle = t;
+	        String t = obtainStyledAttributes.getString(R.styleable.CircularProgressBar_cpb_title);
+	        if (t != null) {
+		        mTitle = t;
+	        }
 
-        t = a.getString(R.styleable.CircularProgressBar_cpb_subtitle);
-        if (t != null)
-            mSubTitle = t;
+	        t = obtainStyledAttributes.getString(R.styleable.CircularProgressBar_cpb_subtitle);
+	        if (t != null) {
+		        mSubTitle = t;
+	        }
 
-        int mStrokeWidth = a.getInt(R.styleable.CircularProgressBar_cpb_strokeWidth, STROKE_WIDTH);
-        int titleTextSize = a.getInt(R.styleable.CircularProgressBar_cpb_titleTextSize, DEFAULT_TITLE_SIZE);
-        int subtitleTextSize = a.getInt(R.styleable.CircularProgressBar_cpb_subtitleTextSize, DEFAULT_SUBTITLE_SIZE);
+	        int mStrokeWidth = obtainStyledAttributes.getInt(R.styleable.CircularProgressBar_cpb_strokeWidth, STROKE_WIDTH);
+	        int titleTextSize = obtainStyledAttributes.getInt(R.styleable.CircularProgressBar_cpb_titleTextSize, DEFAULT_TITLE_SIZE);
+	        int subtitleTextSize = obtainStyledAttributes.getInt(R.styleable.CircularProgressBar_cpb_subtitleTextSize, DEFAULT_SUBTITLE_SIZE);
 
-        a.recycle();
+	        // No need to manually recycle - try-with-resources handles it automatically
 
-        mProgressColorPaint.setAntiAlias(true);
-        mProgressColorPaint.setStyle(Paint.Style.STROKE);
-        mProgressColorPaint.setStrokeWidth(GeneralHelper.dpToPixel(res, mStrokeWidth));
+	        mProgressColorPaint.setAntiAlias(true);
+	        mProgressColorPaint.setStyle(Paint.Style.STROKE);
+	        mProgressColorPaint.setStrokeWidth(GeneralHelper.dpToPixel(res, mStrokeWidth));
 
-        mBackgroundColorPaint.setAntiAlias(true);
-        mBackgroundColorPaint.setStyle(Paint.Style.STROKE);
-        mBackgroundColorPaint.setStrokeWidth(GeneralHelper.dpToPixel(res, mStrokeWidth + STROKE_PADDING));
+	        mBackgroundColorPaint.setAntiAlias(true);
+	        mBackgroundColorPaint.setStyle(Paint.Style.STROKE);
+	        mBackgroundColorPaint.setStrokeWidth(GeneralHelper.dpToPixel(res, mStrokeWidth + STROKE_PADDING));
 
-        mTitlePaint.setTextSize(GeneralHelper.dpToPixel(res, titleTextSize));
-        mTitlePaint.setStyle(Style.FILL);
-        mTitlePaint.setAntiAlias(true);
-        mTitlePaint.setTypeface(Typeface.create("Roboto-Thin", Typeface.NORMAL));
-        mTitlePaint.setShadowLayer(0.1f, 0, 1, Color.GRAY);
+	        mTitlePaint.setTextSize(GeneralHelper.dpToPixel(res, titleTextSize));
+	        mTitlePaint.setStyle(Style.FILL);
+	        mTitlePaint.setAntiAlias(true);
+	        mTitlePaint.setTypeface(Typeface.create("Roboto-Thin", Typeface.NORMAL));
+	        mTitlePaint.setShadowLayer(0.1f, 0, 1, Color.GRAY);
 
-        mSubtitlePaint.setTextSize(GeneralHelper.dpToPixel(res, subtitleTextSize));
-        mSubtitlePaint.setStyle(Style.FILL);
-        mSubtitlePaint.setAntiAlias(true);
-        mSubtitlePaint.setTypeface(Typeface.create("Roboto-Thin", Typeface.BOLD));
-        //		mSubtitlePaint.setShadowLayer(0.1f, 0, 1, Color.GRAY);
+	        mSubtitlePaint.setTextSize(GeneralHelper.dpToPixel(res, subtitleTextSize));
+	        mSubtitlePaint.setStyle(Style.FILL);
+	        mSubtitlePaint.setAntiAlias(true);
+	        mSubtitlePaint.setTypeface(Typeface.create("Roboto-Thin", Typeface.BOLD));
+	        //		mSubtitlePaint.setShadowLayer(0.1f, 0, 1, Color.GRAY);
+        }
+
     }
 
     @Override
@@ -171,17 +173,17 @@ public class CircularProgressBar extends ProgressBar {
 
 
         if (!TextUtils.isEmpty(mTitle)) {
-            int xPos = (int) (getMeasuredWidth() / 2 - mTitlePaint.measureText(mTitle) / 2);
-            int yPos = getMeasuredHeight() / 2;
+            float xPos = (int) (getMeasuredWidth() / 2f - mTitlePaint.measureText(mTitle) / 2);
+            float yPos = getMeasuredHeight() / 2f;
 
             float titleHeight = Math.abs(mTitlePaint.descent() + mTitlePaint.ascent());
             if (TextUtils.isEmpty(mSubTitle)) {
-                yPos += titleHeight / 2;
+                yPos += titleHeight / 2f;
             }
             canvas.drawText(mTitle, xPos, yPos, mTitlePaint);
 
             yPos += titleHeight;
-            xPos = (int) (getMeasuredWidth() / 2 - mSubtitlePaint.measureText(mSubTitle) / 2);
+            xPos = (int) (getMeasuredWidth() / 2f - mSubtitlePaint.measureText(mSubTitle) / 2);
 
             canvas.drawText(mSubTitle, xPos, yPos, mSubtitlePaint);
         }

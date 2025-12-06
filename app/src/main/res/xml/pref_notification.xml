@@ -1,4 +1,5 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <SwitchPreference
         android:defaultValue="true"
@@ -7,7 +8,8 @@
         android:summaryOn="@string/notifications_vibrate_summary_on"
         android:switchTextOff="@string/off"
         android:switchTextOn="@string/on"
-        android:title="@string/pref_title_vibrate" />
+        android:title="@string/pref_title_vibrate"
+        app:iconSpaceReserved="false" />
 
     <SwitchPreference
         android:defaultValue="false"
@@ -16,13 +18,15 @@
         android:summaryOn="@string/notification_is_sticky"
         android:switchTextOff="@string/off"
         android:switchTextOn="@string/on"
-        android:title="@string/sticky_notification" />
+        android:title="@string/sticky_notification"
+        app:iconSpaceReserved="false" />
 
-    <RingtonePreference
+    <com.almothafar.simplebatterynotifier.ui.RingtonePreference
         android:defaultValue="content://settings/system/notification_sound"
         android:key="@string/_pref_key_notifications_alert_sound_ringtone"
         android:ringtoneType="notification"
-        android:title="@string/notifications_alert_sound_ringtone" />
+        android:title="@string/notifications_alert_sound_ringtone"
+        app:iconSpaceReserved="false" />
 
     <SwitchPreference
         android:defaultValue="false"
@@ -31,7 +35,8 @@
         android:summaryOn="@string/notify_every_tick_summary_on"
         android:switchTextOff="@string/off"
         android:switchTextOn="@string/on"
-        android:title="@string/notify_every_tick" />
+        android:title="@string/notify_every_tick"
+        app:iconSpaceReserved="false" />
 
     <SwitchPreference
         android:defaultValue="true"
@@ -40,14 +45,16 @@
         android:summaryOn="@string/notify_for_full_level_summary_on"
         android:switchTextOff="@string/off"
         android:switchTextOn="@string/on"
-        android:title="@string/notify_for_full_level" />
+        android:title="@string/notify_for_full_level"
+        app:iconSpaceReserved="false" />
 
-    <RingtonePreference
+    <com.almothafar.simplebatterynotifier.ui.RingtonePreference
         android:defaultValue="content://settings/system/notification_sound"
         android:dependency="@string/_pref_key_notify_for_full_level"
         android:key="@string/_pref_key_notifications_full_sound_ringtone"
         android:ringtoneType="notification"
-        android:title="@string/notifications_full_sound_ringtone" />
+        android:title="@string/notifications_full_sound_ringtone"
+        app:iconSpaceReserved="false" />
 
     <SwitchPreference
         android:defaultValue="true"
@@ -56,14 +63,16 @@
         android:summaryOn="@string/notify_for_warning_level_summary_on"
         android:switchTextOff="@string/off"
         android:switchTextOn="@string/on"
-        android:title="@string/notify_for_warning_level" />
+        android:title="@string/notify_for_warning_level"
+        app:iconSpaceReserved="false" />
 
-    <RingtonePreference
+    <com.almothafar.simplebatterynotifier.ui.RingtonePreference
         android:defaultValue="content://settings/system/notification_sound"
         android:dependency="@string/_pref_key_notify_for_warning_level"
         android:key="@string/_pref_key_notifications_warning_sound_ringtone"
         android:ringtoneType="notification"
-        android:title="@string/notifications_warning_sound_ringtone" />
+        android:title="@string/notifications_warning_sound_ringtone"
+        app:iconSpaceReserved="false" />
 
 
 </PreferenceScreen>

@@ -1,4 +1,5 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <ListPreference
         android:defaultValue="@string/_pref_value_temperatures_unit_c"
@@ -6,25 +7,26 @@
         android:entryValues="@array/preference_list_temperatures_values"
         android:key="@string/_pref_key_temperatures_unit"
         android:summary="%s"
-        android:title="@string/preference_title_temperature" />
+        android:title="@string/preference_title_temperature"
+        app:iconSpaceReserved="false" />
 
-    <com.almothafar.simplebatterynotifier.ui.widgets.NumberPickerPreference
+    <SeekBarPreference
         android:defaultValue="40"
         android:key="@string/_pref_key_warn_battery_level"
-        valuePostfix="&#37;"
-        valuePrefix=""
-        minRangeValue="30"
-        maxRangeValue="50"
-        android:title="@string/warn_start_level" />
+        android:min="30"
+        android:max="50"
+        android:title="@string/warn_start_level"
+        app:showSeekBarValue="true"
+        app:iconSpaceReserved="false" />
 
-    <com.almothafar.simplebatterynotifier.ui.widgets.NumberPickerPreference
+    <SeekBarPreference
         android:defaultValue="20"
         android:key="@string/_pref_key_critical_battery_level"
-        valuePostfix="&#37;"
-        valuePrefix=""
-        minRangeValue="10"
-        maxRangeValue="20"
-        android:title="@string/alert_start_level" />
+        android:min="10"
+        android:max="20"
+        android:title="@string/alert_start_level"
+        app:showSeekBarValue="true"
+        app:iconSpaceReserved="false" />
 
     <SwitchPreference
         android:defaultValue="false"
@@ -33,7 +35,8 @@
         android:summaryOn="@string/notifications_apply_silent_mode_summary_on"
         android:switchTextOff="@string/off"
         android:switchTextOn="@string/on"
-        android:title="@string/notifications_apply_silent_mode" />
+        android:title="@string/notifications_apply_silent_mode"
+        app:iconSpaceReserved="false" />
 
     
 </PreferenceScreen>

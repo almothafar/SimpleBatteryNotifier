@@ -21,8 +21,7 @@ public class BatteryDO {
 
 
     public float getBatteryPercentage() {
-        float batteryPercentage = (level / (float) scale) * 100;
-        return batteryPercentage;
+	    return (level / (float) scale) * 100;
     }
 
     public String getHealth() {

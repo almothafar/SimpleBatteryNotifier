@@ -44,6 +44,12 @@
         <item name="actionMenuTextColor">@android:color/white</item>
     </style>
 
+    <!-- Settings theme without ActionBar (we use Toolbar instead) -->
+    <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
     <style name="DefaultTextStyle" parent="@android:style/TextAppearance.Medium">
     </style>
 </resources>

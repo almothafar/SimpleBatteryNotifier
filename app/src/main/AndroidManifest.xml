@@ -19,7 +19,8 @@
         <!-- Launcher activity MUST be exported on Android 12+ -->
         <activity
                 android:name=".ui.MainActivity"
-                android:exported="true">
+                android:exported="true"
+                android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -45,6 +46,7 @@
         <activity
                 android:name=".ui.SettingsActivity"
                 android:label="@string/title_activity_settings"
+                android:theme="@style/AppTheme.NoActionBar"
                 android:parentActivityName=".ui.MainActivity"/>
 
     </application>

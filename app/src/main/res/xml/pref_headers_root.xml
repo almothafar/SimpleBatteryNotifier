@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <Preference
+        android:fragment="com.almothafar.simplebatterynotifier.ui.GenericPreferenceFragment"
+        android:key="general"
+        android:summary="@string/pref_header_summary_general"
+        android:title="@string/pref_header_general"
+        app:iconSpaceReserved="false">
+        <extra
+            android:name="category"
+            android:value="@string/pref_category_general" />
+    </Preference>
+
+    <Preference
+        android:fragment="com.almothafar.simplebatterynotifier.ui.GenericPreferenceFragment"
+        android:key="notifications"
+        android:summary="@string/pref_header_summary_notifications"
+        android:title="@string/pref_header_notifications"
+        app:iconSpaceReserved="false">
+        <extra
+            android:name="category"
+            android:value="@string/pref_category_notifications" />
+    </Preference>
+
+    <Preference
+        android:fragment="com.almothafar.simplebatterynotifier.ui.GenericPreferenceFragment"
+        android:key="time_settings"
+        android:summary="@string/pref_header_summary_time_settings"
+        android:title="@string/pref_header_time_settings"
+        app:iconSpaceReserved="false">
+        <extra
+            android:name="category"
+            android:value="@string/pref_category_time_settings" />
+    </Preference>
+
+</PreferenceScreen>
