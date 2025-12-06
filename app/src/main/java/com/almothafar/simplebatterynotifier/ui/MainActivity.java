@@ -7,7 +7,7 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.preference.PreferenceManager;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;

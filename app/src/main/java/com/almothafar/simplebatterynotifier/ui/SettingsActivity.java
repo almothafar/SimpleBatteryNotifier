@@ -13,7 +13,7 @@ import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.preference.RingtonePreference;
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
@@ -56,7 +56,7 @@ public class SettingsActivity extends PreferenceActivity {
 
         mToolBar = (Toolbar) toolbarContainer.findViewById(R.id.toolbar);
         mToolBar.setTitle(getTitle());
-        mToolBar.setNavigationIcon(R.drawable.abc_ic_ab_back_mtrl_am_alpha);
+        mToolBar.setNavigationIcon(R.drawable.ic_arrow_back);
         mToolBar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

@@ -31,7 +31,7 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.Typeface;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;

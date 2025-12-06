@@ -14,7 +14,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
-import android.support.v4.app.NotificationCompat;
 
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
@@ -165,7 +164,7 @@ public class NotificationService {
         notification.setContentIntent(pendingIntent);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            notification.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+            notification.setVisibility(Notification.VISIBILITY_PUBLIC);
         }
 
         Notification n;
@@ -221,7 +220,7 @@ public class NotificationService {
         notification.setContentIntent(pendingIntent);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            notification.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+            notification.setVisibility(Notification.VISIBILITY_PUBLIC);
         }
 
         Notification n;

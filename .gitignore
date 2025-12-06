@@ -33,3 +33,4 @@ Icon?
 # Android bui
 
 *.lock
+.claude/
