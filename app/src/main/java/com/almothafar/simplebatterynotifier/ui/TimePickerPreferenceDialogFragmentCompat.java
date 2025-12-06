@@ -6,6 +6,7 @@ import android.text.format.DateFormat;
 import android.view.View;
 import android.widget.TimePicker;
 
+import androidx.annotation.NonNull;
 import androidx.preference.PreferenceDialogFragmentCompat;
 
 /**
@@ -23,14 +24,14 @@ public class TimePickerPreferenceDialogFragmentCompat extends PreferenceDialogFr
     }
 
     @Override
-    protected View onCreateDialogView(Context context) {
+    protected View onCreateDialogView(@NonNull Context context) {
         mTimePicker = new TimePicker(context);
         mTimePicker.setIs24HourView(DateFormat.is24HourFormat(context));
         return mTimePicker;
     }
 
     @Override
-    protected void onBindDialogView(View view) {
+    protected void onBindDialogView(@NonNull View view) {
         super.onBindDialogView(view);
 
         TimePickerPreference preference = (TimePickerPreference) getPreference();

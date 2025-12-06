@@ -10,6 +10,7 @@ import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.DialogFragment;
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
@@ -73,7 +74,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
     }
 
     @Override
-    public void onDisplayPreferenceDialog(Preference preference) {
+    public void onDisplayPreferenceDialog(@NonNull Preference preference) {
         // Handle TimePickerPreference dialog
         if (preference instanceof TimePickerPreference) {
             DialogFragment dialogFragment = TimePickerPreferenceDialogFragmentCompat
@@ -114,76 +115,76 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
      * Update preference summary based on its type and value
      */
     protected void updatePreferencesSummary(SharedPreferences sharedPreferences, Preference pref) {
-        if (pref == null) return;
+	    switch (pref) {
+		    case null -> {
+		    }
+		    case ListPreference listPref -> listPref.setSummary(listPref.getEntry());
+		    case EditTextPreference editTextPref -> {
+			    // Only set summary if no SummaryProvider is already set
+			    if (editTextPref.getSummaryProvider() == null) {
+				    editTextPref.setSummary(editTextPref.getText());
+			    }
+		    }
+		    case SeekBarPreference seekBarPref -> {
+			    // Add percentage suffix for battery level preferences
+			    String key = pref.getKey();
+			    if (key != null && (key.equals(getString(R.string._pref_key_warn_battery_level)) ||
+					    key.equals(getString(R.string._pref_key_critical_battery_level)))) {
+				    seekBarPref.setSummary(seekBarPref.getValue() + "%");
+			    }
+		    }
+		    case MultiSelectListPreference mlistPref -> {
+			    StringBuilder summaryBuilder = new StringBuilder();
+			    Set<String> values = mlistPref.getValues();
 
-        if (pref instanceof ListPreference) {
-            ListPreference listPref = (ListPreference) pref;
-            listPref.setSummary(listPref.getEntry());
+			    int count = 0;
+			    for (String value : values) {
+				    int index = mlistPref.findIndexOfValue(value);
+				    if (index >= 0 && mlistPref.getEntries() != null) {
+					    if (count > 0) summaryBuilder.append("; ");
+					    summaryBuilder.append(mlistPref.getEntries()[index]);
+					    count++;
+				    }
+			    }
+			    mlistPref.setSummary(summaryBuilder.toString());
+		    }
+		    default -> {
+			    // Handle custom preferences by class name (they use old android.preference classes)
+			    String className = pref.getClass().getSimpleName();
 
-        } else if (pref instanceof EditTextPreference) {
-            EditTextPreference editTextPref = (EditTextPreference) pref;
-            // Only set summary if no SummaryProvider is already set
-            if (editTextPref.getSummaryProvider() == null) {
-                editTextPref.setSummary(editTextPref.getText());
-            }
+			    switch (className) {
+				    case "RingtonePreference" -> {
+					    // Handle ringtone preference
+					    String uri = sharedPreferences.getString(pref.getKey(), null);
+					    if (uri != null && !uri.isEmpty()) {
+						    try {
+							    Ringtone ringtone = RingtoneManager.getRingtone(pref.getContext(), Uri.parse(uri));
+							    if (ringtone != null) {
+								    pref.setSummary(ringtone.getTitle(pref.getContext()));
+							    }
+						    } catch (Exception e) {
+							    // If ringtone not found, just show URI
+							    pref.setSummary(uri);
+						    }
+					    }
+				    }
+				    case "NumberPickerPreference" -> {
+					    // Handle number picker preference
+					    int value = sharedPreferences.getInt(pref.getKey(), 0);
+					    pref.setSummary(String.valueOf(value));
 
-        } else if (pref instanceof SeekBarPreference) {
-            SeekBarPreference seekBarPref = (SeekBarPreference) pref;
-            // Add percentage suffix for battery level preferences
-            String key = pref.getKey();
-            if (key != null && (key.equals(getString(R.string._pref_key_warn_battery_level)) ||
-                               key.equals(getString(R.string._pref_key_critical_battery_level)))) {
-                seekBarPref.setSummary(seekBarPref.getValue() + "%");
-            }
+				    }
+				    case "TimePickerPreference" -> {
+					    // Handle time picker preference
+					    String value = sharedPreferences.getString(pref.getKey(), "");
+					    if (!value.isEmpty()) {
+						    pref.setSummary(value);
+					    }
+				    }
+			    }
+		    }
+	    }
 
-        } else if (pref instanceof MultiSelectListPreference) {
-            MultiSelectListPreference mlistPref = (MultiSelectListPreference) pref;
-            StringBuilder summaryBuilder = new StringBuilder();
-            Set<String> values = mlistPref.getValues();
-
-            int count = 0;
-            for (String value : values) {
-                int index = mlistPref.findIndexOfValue(value);
-                if (index >= 0 && mlistPref.getEntries() != null) {
-                    if (count > 0) summaryBuilder.append("; ");
-                    summaryBuilder.append(mlistPref.getEntries()[index]);
-                    count++;
-                }
-            }
-            mlistPref.setSummary(summaryBuilder.toString());
-
-        } else {
-            // Handle custom preferences by class name (they use old android.preference classes)
-            String className = pref.getClass().getSimpleName();
-
-            if (className.equals("RingtonePreference")) {
-                // Handle ringtone preference
-                String uri = sharedPreferences.getString(pref.getKey(), null);
-                if (uri != null && !uri.isEmpty()) {
-                    try {
-                        Ringtone ringtone = RingtoneManager.getRingtone(pref.getContext(), Uri.parse(uri));
-                        if (ringtone != null) {
-                            pref.setSummary(ringtone.getTitle(pref.getContext()));
-                        }
-                    } catch (Exception e) {
-                        // If ringtone not found, just show URI
-                        pref.setSummary(uri);
-                    }
-                }
-
-            } else if (className.equals("NumberPickerPreference")) {
-                // Handle number picker preference
-                int value = sharedPreferences.getInt(pref.getKey(), 0);
-                pref.setSummary(String.valueOf(value));
-
-            } else if (className.equals("TimePickerPreference")) {
-                // Handle time picker preference
-                String value = sharedPreferences.getString(pref.getKey(), "");
-                if (!value.isEmpty()) {
-                    pref.setSummary(value);
-                }
-            }
-        }
     }
 
     /**
@@ -203,18 +204,16 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
      * Initialize summary for a single preference (recursively for categories)
      */
     protected void initPreferencesSummary(SharedPreferences sharedPreferences, Preference p) {
-        if (p instanceof PreferenceCategory) {
-            PreferenceCategory pCat = (PreferenceCategory) p;
-            for (int i = 0; i < pCat.getPreferenceCount(); i++) {
+        if (p instanceof final PreferenceCategory pCat) {
+	        for (int i = 0; i < pCat.getPreferenceCount(); i++) {
                 initPreferencesSummary(sharedPreferences, pCat.getPreference(i));
             }
         } else {
             updatePreferencesSummary(sharedPreferences, p);
 
             // Add click listener for ringtone preferences
-            if (p instanceof RingtonePreference) {
-                RingtonePreference ringtonePref = (RingtonePreference) p;
-                ringtonePref.setOnPreferenceClickListener(pref -> {
+            if (p instanceof final RingtonePreference ringtonePref) {
+	            ringtonePref.setOnPreferenceClickListener(pref -> {
                     currentRingtonePreference = (RingtonePreference) pref;
                     Intent intent = currentRingtonePreference.createRingtonePickerIntent();
                     ringtonePickerLauncher.launch(intent);

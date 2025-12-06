@@ -82,18 +82,16 @@ public class MainActivity extends AppCompatActivity {
     private void startUpdateTimer() {
         updateTask = new TimerTask() {
             public void run() {
-                handler.post(new Runnable() {
-                    public void run() {
-                        final CircularProgressBar c2 = (CircularProgressBar) findViewById(R.id.batteryPercentage);
-                        fillBatteryInfo();
-                        c2.setProgress(batteryPercentage);
-                        c2.setTitle(batteryPercentage + "%");
-                        c2.setSubTitle(subTitle);
+                handler.post(() -> {
+                    final CircularProgressBar c2 = findViewById(R.id.batteryPercentage);
+                    fillBatteryInfo();
+                    c2.setProgress(batteryPercentage);
+                    c2.setTitle(batteryPercentage + "%");
+                    c2.setSubTitle(subTitle);
 
-                        FragmentManager fragmentManager = getSupportFragmentManager();
-                        BatteryDetailsFragment batteryDetailsFragment = (BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
-                        batteryDetailsFragment.updateBatteryDetails(batteryDO);
-                    }
+                    FragmentManager fragmentManager = getSupportFragmentManager();
+                    BatteryDetailsFragment batteryDetailsFragment = (BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
+                    batteryDetailsFragment.updateBatteryDetails(batteryDO);
                 });
             }
         };

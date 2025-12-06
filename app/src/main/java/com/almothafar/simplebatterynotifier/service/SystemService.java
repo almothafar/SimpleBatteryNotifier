@@ -23,11 +23,6 @@ import java.io.IOException;
 public class SystemService {
     private static final String TAG = "com.almothafar";
 
-    /**
-     *
-     * @param context
-     * @return
-     */
     public static BatteryDO getBatteryInfo(Context context) {
         IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         Intent batteryStatus = context.registerReceiver(null, filter);

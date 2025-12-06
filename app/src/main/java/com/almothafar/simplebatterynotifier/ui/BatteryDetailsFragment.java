@@ -31,13 +31,6 @@ public class BatteryDetailsFragment extends Fragment {
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-        }
-    }
-
-    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_battery_details, container, false);
@@ -52,11 +45,11 @@ public class BatteryDetailsFragment extends Fragment {
     public void createDetailsTable(View view) {
         fillBatteryInfo(view);
 
-        TableLayout tableLayout = (TableLayout) view.findViewById(R.id.batteryDetailsTable);
+        TableLayout tableLayout = view.findViewById(R.id.batteryDetailsTable);
         tableLayout.removeAllViews();
         tableLayout.setStretchAllColumns(true);
-        int cellPadding = (int) getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding);
-        int cellPaddingTop = (int) getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding_top);
+        int cellPadding = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding);
+        int cellPaddingTop = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding_top);
 
         int i = 0;
         for (String key : valuesMap.keySet()) {
@@ -68,7 +61,7 @@ public class BatteryDetailsFragment extends Fragment {
             TextView textViewLabel = new TextView(view.getContext());
             textViewLabel.setTextAppearance(view.getContext(), R.style.DefaultTextStyle);
             textViewLabel.setText(key);
-            textViewLabel.setGravity(Gravity.RIGHT);
+            textViewLabel.setGravity(Gravity.END);
             textViewLabel.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_label_color));
             textViewLabel.setPadding(0, 0, cellPadding, cellPaddingTop);
 
@@ -81,7 +74,7 @@ public class BatteryDetailsFragment extends Fragment {
             textViewValue.setTextAppearance(view.getContext(), R.style.DefaultTextStyle);
             textViewValue.setText(valuesMap.get(key));
             textViewValue.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
-            textViewValue.setGravity(Gravity.LEFT);
+            textViewValue.setGravity(Gravity.START);
             textViewValue.setPadding(cellPadding, 0, 0, cellPaddingTop);
 
             // TODO fix this is workaround for arabic layout, it must be handled with RTL or another layout xml file, but lets postpone it for now :)
@@ -117,7 +110,7 @@ public class BatteryDetailsFragment extends Fragment {
         valuesMap.put(getResources().getString(R.string.voltage), batteryDO.getVoltage() + " mV");
         valuesMap.put(getResources().getString(R.string.power_source), batteryDO.getPowerSource());
         valuesMap.put(getResources().getString(R.string.temperature), temperature + temperatureShort);
-        valuesMap.put(getResources().getString(R.string.health), "" + batteryDO.getHealth());
+        valuesMap.put(getResources().getString(R.string.health), batteryDO.getHealth());
     }
 
     public void updateBatteryDetails(BatteryDO batteryDO) {

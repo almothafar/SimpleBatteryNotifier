@@ -6,6 +6,7 @@ import android.preference.DialogPreference;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.TimePicker;
+import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -26,13 +27,11 @@ public class TimePickerPreference extends DialogPreference {
 	}
 
 	public static int getHour(String time) {
-		String[] pieces = time.split(":");
-		return Integer.parseInt(pieces[0]);
+		return GeneralHelper.getHour(time);
 	}
 
 	public static int getMinute(String time) {
-		String[] pieces = time.split(":");
-		return Integer.parseInt(pieces[1]);
+		return GeneralHelper.getMinute(time);
 	}
 
 	public static Date toDate(String inTime) {

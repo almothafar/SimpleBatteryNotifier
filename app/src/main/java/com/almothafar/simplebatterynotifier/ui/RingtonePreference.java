@@ -57,7 +57,7 @@ public class RingtonePreference extends Preference {
         intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true);
         intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true);
 
-        // Set current ringtone
+        // Set the current ringtone
         if (!TextUtils.isEmpty(currentRingtoneUri)) {
             intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(currentRingtoneUri));
         }

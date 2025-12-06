@@ -69,11 +69,11 @@ public class CircularProgressBar extends ProgressBar {
     private int mShadowColor = Color.BLACK;
 
     public interface ProgressAnimationListener {
-        public void onAnimationStart();
+        void onAnimationStart();
 
-        public void onAnimationFinish();
+		void onAnimationFinish();
 
-        public void onAnimationProgress(int progress);
+        void onAnimationProgress(int progress);
     }
 
     public CircularProgressBar(Context context) {
