@@ -1,89 +1,122 @@
 package com.almothafar.simplebatterynotifier.receiver;
 
+import static java.util.Objects.isNull;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
+
 import androidx.preference.PreferenceManager;
 
 import com.almothafar.simplebatterynotifier.R;
-import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 
+/**
+ * Broadcast receiver for monitoring battery level changes.
+ * Sends notifications when battery reaches critical/warning levels or becomes full.
+ */
 public class BatteryLevelReceiver extends BroadcastReceiver {
-    private static final String TAG = "com.almothafar";
 
-    private static int prevLevel = 0;
-    private static int prevType = 0;
-    private static boolean fullNotificationCalled = false;
+	/**
+	 * Static lock object for thread-safe access to static fields.
+	 * Using synchronized(this) doesn't work for BroadcastReceivers since each broadcast creates a new instance.
+	 */
+	private static final Object LOCK = new Object();
 
+	/**
+	 * Thread-safe static fields to track battery notification state
+	 */
+	private static volatile int prevLevel = 0;
+	private static volatile int prevType = 0;
+	private static volatile boolean fullNotificationCalled = false;
 
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        final Intent mIntent = context.getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        int status = mIntent != null ? mIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) : -1;
+	@Override
+	public void onReceive(final Context context, final Intent intent) {
+		final Intent batteryStatus = context.getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+		if (isNull(batteryStatus)) {
+			return; // Cannot determine battery status, exit early
+		}
 
-        boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING;
-        boolean isFull = status == BatteryManager.BATTERY_STATUS_FULL;
+		final int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+		final boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING;
+		final boolean isFull = status == BatteryManager.BATTERY_STATUS_FULL;
 
-        BatteryDO batteryDO = SystemService.getBatteryInfo(context);
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
-        int warningLevel = sharedPref.getInt(context.getString(R.string._pref_key_warn_battery_level), 40);
-        int criticalLevel = sharedPref.getInt(context.getString(R.string._pref_key_critical_battery_level), 20);
-        boolean warningEnabled = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_for_warning_level), true);
-        boolean fullNotifyEnabled = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_for_full_level), true);
-        boolean alertEveryTick = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_every_tick), false);
+		final BatteryDO batteryDO = SystemService.getBatteryInfo(context);
+		final int percentage = (int) batteryDO.getBatteryPercentage();
 
-        int percentage = (int) batteryDO.getBatteryPercentage();
+		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+		final int warningLevel = sharedPref.getInt(context.getString(R.string._pref_key_warn_battery_level), 40);
+		final int criticalLevel = sharedPref.getInt(context.getString(R.string._pref_key_critical_battery_level), 20);
+		final boolean warningEnabled = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_for_warning_level), true);
+		final boolean fullNotifyEnabled = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_for_full_level), true);
+		final boolean alertEveryTick = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_every_tick), false);
 
-        boolean isChanged = prevLevel != percentage;
+		final boolean isChanged = prevLevel != percentage;
 
-        synchronized (this) {
-            // If its charging no need to make any notification except if it is full.
-            if (isChanged && !isCharging) {
-                // When its less than alert level (4%) then its must send notification.
-                if (percentage <= NotificationService.RED_ALERT_LEVEL) {
-                    prevType = 0;
-                }
+		synchronized (LOCK) {
+			if (isChanged && !isCharging) {
+				handleDischarging(context, percentage, criticalLevel, warningLevel, warningEnabled, alertEveryTick);
+			} else {
+				handleChargingOrFull(context, percentage, warningLevel, isFull, fullNotifyEnabled);
+			}
+			prevLevel = percentage;
+		}
+	}
 
-                // Lets handle critical first, then warning.
-                if (percentage <= criticalLevel) {
-                    if (prevType != NotificationService.CRITICAL_TYPE || alertEveryTick) {
-                        NotificationService.sendNotification(context, NotificationService.CRITICAL_TYPE);
-                        prevType = NotificationService.CRITICAL_TYPE;
-                    }
-                } else if (percentage <= warningLevel && warningEnabled) {
-                    if (prevType != NotificationService.WARNING_TYPE) {
-                        NotificationService.sendNotification(context, NotificationService.WARNING_TYPE);
-                        prevType = NotificationService.WARNING_TYPE;
-                    }
-                }
-            } else {
-                if (!fullNotificationCalled) {
-                    if (isFull && fullNotifyEnabled) {
-                        NotificationService.sendNotification(context, NotificationService.FULL_LEVEL_TYPE);
-                        fullNotificationCalled = true;
-                    }
-                }
+	/**
+	 * Handle battery notifications while discharging
+	 */
+	private void handleDischarging(final Context context, final int percentage, final int criticalLevel,
+	                                final int warningLevel, final boolean warningEnabled, final boolean alertEveryTick) {
+		// Force critical notification for very low battery (red alert level)
+		if (percentage <= NotificationService.RED_ALERT_LEVEL) {
+			prevType = 0;
+		}
 
-                if (percentage <= NotificationService.FULL_PERCENTAGE && percentage > warningLevel) {
-                    fullNotificationCalled = false;
-                }
-            }
-            // Store the current level, so no need to duplicate the notification as a spam !
-            prevLevel = percentage;
-        }
-    }
+		// Handle critical level first, then warning
+		if (percentage <= criticalLevel) {
+			if (prevType != NotificationService.CRITICAL_TYPE || alertEveryTick) {
+				NotificationService.sendNotification(context, NotificationService.CRITICAL_TYPE);
+				prevType = NotificationService.CRITICAL_TYPE;
+			}
+		} else if (percentage <= warningLevel && warningEnabled) {
+			if (prevType != NotificationService.WARNING_TYPE) {
+				NotificationService.sendNotification(context, NotificationService.WARNING_TYPE);
+				prevType = NotificationService.WARNING_TYPE;
+			}
+		}
+	}
 
-    public static void resetVariables() {
-        fullNotificationCalled = false;
-        prevType = 0;
-    }
+	/**
+	 * Handle battery notifications while charging or full
+	 */
+	private void handleChargingOrFull(final Context context, final int percentage, final int warningLevel,
+	                                   final boolean isFull, final boolean fullNotifyEnabled) {
+		if (!fullNotificationCalled) {
+			if (isFull && fullNotifyEnabled) {
+				NotificationService.sendNotification(context, NotificationService.FULL_LEVEL_TYPE);
+				fullNotificationCalled = true;
+			}
+		}
 
-    public static void setPreviousType(int type) {
-        prevType = type;
-    }
+		// Reset full notification flag when battery drops below full threshold
+		if (percentage <= NotificationService.FULL_PERCENTAGE && percentage > warningLevel) {
+			fullNotificationCalled = false;
+		}
+	}
+
+	/**
+	 * Reset notification state when charger is disconnected
+	 */
+	public static void resetVariables() {
+		synchronized (LOCK) {
+			fullNotificationCalled = false;
+			prevType = 0;
+		}
+	}
 }
