@@ -1,8 +1,5 @@
 package com.almothafar.simplebatterynotifier.service;
 
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
-
 import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -20,10 +17,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
-
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
-
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.ui.MainActivity;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
@@ -33,21 +28,21 @@ import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 /**
  * Service for managing battery notification creation and display
  */
 public final class NotificationService {
-	private static final String TAG = NotificationService.class.getSimpleName();
-
 	// Notification types
 	public static final int CRITICAL_TYPE = 1;
 	public static final int WARNING_TYPE = 2;
 	public static final int FULL_LEVEL_TYPE = 3;
-
 	// Battery thresholds
 	public static final int RED_ALERT_LEVEL = 4;
 	public static final int FULL_PERCENTAGE = 95;
-
+	private static final String TAG = NotificationService.class.getSimpleName();
 	// Notification channels
 	private static final String CHANNEL_ID_CRITICAL = "battery_critical";
 	private static final String CHANNEL_ID_WARNING = "battery_warning";
@@ -118,15 +113,15 @@ public final class NotificationService {
 		createNotificationChannels(context);
 
 		final String title = isHealthyCharge
-				? context.getString(R.string.notification_charge_started_title_healthy)
-				: context.getString(R.string.notification_charge_started_title_regular);
+		                     ? context.getString(R.string.notification_charge_started_title_healthy)
+		                     : context.getString(R.string.notification_charge_started_title_regular);
 
 		final String content = context.getString(R.string.notification_charge_started_content, chargeSource);
 		final String ticker = title.concat(", ").concat(content);
 
 		final int iconRes = isHealthyCharge
-				? R.drawable.ic_stat_device_battery_charging_20
-				: R.drawable.ic_stat_device_battery_charging_50;
+		                    ? R.drawable.ic_stat_device_battery_charging_20
+		                    : R.drawable.ic_stat_device_battery_charging_50;
 
 		final Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID_FULL)
 				.setSmallIcon(iconRes)
@@ -194,7 +189,7 @@ public final class NotificationService {
 	 * Create a notification channel if it doesn't already exist
 	 */
 	private static void createChannelIfNotExists(final NotificationManager manager, final String channelId, final String name,
-	                                              final String description, final int ledColor) {
+	                                             final String description, final int ledColor) {
 		if (nonNull(manager.getNotificationChannel(channelId))) {
 			return;
 		}
@@ -226,13 +221,13 @@ public final class NotificationService {
 	 */
 	private static void configureNotificationContent(final Context context, final Notification.Builder builder, final NotificationConfig config) {
 		builder.setTicker(config.ticker)
-				.setContentTitle(config.title)
-				.setContentText(config.content)
-				.setWhen(System.currentTimeMillis())
-				.setLargeIcon(getLauncherIcon(context))
-				.setContentIntent(createMainActivityIntent(context))
-				.setVisibility(Notification.VISIBILITY_PUBLIC)
-				.setStyle(new Notification.BigTextStyle().bigText(config.bigContent));
+		       .setContentTitle(config.title)
+		       .setContentText(config.content)
+		       .setWhen(System.currentTimeMillis())
+		       .setLargeIcon(getLauncherIcon(context))
+		       .setContentIntent(createMainActivityIntent(context))
+		       .setVisibility(Notification.VISIBILITY_PUBLIC)
+		       .setStyle(new Notification.BigTextStyle().bigText(config.bigContent));
 	}
 
 	/**
@@ -262,11 +257,15 @@ public final class NotificationService {
 	 * Play notification sound if conditions are met
 	 */
 	private static void playSoundIfNeeded(final Context context, final NotificationConfig config) {
-		if (!config.withinTime) return;
+		if (!config.withinTime) {
+			return;
+		}
 
 		final Uri soundUri = Uri.parse(config.alarmSound);
 		final AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-		if (isNull(audioManager)) return;
+		if (isNull(audioManager)) {
+			return;
+		}
 
 		final boolean isNotNormalRingerMode = audioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL || isInDoNotDisturbMode(context);
 
@@ -409,8 +408,8 @@ public final class NotificationService {
 					this.alarmSound = prefs.getString(context.getString(R.string._pref_key_notifications_full_sound_ringtone), defaultSound);
 					this.ticker = context.getString(R.string.notification_full_level_ticker);
 					this.title = isHealthyCharge
-							? context.getString(R.string.notification_full_level_title_healthy)
-							: context.getString(R.string.notification_full_level_title_regular);
+					             ? context.getString(R.string.notification_full_level_title_healthy)
+					             : context.getString(R.string.notification_full_level_title_regular);
 					this.content = context.getString(R.string.notification_full_level_content);
 					this.bigContent = context.getString(R.string.notification_full_level_content_big);
 					break;

@@ -1,20 +1,18 @@
 package com.almothafar.simplebatterynotifier.receiver;
 
-import static java.util.Objects.isNull;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
-
 import androidx.preference.PreferenceManager;
-
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
+
+import static java.util.Objects.isNull;
 
 /**
  * Broadcast receiver for monitoring battery level changes.
@@ -34,6 +32,16 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	private static volatile int prevLevel = 0;
 	private static volatile int prevType = 0;
 	private static volatile boolean fullNotificationCalled = false;
+
+	/**
+	 * Reset notification state when charger is disconnected
+	 */
+	public static void resetVariables() {
+		synchronized (LOCK) {
+			fullNotificationCalled = false;
+			prevType = 0;
+		}
+	}
 
 	@Override
 	public void onReceive(final Context context, final Intent intent) {
@@ -71,8 +79,12 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	/**
 	 * Handle battery notifications while discharging
 	 */
-	private void handleDischarging(final Context context, final int percentage, final int criticalLevel,
-	                                final int warningLevel, final boolean warningEnabled, final boolean alertEveryTick) {
+	private void handleDischarging(final Context context,
+	                               final int percentage,
+	                               final int criticalLevel,
+	                               final int warningLevel,
+	                               final boolean warningEnabled,
+	                               final boolean alertEveryTick) {
 		// Force critical notification for very low battery (red alert level)
 		if (percentage <= NotificationService.RED_ALERT_LEVEL) {
 			prevType = 0;
@@ -96,7 +108,7 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	 * Handle battery notifications while charging or full
 	 */
 	private void handleChargingOrFull(final Context context, final int percentage, final int warningLevel,
-	                                   final boolean isFull, final boolean fullNotifyEnabled) {
+	                                  final boolean isFull, final boolean fullNotifyEnabled) {
 		if (!fullNotificationCalled) {
 			if (isFull && fullNotifyEnabled) {
 				NotificationService.sendNotification(context, NotificationService.FULL_LEVEL_TYPE);
@@ -107,16 +119,6 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		// Reset full notification flag when battery drops below full threshold
 		if (percentage <= NotificationService.FULL_PERCENTAGE && percentage > warningLevel) {
 			fullNotificationCalled = false;
-		}
-	}
-
-	/**
-	 * Reset notification state when charger is disconnected
-	 */
-	public static void resetVariables() {
-		synchronized (LOCK) {
-			fullNotificationCalled = false;
-			prevType = 0;
 		}
 	}
 }

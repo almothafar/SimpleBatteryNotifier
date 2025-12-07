@@ -1,28 +1,24 @@
 package com.almothafar.simplebatterynotifier.ui;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.fragment.app.FragmentManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
-import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import androidx.preference.PreferenceManager;
+import android.view.Menu;
+import android.view.MenuItem;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.WindowCompat;
-import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.WindowManager;
-
+import androidx.fragment.app.FragmentManager;
+import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
-import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
-import com.almothafar.simplebatterynotifier.util.GeneralHelper;
+import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.ui.widgets.CircularProgressBar;
 
 import java.util.Timer;
@@ -30,149 +26,148 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final long UPDATER_DELAY = 300;
-    private static final long UPDATER_PERIOD = 3000;
-    // SETTINGS_RESULT constant removed - no longer needed with ActivityResultLauncher (doesn't use request codes)
-    int batteryPercentage;
-    String subTitle;
-    BatteryDO batteryDO;
+	private static final long UPDATER_DELAY = 300;
+	private static final long UPDATER_PERIOD = 3000;
+	// Use Handler(Looper) constructor - Handler() deprecated to prevent null Looper
+	final Handler handler = new Handler(Looper.getMainLooper());
+	// SETTINGS_RESULT constant removed - no longer needed with ActivityResultLauncher (doesn't use request codes)
+	int batteryPercentage;
+	String subTitle;
+	BatteryDO batteryDO;
+	TimerTask updateTask;
+	Timer timer = new Timer();
+	private ActivityResultLauncher<Intent> settingsLauncher;
 
-    TimerTask updateTask;
-    // Use Handler(Looper) constructor - Handler() deprecated to prevent null Looper
-    final Handler handler = new Handler(Looper.getMainLooper());
-    Timer timer = new Timer();
-    private ActivityResultLauncher<Intent> settingsLauncher;
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.menu_main, menu);
+		return true;
+	}
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		int id = item.getItemId();
+		if (id == R.id.action_settings) {
+			OpenSettings();
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
 
-        // Enable edge-to-edge display
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_main);
+		// Enable edge-to-edge display
+		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
-        // Set up the Toolbar
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+		setContentView(R.layout.activity_main);
 
-        // setStatusBarColor() and setNavigationBarColor() removed - deprecated in API 35
-        // Edge-to-edge is already enabled via WindowCompat.setDecorFitsSystemWindows()
-        // System bar colors should be set in themes (values/themes.xml) instead
+		// Set up the Toolbar
+		Toolbar toolbar = findViewById(R.id.toolbar);
+		setSupportActionBar(toolbar);
 
-        // Register activity result launcher for settings
-        // Replaces deprecated startActivityForResult() - modern approach doesn't require result handling
-        settingsLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    // When returning from settings, refresh the UI with updated preferences
-                    initialFirstValues();
-                }
-        );
+		// setStatusBarColor() and setNavigationBarColor() removed - deprecated in API 35
+		// Edge-to-edge is already enabled via WindowCompat.setDecorFitsSystemWindows()
+		// System bar colors should be set in themes (values/themes.xml) instead
 
-        // If not started will start it.
-        // TODO check if service is running before do this.
-        startService(new Intent(this, PowerConnectionService.class));
+		// Register activity result launcher for settings
+		// Replaces deprecated startActivityForResult() - modern approach doesn't require result handling
+		settingsLauncher = registerForActivityResult(
+				new ActivityResultContracts.StartActivityForResult(),
+				result -> {
+					// When returning from settings, refresh the UI with updated preferences
+					initialFirstValues();
+				}
+		);
+
+		// If not started will start it.
+		// TODO check if service is running before do this.
+		startService(new Intent(this, PowerConnectionService.class));
 
 
-    }
+	}
 
-    @Override
-    protected void onPostResume() {
-        super.onPostResume();
+	@Override
+	protected void onPostResume() {
+		super.onPostResume();
 
-        initialFirstValues();
+		initialFirstValues();
 
-        startUpdateTimer();
-    }
+		startUpdateTimer();
+	}
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        timer.cancel();
-    }
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		timer.cancel();
+	}
 
-    private void startUpdateTimer() {
-        updateTask = new TimerTask() {
-            public void run() {
-                handler.post(() -> {
-                    final CircularProgressBar c2 = findViewById(R.id.batteryPercentage);
-                    fillBatteryInfo();
-                    c2.setProgress(batteryPercentage);
-                    c2.setTitle(batteryPercentage + "%");
-                    c2.setSubTitle(subTitle);
+	protected void fillBatteryInfo() {
+		batteryDO = SystemService.getBatteryInfo(this);
 
-                    FragmentManager fragmentManager = getSupportFragmentManager();
-                    BatteryDetailsFragment batteryDetailsFragment = (BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
-                    batteryDetailsFragment.updateBatteryDetails(batteryDO);
-                });
-            }
-        };
-        timer.schedule(updateTask, UPDATER_DELAY, UPDATER_PERIOD);  // here is t.schedule( , delay, period);
-    }
+		boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
+		boolean isFull = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_FULL;
 
-    private void initialFirstValues() {
-        fillBatteryInfo();
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+		batteryPercentage = (int) batteryDO.getBatteryPercentage();
 
-        final CircularProgressBar c2 = (CircularProgressBar) findViewById(R.id.batteryPercentage);
-        c2.setWarningLevel(sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
-        c2.setCriticalLevel(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20));
-        c2.animateProgressTo(0, batteryPercentage, new CircularProgressBar.ProgressAnimationListener() {
+		if (isCharging) {
+			subTitle = getResources().getString(R.string.charging);
+		} else {
+			subTitle = getResources().getString(R.string.discharging);
+		}
+		if (isFull) {
+			subTitle = getResources().getString(R.string.charged);
+		}
+	}
 
-            @Override
-            public void onAnimationStart() {
-            }
+	private void startUpdateTimer() {
+		updateTask = new TimerTask() {
+			public void run() {
+				handler.post(() -> {
+					final CircularProgressBar c2 = findViewById(R.id.batteryPercentage);
+					fillBatteryInfo();
+					c2.setProgress(batteryPercentage);
+					c2.setTitle(batteryPercentage + "%");
+					c2.setSubTitle(subTitle);
 
-            @Override
-            public void onAnimationProgress(int progress) {
-                c2.setTitle(progress + "%");
-                c2.setSubTitle(subTitle);
-            }
+					FragmentManager fragmentManager = getSupportFragmentManager();
+					BatteryDetailsFragment batteryDetailsFragment = (BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
+					batteryDetailsFragment.updateBatteryDetails(batteryDO);
+				});
+			}
+		};
+		timer.schedule(updateTask, UPDATER_DELAY, UPDATER_PERIOD);  // here is t.schedule( , delay, period);
+	}
 
-            @Override
-            public void onAnimationFinish() {
-            }
-        });
-    }
+	private void initialFirstValues() {
+		fillBatteryInfo();
+		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 
-    protected void fillBatteryInfo() {
-        batteryDO = SystemService.getBatteryInfo(this);
+		final CircularProgressBar c2 = findViewById(R.id.batteryPercentage);
+		c2.setWarningLevel(sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
+		c2.setCriticalLevel(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20));
+		c2.animateProgressTo(0, batteryPercentage, new CircularProgressBar.ProgressAnimationListener() {
 
-        boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
-        boolean isFull = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_FULL;
+			@Override
+			public void onAnimationStart() {
+			}
 
-        batteryPercentage = (int) batteryDO.getBatteryPercentage();
+			@Override
+			public void onAnimationFinish() {
+			}
 
-        if (isCharging) {
-            subTitle = getResources().getString(R.string.charging);
-        } else {
-            subTitle = getResources().getString(R.string.discharging);
-        }
-        if (isFull) {
-            subTitle = getResources().getString(R.string.charged);
-        }
-    }
+			@Override
+			public void onAnimationProgress(int progress) {
+				c2.setTitle(progress + "%");
+				c2.setSubTitle(subTitle);
+			}
+		});
+	}
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            OpenSettings();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    private void OpenSettings() {
-        Intent i = new Intent(this, SettingsActivity.class);
-        // Use modern ActivityResultLauncher instead of deprecated startActivityForResult()
-        settingsLauncher.launch(i);
-    }
+	private void OpenSettings() {
+		Intent i = new Intent(this, SettingsActivity.class);
+		// Use modern ActivityResultLauncher instead of deprecated startActivityForResult()
+		settingsLauncher.launch(i);
+	}
 }

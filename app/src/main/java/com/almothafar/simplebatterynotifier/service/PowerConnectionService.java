@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
 import android.os.IBinder;
-import android.util.Log;
 import com.almothafar.simplebatterynotifier.receiver.BatteryLevelReceiver;
 import com.almothafar.simplebatterynotifier.receiver.PowerConnectionReceiver;
 
@@ -32,14 +31,14 @@ public class PowerConnectionService extends Service {
 	}
 
 	@Override
-	public int onStartCommand(final Intent intent, final int flags, final int startId) {
-		return START_STICKY;
-	}
-
-	@Override
 	public void onDestroy() {
 		super.onDestroy();
 		unregisterReceivers();
+	}
+
+	@Override
+	public int onStartCommand(final Intent intent, final int flags, final int startId) {
+		return START_STICKY;
 	}
 
 	/**

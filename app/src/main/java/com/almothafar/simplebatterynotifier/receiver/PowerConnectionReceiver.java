@@ -114,13 +114,6 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	/**
 	 * Simple data class to hold charger information
 	 */
-	private static class ChargerInfo {
-		final String connectedMessage;
-		final String source;
-
-		ChargerInfo(final String connectedMessage, final String source) {
-			this.connectedMessage = connectedMessage;
-			this.source = source;
-		}
+		private record ChargerInfo(String connectedMessage, String source) {
 	}
 }
