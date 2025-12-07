@@ -79,7 +79,6 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
         if (preference instanceof TimePickerPreference) {
             DialogFragment dialogFragment = TimePickerPreferenceDialogFragmentCompat
                     .newInstance(preference.getKey());
-            dialogFragment.setTargetFragment(this, 0);
             dialogFragment.show(getParentFragmentManager(),
                     "androidx.preference.PreferenceFragment.DIALOG");
         } else {

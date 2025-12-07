@@ -1,5 +1,7 @@
 package com.almothafar.simplebatterynotifier.ui;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.fragment.app.FragmentManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -29,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final long UPDATER_DELAY = 300;
     private static final long UPDATER_PERIOD = 3000;
-    private static final int SETTINGS_RESULT = 1;
+    // SETTINGS_RESULT constant removed - no longer needed with ActivityResultLauncher (doesn't use request codes)
     int batteryPercentage;
     String subTitle;
     BatteryDO batteryDO;
@@ -37,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     TimerTask updateTask;
     final Handler handler = new Handler();
     Timer timer = new Timer();
+    private ActivityResultLauncher<Intent> settingsLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +59,16 @@ public class MainActivity extends AppCompatActivity {
 
         // Set navigation bar color to semi-transparent for better visibility
         getWindow().setNavigationBarColor(0x80000000); // 50% transparent black
+
+        // Register activity result launcher for settings
+        // Replaces deprecated startActivityForResult() - modern approach doesn't require result handling
+        settingsLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    // When returning from settings, refresh the UI with updated preferences
+                    initialFirstValues();
+                }
+        );
 
         // If not started will start it.
         // TODO check if service is running before do this.
@@ -159,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void OpenSettings() {
         Intent i = new Intent(this, SettingsActivity.class);
-        startActivityForResult(i, SETTINGS_RESULT);
+        // Use modern ActivityResultLauncher instead of deprecated startActivityForResult()
+        settingsLauncher.launch(i);
     }
 }
