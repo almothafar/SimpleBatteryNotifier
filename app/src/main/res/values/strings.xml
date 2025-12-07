@@ -82,12 +82,12 @@
 
     <string name="notification_critical_ticker">Your battery in critical level and below %1$d%%</string>
     <string name="notification_critical_title">Healthy charge time</string>
-    <string name="notification_critical_content">Battery almost run out of power</string>
+    <string name="notification_critical_content">Battery almost run out of power (%1$d%%)</string>
     <string name="notification_critical_content_big">Your battery level is below critical level (%1$d%%), its time to connect your charger</string>
     <string name="notification_warning_ticker">Your battery in midway and below %1$d%%</string>
     <string name="notification_warning_title">Watch your usage</string>
-    <string name="notification_warning_content">You just need to watch your usage</string>
-    <string name="notification_warning_content_big">You just need to watch your usage for your smartphone, but still no need for charger now</string>
+    <string name="notification_warning_content">You just need to watch your usage (%1$d%%)</string>
+    <string name="notification_warning_content_big">Battery level is at %1$d%%. You just need to watch your usage for your smartphone, but still no need for charger now</string>
     <string name="notification_full_level_ticker">Your battery fully charged, you can disconnect your charger</string>
     <string name="notification_full_level_title_healthy">Healthy charge completed</string>
     <string name="notification_full_level_title_regular">Regular charge completed</string>

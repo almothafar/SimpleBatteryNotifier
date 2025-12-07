@@ -82,12 +82,12 @@
 
     <string name="notification_critical_ticker">مستوى حرج للبطارية أقل من  %1$d%%</string>
     <string name="notification_critical_title">وقت الشحن الصحي</string>
-    <string name="notification_critical_content">البطارية على وشك النفاذ</string>
+    <string name="notification_critical_content">البطارية على وشك النفاذ (%1$d%%)</string>
     <string name="notification_critical_content_big">البطارية في مستوى حرج وأقل من (%1$d%%) حان الوقت لشحن الهاتف</string>
     <string name="notification_warning_ticker">البطارية في منتصف الطريق اقل من %1$d%%</string>
     <string name="notification_warning_title">اقتصد في الاستخدام</string>
-    <string name="notification_warning_content">تحتاج فقط للانتباه للبطارية</string>
-    <string name="notification_warning_content_big">لا تحتاج للشاحن بعد, لكن انتبه لاستهلاك البطارية</string>
+    <string name="notification_warning_content">تحتاج فقط للانتباه للبطارية (%1$d%%)</string>
+    <string name="notification_warning_content_big">مستوى البطارية %1$d%%. لا تحتاج للشاحن بعد, لكن انتبه لاستهلاك البطارية</string>
     <string name="notification_full_level_ticker">البطارية تم شحنها بالكامل, بامكانك فصل الشاحن</string>
     <string name="notification_full_level_title_healthy">الشحن الصحي اكتمل</string>
     <string name="notification_full_level_title_regular">الشحن الاعتيادي اكتمل</string>

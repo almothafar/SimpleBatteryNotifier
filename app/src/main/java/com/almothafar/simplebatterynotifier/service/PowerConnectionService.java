@@ -37,7 +37,7 @@ public class PowerConnectionService extends Service {
         final Intent mIntent = getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         int plugged = mIntent != null ? mIntent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) : -1;
         powerConnectionReceiver = new PowerConnectionReceiver();
-        // First call must pass the current value, so avoid unnecessary triggers, its handled inside onRecieve() method.
+        // The first call must pass the current value, so avoid unnecessary triggers, its handled inside onRecieve() method.
         PowerConnectionReceiver.setCurrentStat(plugged);
         batteryLevelReceiver = new BatteryLevelReceiver();
         IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);

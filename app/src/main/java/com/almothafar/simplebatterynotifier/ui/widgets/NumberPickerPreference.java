@@ -2,49 +2,45 @@ package com.almothafar.simplebatterynotifier.ui.widgets;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.preference.DialogPreference;
 import android.util.AttributeSet;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.NumberPicker;
+
+import androidx.preference.DialogPreference;
 
 /**
+ * Custom NumberPickerPreference for AndroidX
  * Created by Al-Mothafar on 25/08/2015.
+ * Migrated to AndroidX preferences
  */
 public class NumberPickerPreference extends DialogPreference {
 
-    /*public NumberPickerPreference(Context context, AttributeSet attrs) {
-        super(context, attrs);
-
-        setDialogLayoutResource(R.layout.numberpicker_dialog);
-        setPositiveButtonText(android.R.string.ok);
-        setNegativeButtonText(android.R.string.cancel);
-
-        setDialogIcon(null);
-    }*/
-
-
-    private NumberPicker picker;
     private int value;
 
-    private String prefix;
-    private String postfix;
-    private int minValue;
-    private int maxValue;
+    private String prefix = "";
+    private String postfix = "";
+    private int minValue = 0;
+    private int maxValue = 100;
+
+    public NumberPickerPreference(Context context) {
+        this(context, null);
+    }
 
     public NumberPickerPreference(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        initialAttributes(attrs);
+        this(context, attrs, androidx.preference.R.attr.dialogPreferenceStyle);
     }
 
     public NumberPickerPreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+
+        setPositiveButtonText(android.R.string.ok);
+        setNegativeButtonText(android.R.string.cancel);
+        setDialogIcon(null);
+
         initialAttributes(attrs);
     }
 
     private void initialAttributes(AttributeSet attrs) {
+        if (attrs == null) return;
+
         for (int i = 0; i < attrs.getAttributeCount(); i++) {
             String attr = attrs.getAttributeName(i);
             String val = attrs.getAttributeValue(i);
@@ -61,61 +57,34 @@ public class NumberPickerPreference extends DialogPreference {
     }
 
     @Override
-    protected View onCreateDialogView() {
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        layoutParams.gravity = Gravity.CENTER;
-
-        picker = new NumberPicker(getContext());
-        picker.setLayoutParams(layoutParams);
-
-        FrameLayout dialogView = new FrameLayout(getContext());
-        dialogView.addView(picker);
-
-        return dialogView;
-    }
-
-    @Override
-    protected void onBindDialogView(View view) {
-        super.onBindDialogView(view);
-        // FIXME this should be parametter !
-        picker.setMinValue(minValue);
-        picker.setMaxValue(maxValue);
-        picker.setValue(getValue());
-        picker.setWrapSelectorWheel(false);
-    }
-
-    @Override
-    protected void onDialogClosed(boolean positiveResult) {
-        if (positiveResult) {
-            int newValue = picker.getValue();
-            if (callChangeListener(newValue)) {
-                setValue(newValue);
-            }
-        }
-    }
-
-    @Override
     protected Object onGetDefaultValue(TypedArray a, int index) {
         return a.getInt(index, minValue);
     }
 
     @Override
-    protected void onSetInitialValue(boolean restorePersistedValue, Object defaultValue) {
-        setValue(restorePersistedValue ? getPersistedInt(minValue) : (Integer) defaultValue);
+    protected void onSetInitialValue(Object defaultValue) {
+        setValue(getPersistedInt(defaultValue != null ? (Integer) defaultValue : minValue));
     }
 
     public void setValue(int value) {
         this.value = value;
         persistInt(this.value);
+        updateSummary();
     }
 
     public int getValue() {
         return this.value;
     }
 
-    @Override
-    public void setSummary(int value) {
+    public int getMinValue() {
+        return minValue;
+    }
+
+    public int getMaxValue() {
+        return maxValue;
+    }
+
+    private void updateSummary() {
         setSummary(prefix + value + postfix);
     }
 }

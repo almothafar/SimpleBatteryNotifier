@@ -4,12 +4,15 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.util.Log;
 
 import com.almothafar.simplebatterynotifier.R;
@@ -94,11 +97,6 @@ public class SystemService {
         return batteryDO;
     }
 
-    /**
-     *
-     * @param context
-     * @return
-     */
     public static synchronized int getBatteryCapacity(Context context) {
         // Power profile class instance
         Object mPowerProfile_ = null;
@@ -128,25 +126,28 @@ public class SystemService {
         return batteryCapacity;
     }
 
-    /**
-     *
-     * @param context
-     */
     public static void vibratePhone(Context context) {
-        Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        // Get Vibrator using modern API for S+ or legacy for older versions
+        final Vibrator vibrator;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            VibratorManager vibratorManager = (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            vibrator = vibratorManager.getDefaultVibrator();
+        } else {
+            // VIBRATOR_SERVICE deprecated in API 31, but required for API 26-30 (minSdk is 26)
+	        @SuppressWarnings("deprecation") // Required for backward compatibility with API < 31 (VIBRATOR_SERVICE) and API < 26 (vibrate)
+	        final Vibrator systemService = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+	        vibrator = systemService;
+        }
+
         if (vibrator.hasVibrator()) {
             long[] pattern = {0, 500, 250, 500, 250};
-            vibrator.vibrate(pattern, -1);
+            // Use VibrationEffect for O+ or legacy vibrate for older versions
+	        vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1));
         } else {
             Log.w(TAG, "Device can not vibrate");
         }
     }
 
-    /**
-     *
-     * @param context
-     * @param alert
-     */
     public static void playSound(Context context, Uri alert) {
         MediaPlayer mMediaPlayer = new MediaPlayer();
         try {
@@ -154,7 +155,12 @@ public class SystemService {
             final AudioManager audioManager = (AudioManager) context
                     .getSystemService(Context.AUDIO_SERVICE);
             if (audioManager.getStreamVolume(AudioManager.STREAM_ALARM) != 0) {
-                mMediaPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
+                // setAudioStreamType() deprecated - use AudioAttributes instead
+                AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build();
+                mMediaPlayer.setAudioAttributes(audioAttributes);
                 mMediaPlayer.prepare();
                 mMediaPlayer.start();
             }

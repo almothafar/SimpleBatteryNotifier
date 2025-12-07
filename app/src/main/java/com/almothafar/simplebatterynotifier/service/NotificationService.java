@@ -37,33 +37,70 @@ public class NotificationService {
 	public static final String ZEN_MODE = "zen_mode";
 	public static final int ZEN_MODE_IMPORTANT_INTERRUPTIONS = 1;
 	private static final String TAG = "com.almothafar";
-	private static final String CHANNEL_ID = "battery_notifications";
-	private static final String CHANNEL_NAME = "Battery Notifications";
+	// Separate channels for each notification type to support different LED colors
+	private static final String CHANNEL_ID_CRITICAL = "battery_critical";
+	private static final String CHANNEL_ID_WARNING = "battery_warning";
+	private static final String CHANNEL_ID_FULL = "battery_full";
 	private static final long[] VIBRATION_PATTERN = {0, 500, 250, 500, 250};
 	private static final int UNIQUE_ID = 1641987;
 	private static final int UNIQUE_ID_STICKY = 1648719;
 	private static boolean isHealthyCharge;
 
-	private static void createNotificationChannel(Context context) {
+	private static void createNotificationChannels(Context context) {
 		NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-		if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-			NotificationChannel channel = new NotificationChannel(
-					CHANNEL_ID,
-					CHANNEL_NAME,
+
+		// Create separate channels for each notification type with appropriate LED colors
+		// Critical channel - RED LED
+		if (manager.getNotificationChannel(CHANNEL_ID_CRITICAL) == null) {
+			NotificationChannel channelCritical = new NotificationChannel(
+					CHANNEL_ID_CRITICAL,
+					"Battery Critical Alerts",
 					NotificationManager.IMPORTANCE_HIGH
 			);
-			channel.setDescription("Battery level notifications");
-			channel.enableLights(true);
-			channel.enableVibration(true);
-			channel.setVibrationPattern(VIBRATION_PATTERN);
-			manager.createNotificationChannel(channel);
+			channelCritical.setDescription("Critical battery level alerts");
+			channelCritical.enableLights(true);
+			channelCritical.setLightColor(Color.RED);
+			channelCritical.enableVibration(true);
+			channelCritical.setVibrationPattern(VIBRATION_PATTERN);
+			manager.createNotificationChannel(channelCritical);
+		}
+
+		// Warning channel - ORANGE LED
+		if (manager.getNotificationChannel(CHANNEL_ID_WARNING) == null) {
+			NotificationChannel channelWarning = new NotificationChannel(
+					CHANNEL_ID_WARNING,
+					"Battery Warnings",
+					NotificationManager.IMPORTANCE_HIGH
+			);
+			channelWarning.setDescription("Battery warning notifications");
+			channelWarning.enableLights(true);
+			channelWarning.setLightColor(Color.rgb(0xff, 0x66, 0x00)); // Orange
+			channelWarning.enableVibration(true);
+			channelWarning.setVibrationPattern(VIBRATION_PATTERN);
+			manager.createNotificationChannel(channelWarning);
+		}
+
+		// Full charge channel - GREEN LED
+		if (manager.getNotificationChannel(CHANNEL_ID_FULL) == null) {
+			NotificationChannel channelFull = new NotificationChannel(
+					CHANNEL_ID_FULL,
+					"Battery Full",
+					NotificationManager.IMPORTANCE_HIGH
+			);
+			channelFull.setDescription("Battery fully charged notifications");
+			channelFull.enableLights(true);
+			channelFull.setLightColor(Color.GREEN);
+			channelFull.enableVibration(true);
+			channelFull.setVibrationPattern(VIBRATION_PATTERN);
+			manager.createNotificationChannel(channelFull);
 		}
 	}
 
 	public static void sendNotification(Context context, int type) {
-		createNotificationChannel(context);
+		createNotificationChannels(context);
 
 		Notification.Builder notification;
+		String channelId;
 		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
 		boolean vibrationEnabled = sharedPref.getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
 		boolean stickyNotification = sharedPref.getBoolean(context.getString(R.string._pref_key_notifications_sticky), false);
@@ -86,14 +123,12 @@ public class NotificationService {
 
 		String alarmSound = "content://settings/system/notification_sound"; // initial with default value
 
-		// Create notification builder with channel support for Android O+
-		notification = new Notification.Builder(context, CHANNEL_ID);
-
+		// Select appropriate channel based on notification type
 		switch (type) {
 			case CRITICAL_TYPE:
+				channelId = CHANNEL_ID_CRITICAL;
 				alarmSound = sharedPref.getString(context.getString(R.string._pref_key_notifications_alert_sound_ringtone), alarmSound);
-				notification
-						.setLights(Color.RED, 1000, 1000)
+				notification = new Notification.Builder(context, channelId)
 						.setSmallIcon(R.drawable.ic_stat_device_battery_charging_20);
 				ticker = context.getString(R.string.notification_critical_ticker, criticalLevel);
 				title = context.getString(R.string.notification_critical_title);
@@ -101,9 +136,9 @@ public class NotificationService {
 				bigContent = context.getString(R.string.notification_critical_content_big, criticalLevel);
 				break;
 			case WARNING_TYPE:
+				channelId = CHANNEL_ID_WARNING;
 				alarmSound = sharedPref.getString(context.getString(R.string._pref_key_notifications_warning_sound_ringtone), alarmSound);
-				notification
-						.setLights(Color.rgb(0xff, 0x66, 0x00), 1000, 1000)
+				notification = new Notification.Builder(context, channelId)
 						.setSmallIcon(R.drawable.ic_stat_device_battery_charging_50)
 						.setOnlyAlertOnce(true);
 				ticker = context.getString(R.string.notification_warning_ticker, warningLevel);
@@ -112,9 +147,10 @@ public class NotificationService {
 				bigContent = context.getString(R.string.notification_warning_content_big, warningLevel);
 				break;
 			case FULL_LEVEL_TYPE:
+			default:
+				channelId = CHANNEL_ID_FULL;
 				alarmSound = sharedPref.getString(context.getString(R.string._pref_key_notifications_full_sound_ringtone), alarmSound);
-				notification
-						.setLights(Color.GREEN, 1000, 1000)
+				notification = new Notification.Builder(context, channelId)
 						.setSmallIcon(R.drawable.ic_stat_device_battery_charging_full)
 						.setOnlyAlertOnce(true);
 				ticker = context.getString(R.string.notification_full_level_ticker);
@@ -160,12 +196,6 @@ public class NotificationService {
 					}
 				}
 				playSoundThread = new Thread(new RunnableWithContextUri(context, uri));
-			} else {
-				// else just follow normal behaviour
-				notification.setSound(uri);
-				if (vibrationEnabled) {
-					notification.setVibrate(VIBRATION_PATTERN);
-				}
 			}
 		}
 		Bitmap bm = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
@@ -185,10 +215,9 @@ public class NotificationService {
 		notification.setContentIntent(pendingIntent);
 		notification.setVisibility(Notification.VISIBILITY_PUBLIC);
 
-		// Build notification with priority and style
-		notification
-				.setPriority(Notification.PRIORITY_HIGH)
-				.setStyle(new Notification.BigTextStyle().bigText(bigContent));
+		// setPriority() removed - deprecated, priority now handled by NotificationChannel importance
+		// Build notification with style
+		notification.setStyle(new Notification.BigTextStyle().bigText(bigContent));
 		Notification n = notification.build();
 
 		if (stickyNotification) {
@@ -203,10 +232,11 @@ public class NotificationService {
 	}
 
 	public static void sendChargeNotification(Context context, String chargeSource) {
-		createNotificationChannel(context);
+		createNotificationChannels(context);
 
 		Notification.Builder notification;
-		notification = new Notification.Builder(context, CHANNEL_ID);
+		// Use full charge channel for charge notifications
+		notification = new Notification.Builder(context, CHANNEL_ID_FULL);
 
 		String ticker, title, content;
 

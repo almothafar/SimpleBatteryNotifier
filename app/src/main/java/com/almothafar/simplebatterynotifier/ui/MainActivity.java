@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import androidx.preference.PreferenceManager;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -37,7 +38,8 @@ public class MainActivity extends AppCompatActivity {
     BatteryDO batteryDO;
 
     TimerTask updateTask;
-    final Handler handler = new Handler();
+    // Use Handler(Looper) constructor - Handler() deprecated to prevent null Looper
+    final Handler handler = new Handler(Looper.getMainLooper());
     Timer timer = new Timer();
     private ActivityResultLauncher<Intent> settingsLauncher;
 
@@ -54,11 +56,9 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        // Set status bar to transparent to show toolbar color behind it
-        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
-
-        // Set navigation bar color to semi-transparent for better visibility
-        getWindow().setNavigationBarColor(0x80000000); // 50% transparent black
+        // setStatusBarColor() and setNavigationBarColor() removed - deprecated in API 35
+        // Edge-to-edge is already enabled via WindowCompat.setDecorFitsSystemWindows()
+        // System bar colors should be set in themes (values/themes.xml) instead
 
         // Register activity result launcher for settings
         // Replaces deprecated startActivityForResult() - modern approach doesn't require result handling

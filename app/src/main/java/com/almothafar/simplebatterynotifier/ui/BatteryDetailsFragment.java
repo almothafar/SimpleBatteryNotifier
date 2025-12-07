@@ -59,7 +59,8 @@ public class BatteryDetailsFragment extends Fragment {
             row.setWeightSum(3);
 
             TextView textViewLabel = new TextView(view.getContext());
-            textViewLabel.setTextAppearance(view.getContext(), R.style.DefaultTextStyle);
+            // setTextAppearance(Context, int) deprecated - use setTextAppearance(int) instead
+            textViewLabel.setTextAppearance(R.style.DefaultTextStyle);
             textViewLabel.setText(key);
             textViewLabel.setGravity(Gravity.END);
             textViewLabel.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_label_color));
@@ -71,7 +72,8 @@ public class BatteryDetailsFragment extends Fragment {
             textViewSep.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_label_color));
 
             TextView textViewValue = new TextView(view.getContext());
-            textViewValue.setTextAppearance(view.getContext(), R.style.DefaultTextStyle);
+            // setTextAppearance(Context, int) deprecated - use setTextAppearance(int) instead
+            textViewValue.setTextAppearance(R.style.DefaultTextStyle);
             textViewValue.setText(valuesMap.get(key));
             textViewValue.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
             textViewValue.setGravity(Gravity.START);
