@@ -17,16 +17,27 @@ import static java.util.Objects.nonNull;
 
 /**
  * Modern Settings Activity using AndroidX Preferences
+ * Provides hierarchical settings navigation with preference fragments
  */
 public class SettingsActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
 	private static final String TITLE_TAG = "settingsActivityTitle";
 
+	/**
+	 * Save the activity state including the current title
+	 *
+	 * @param outState Bundle to save state into
+	 */
 	@Override
-	public void onSaveInstanceState(@NonNull Bundle outState) {
+	public void onSaveInstanceState(@NonNull final Bundle outState) {
 		super.onSaveInstanceState(outState);
 		outState.putCharSequence(TITLE_TAG, getTitle());
 	}
 
+	/**
+	 * Handle support navigation up action
+	 *
+	 * @return True if navigation was handled
+	 */
 	@Override
 	public boolean onSupportNavigateUp() {
 		if (getSupportFragmentManager().popBackStackImmediate()) {
@@ -35,8 +46,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		return super.onSupportNavigateUp();
 	}
 
+	/**
+	 * Handle options menu item selection
+	 *
+	 * @param item The selected menu item
+	 * @return True if item was handled
+	 */
 	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
+	public boolean onOptionsItemSelected(final MenuItem item) {
 		if (item.getItemId() == android.R.id.home) {
 			getOnBackPressedDispatcher().onBackPressed();
 			return true;
@@ -44,8 +61,15 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		return super.onOptionsItemSelected(item);
 	}
 
+	/**
+	 * Handle preference fragment navigation
+	 *
+	 * @param caller The calling preference fragment
+	 * @param pref   The preference that was clicked
+	 * @return True if fragment navigation was handled
+	 */
 	@Override
-	public boolean onPreferenceStartFragment(@NonNull PreferenceFragmentCompat caller, Preference pref) {
+	public boolean onPreferenceStartFragment(@NonNull final PreferenceFragmentCompat caller, final Preference pref) {
 		// Instantiate the new Fragment
 		final Bundle args = pref.getExtras();
 		final Fragment fragment = getSupportFragmentManager().getFragmentFactory()
@@ -62,8 +86,13 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		return true;
 	}
 
+	/**
+	 * Initialize the settings activity
+	 *
+	 * @param savedInstanceState Saved state bundle
+	 */
 	@Override
-	protected void onCreate(Bundle savedInstanceState) {
+	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		// Enable edge-to-edge display
@@ -72,7 +101,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		setContentView(R.layout.activity_settings);
 
 		// Set up the toolbar
-		Toolbar toolbar = findViewById(R.id.toolbar);
+		final Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
 		final ActionBar supportActionBar = getSupportActionBar();
 		if (nonNull(supportActionBar)) {
@@ -105,8 +134,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 	 * Root settings fragment showing preference categories
 	 */
 	public static class HeaderFragment extends PreferenceFragmentCompat {
+		/**
+		 * Create the preference hierarchy from XML
+		 *
+		 * @param savedInstanceState Saved state bundle
+		 * @param rootKey            The root key for preferences
+		 */
 		@Override
-		public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+		public void onCreatePreferences(final Bundle savedInstanceState, final String rootKey) {
 			setPreferencesFromResource(R.xml.pref_headers_root, rootKey);
 		}
 	}

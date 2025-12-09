@@ -5,80 +5,91 @@ import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import androidx.preference.DialogPreference;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 /**
- * Custom TimePickerPreference for AndroidX
+ * Custom TimePickerPreference for AndroidX preferences
  */
 public class TimePickerPreference extends DialogPreference {
-	private int mHour = 0;
-	private int mMinute = 0;
+	private int hour = 0;
+	private int minute = 0;
 
-	public TimePickerPreference(Context context) {
+	public TimePickerPreference(final Context context) {
 		this(context, null);
 	}
 
-	public TimePickerPreference(Context context, AttributeSet attrs) {
+	public TimePickerPreference(final Context context, final AttributeSet attrs) {
 		this(context, attrs, androidx.preference.R.attr.dialogPreferenceStyle);
 	}
 
-	public TimePickerPreference(Context context, AttributeSet attrs, int defStyleAttr) {
+	public TimePickerPreference(final Context context, final AttributeSet attrs, final int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
 
 		setPositiveButtonText(android.R.string.ok);
 		setNegativeButtonText(android.R.string.cancel);
-
-		// Set dialog icon if needed
 		setDialogIcon(null);
 	}
 
+	/**
+	 * Get the current time as a formatted string
+	 *
+	 * @return Time in "HH:MM" format
+	 */
 	public String getTime() {
-		return String.format("%02d:%02d", mHour, mMinute);
+		return String.format("%02d:%02d", hour, minute);
 	}
 
+	/**
+	 * Set the time from a formatted string
+	 *
+	 * @param time Time string in "HH:MM" format
+	 */
 	public void setTime(String time) {
-		if (time == null || time.isEmpty()) {
+		if (isNull(time) || time.isEmpty()) {
 			time = "00:00";
 		}
 
-		String[] parts = time.split(":");
+		final String[] parts = time.split(":");
 		if (parts.length == 2) {
 			try {
-				mHour = Integer.parseInt(parts[0]);
-				mMinute = Integer.parseInt(parts[1]);
+				hour = Integer.parseInt(parts[0]);
+				minute = Integer.parseInt(parts[1]);
 			} catch (NumberFormatException e) {
-				mHour = 0;
-				mMinute = 0;
+				hour = 0;
+				minute = 0;
 			}
 		}
 
-		String timeStr = String.format("%02d:%02d", mHour, mMinute);
+		final String timeStr = String.format("%02d:%02d", hour, minute);
 		persistString(timeStr);
 		setSummary(timeStr);
 	}
 
 	public int getHour() {
-		return mHour;
+		return hour;
 	}
 
-	public void setHour(int hour) {
-		mHour = hour;
+	public void setHour(final int hour) {
+		this.hour = hour;
 	}
 
 	public int getMinute() {
-		return mMinute;
+		return minute;
 	}
 
-	public void setMinute(int minute) {
-		mMinute = minute;
+	public void setMinute(final int minute) {
+		this.minute = minute;
 	}
 
 	@Override
-	protected Object onGetDefaultValue(TypedArray a, int index) {
+	protected Object onGetDefaultValue(final TypedArray a, final int index) {
 		return a.getString(index);
 	}
 
 	@Override
-	protected void onSetInitialValue(Object defaultValue) {
-		String time = getPersistedString(defaultValue != null ? defaultValue.toString() : "00:00");
+	protected void onSetInitialValue(final Object defaultValue) {
+		final String time = getPersistedString(nonNull(defaultValue) ? defaultValue.toString() : "00:00");
 		setTime(time);
 	}
 }

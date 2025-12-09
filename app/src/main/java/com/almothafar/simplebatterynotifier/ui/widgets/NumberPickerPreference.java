@@ -5,10 +5,11 @@ import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import androidx.preference.DialogPreference;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 /**
- * Custom NumberPickerPreference for AndroidX
- * Created by Al-Mothafar on 25/08/2015.
- * Migrated to AndroidX preferences
+ * Custom NumberPickerPreference for AndroidX preferences
  */
 public class NumberPickerPreference extends DialogPreference {
 
@@ -19,29 +20,29 @@ public class NumberPickerPreference extends DialogPreference {
 	private int minValue = 0;
 	private int maxValue = 100;
 
-	public NumberPickerPreference(Context context) {
+	public NumberPickerPreference(final Context context) {
 		this(context, null);
 	}
 
-	public NumberPickerPreference(Context context, AttributeSet attrs) {
+	public NumberPickerPreference(final Context context, final AttributeSet attrs) {
 		this(context, attrs, androidx.preference.R.attr.dialogPreferenceStyle);
 	}
 
-	public NumberPickerPreference(Context context, AttributeSet attrs, int defStyleAttr) {
+	public NumberPickerPreference(final Context context, final AttributeSet attrs, final int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
 
 		setPositiveButtonText(android.R.string.ok);
 		setNegativeButtonText(android.R.string.cancel);
 		setDialogIcon(null);
 
-		initialAttributes(attrs);
+		initializeAttributes(attrs);
 	}
 
 	public int getValue() {
 		return this.value;
 	}
 
-	public void setValue(int value) {
+	public void setValue(final int value) {
 		this.value = value;
 		persistInt(this.value);
 		updateSummary();
@@ -56,23 +57,28 @@ public class NumberPickerPreference extends DialogPreference {
 	}
 
 	@Override
-	protected Object onGetDefaultValue(TypedArray a, int index) {
+	protected Object onGetDefaultValue(final TypedArray a, final int index) {
 		return a.getInt(index, minValue);
 	}
 
 	@Override
-	protected void onSetInitialValue(Object defaultValue) {
-		setValue(getPersistedInt(defaultValue != null ? (Integer) defaultValue : minValue));
+	protected void onSetInitialValue(final Object defaultValue) {
+		setValue(getPersistedInt(nonNull(defaultValue) ? (Integer) defaultValue : minValue));
 	}
 
-	private void initialAttributes(AttributeSet attrs) {
-		if (attrs == null) {
+	/**
+	 * Initialize custom attributes from XML
+	 *
+	 * @param attrs AttributeSet from XML
+	 */
+	private void initializeAttributes(final AttributeSet attrs) {
+		if (isNull(attrs)) {
 			return;
 		}
 
 		for (int i = 0; i < attrs.getAttributeCount(); i++) {
-			String attr = attrs.getAttributeName(i);
-			String val = attrs.getAttributeValue(i);
+			final String attr = attrs.getAttributeName(i);
+			final String val = attrs.getAttributeValue(i);
 			if (attr.equalsIgnoreCase("minRangeValue")) {
 				this.minValue = Integer.parseInt(val);
 			} else if (attr.equalsIgnoreCase("maxRangeValue")) {
@@ -85,6 +91,9 @@ public class NumberPickerPreference extends DialogPreference {
 		}
 	}
 
+	/**
+	 * Update the preference summary with current value
+	 */
 	private void updateSummary() {
 		setSummary(prefix + value + postfix);
 	}

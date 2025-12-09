@@ -24,6 +24,7 @@ import com.almothafar.simplebatterynotifier.R;
 
 import java.util.Set;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 /**
@@ -36,7 +37,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	private ActivityResultLauncher<Intent> ringtonePickerLauncher;
 
 	@Override
-	public void onCreate(Bundle savedInstanceState) {
+	public void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		// Register the activity result launcher for the ringtone picker
@@ -53,7 +54,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 							} else {
 								// Suppress deprecation warning - this is required for API < 33 compatibility (minSdk is 26)
 								@SuppressWarnings("deprecation")
-								Uri fallbackUri = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
+								final Uri fallbackUri = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
 								uri = fallbackUri;
 							}
 							final String uriString = nonNull(uri) ? uri.toString() : "";
@@ -66,12 +67,12 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	}
 
 	@Override
-	public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+	public void onCreatePreferences(final Bundle savedInstanceState, final String rootKey) {
 		// Get category from arguments
-		Bundle args = getArguments();
-		if (args != null) {
-			String category = args.getString("category");
-			if (category != null) {
+		final Bundle args = getArguments();
+		if (nonNull(args)) {
+			final String category = args.getString("category");
+			if (nonNull(category)) {
 				if (category.equals(getString(R.string.pref_category_general))) {
 					setPreferencesFromResource(R.xml.pref_general, rootKey);
 				} else if (category.equals(getString(R.string.pref_category_notifications))) {
@@ -84,10 +85,10 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	}
 
 	@Override
-	public void onDisplayPreferenceDialog(@NonNull Preference preference) {
+	public void onDisplayPreferenceDialog(@NonNull final Preference preference) {
 		// Handle TimePickerPreference dialog
 		if (preference instanceof TimePickerPreference) {
-			DialogFragment dialogFragment = TimePickerPreferenceDialogFragmentCompat
+			final DialogFragment dialogFragment = TimePickerPreferenceDialogFragmentCompat
 					.newInstance(preference.getKey());
 			dialogFragment.show(getParentFragmentManager(),
 			                    "androidx.preference.PreferenceFragment.DIALOG");
@@ -100,7 +101,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	public void onResume() {
 		super.onResume();
 		// Register preference change listener
-		PreferenceScreen preferenceScreen = getPreferenceScreen();
+		final PreferenceScreen preferenceScreen = getPreferenceScreen();
 		if (nonNull(preferenceScreen)) {
 			final SharedPreferences sharedPreferences = preferenceScreen.getSharedPreferences();
 			if (nonNull(sharedPreferences)) {
@@ -114,7 +115,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	public void onPause() {
 		super.onPause();
 		// Unregister preference change listener
-		PreferenceScreen preferenceScreen = getPreferenceScreen();
+		final PreferenceScreen preferenceScreen = getPreferenceScreen();
 		if (nonNull(preferenceScreen)) {
 			final SharedPreferences sharedPreferences = preferenceScreen.getSharedPreferences();
 			if (nonNull(sharedPreferences)) {
@@ -124,41 +125,41 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	}
 
 	@Override
-	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+	public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
 		// Update summary when preference changes
-		Preference pref = findPreference(key);
+		final Preference pref = findPreference(key);
 		updatePreferencesSummary(sharedPreferences, pref);
 	}
 
 	/**
 	 * Update a preference summary based on its type and value
 	 */
-	protected void updatePreferencesSummary(SharedPreferences sharedPreferences, Preference pref) {
+	protected void updatePreferencesSummary(final SharedPreferences sharedPreferences, final Preference pref) {
 		switch (pref) {
 			case null -> {
 			}
 			case ListPreference listPref -> listPref.setSummary(listPref.getEntry());
 			case EditTextPreference editTextPref -> {
 				// Only set summary if no SummaryProvider is already set
-				if (editTextPref.getSummaryProvider() == null) {
+				if (isNull(editTextPref.getSummaryProvider())) {
 					editTextPref.setSummary(editTextPref.getText());
 				}
 			}
 			case SeekBarPreference seekBarPref -> {
 				// Add percentage suffix for battery level preferences
-				String key = pref.getKey();
+				final String key = pref.getKey();
 				if (nonNull(key) && (key.equals(getString(R.string._pref_key_warn_battery_level)) || key.equals(getString(R.string._pref_key_critical_battery_level)))) {
 					seekBarPref.setSummary(seekBarPref.getValue() + "%");
 				}
 			}
 			case MultiSelectListPreference mlistPref -> {
-				StringBuilder summaryBuilder = new StringBuilder();
-				Set<String> values = mlistPref.getValues();
+				final StringBuilder summaryBuilder = new StringBuilder();
+				final Set<String> values = mlistPref.getValues();
 
 				int count = 0;
-				for (String value : values) {
-					int index = mlistPref.findIndexOfValue(value);
-					if (index >= 0 && mlistPref.getEntries() != null) {
+				for (final String value : values) {
+					final int index = mlistPref.findIndexOfValue(value);
+					if (index >= 0 && nonNull(mlistPref.getEntries())) {
 						if (count > 0) {
 							summaryBuilder.append("; ");
 						}
@@ -170,16 +171,16 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 			}
 			default -> {
 				// Handle custom preferences by class name (they use old android.preference classes)
-				String className = pref.getClass().getSimpleName();
+				final String className = pref.getClass().getSimpleName();
 
 				switch (className) {
 					case "RingtonePreference" -> {
 						// Handle ringtone preference
-						String uri = sharedPreferences.getString(pref.getKey(), null);
-						if (uri != null && !uri.isEmpty()) {
+						final String uri = sharedPreferences.getString(pref.getKey(), null);
+						if (nonNull(uri) && !uri.isEmpty()) {
 							try {
-								Ringtone ringtone = RingtoneManager.getRingtone(pref.getContext(), Uri.parse(uri));
-								if (ringtone != null) {
+								final Ringtone ringtone = RingtoneManager.getRingtone(pref.getContext(), Uri.parse(uri));
+								if (nonNull(ringtone)) {
 									pref.setSummary(ringtone.getTitle(pref.getContext()));
 								}
 							} catch (Exception e) {
@@ -190,30 +191,28 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 					}
 					case "NumberPickerPreference" -> {
 						// Handle number picker preference
-						int value = sharedPreferences.getInt(pref.getKey(), 0);
+						final int value = sharedPreferences.getInt(pref.getKey(), 0);
 						pref.setSummary(String.valueOf(value));
-
 					}
 					case "TimePickerPreference" -> {
 						// Handle time picker preference
-						String value = sharedPreferences.getString(pref.getKey(), "");
-						if (!value.isEmpty()) {
+						final String value = sharedPreferences.getString(pref.getKey(), "");
+						if (nonNull(value) && !value.isEmpty()) {
 							pref.setSummary(value);
 						}
 					}
 				}
 			}
 		}
-
 	}
 
 	/**
 	 * Initialize summaries for all preferences
 	 */
 	protected void initSummary() {
-		PreferenceScreen screen = getPreferenceScreen();
-		if (screen != null) {
-			SharedPreferences sharedPrefs = screen.getSharedPreferences();
+		final PreferenceScreen screen = getPreferenceScreen();
+		if (nonNull(screen)) {
+			final SharedPreferences sharedPrefs = screen.getSharedPreferences();
 			for (int i = 0; i < screen.getPreferenceCount(); i++) {
 				initPreferencesSummary(sharedPrefs, screen.getPreference(i));
 			}
@@ -223,7 +222,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	/**
 	 * Initialize the summary for a single preference (recursively for categories)
 	 */
-	protected void initPreferencesSummary(SharedPreferences sharedPreferences, Preference p) {
+	protected void initPreferencesSummary(final SharedPreferences sharedPreferences, final Preference p) {
 		if (p instanceof final PreferenceCategory pCat) {
 			for (int i = 0; i < pCat.getPreferenceCount(); i++) {
 				initPreferencesSummary(sharedPreferences, pCat.getPreference(i));
@@ -235,7 +234,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 			if (p instanceof final RingtonePreference ringtonePref) {
 				ringtonePref.setOnPreferenceClickListener(pref -> {
 					currentRingtonePreference = (RingtonePreference) pref;
-					Intent intent = currentRingtonePreference.createRingtonePickerIntent();
+					final Intent intent = currentRingtonePreference.createRingtonePickerIntent();
 					ringtonePickerLauncher.launch(intent);
 					return true;
 				});
@@ -243,8 +242,8 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 
 			// Add a change listener for SeekBarPreference to show percentage
 			if (p instanceof SeekBarPreference) {
-				String key = p.getKey();
-				if (key != null && (key.equals(getString(R.string._pref_key_warn_battery_level)) ||
+				final String key = p.getKey();
+				if (nonNull(key) && (key.equals(getString(R.string._pref_key_warn_battery_level)) ||
 						key.equals(getString(R.string._pref_key_critical_battery_level)))) {
 					p.setOnPreferenceChangeListener((pref, newValue) -> {
 						if (newValue instanceof Integer) {

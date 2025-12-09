@@ -1,9 +1,10 @@
 package com.almothafar.simplebatterynotifier.model;
 
 /**
- * Created by Al-Mothafar on 24/08/2015.
+ * Battery data object holding battery status information
+ * Uses builder pattern for chaining setters
  */
-public class BatteryDO {
+public final class BatteryDO {
 	private int level;
 	private int plugged;
 	private int scale;
@@ -19,7 +20,11 @@ public class BatteryDO {
 	private boolean warningHealth;
 	private boolean criticalHealth;
 
-
+	/**
+	 * Calculate battery percentage from level and scale
+	 *
+	 * @return Battery percentage (0-100)
+	 */
 	public float getBatteryPercentage() {
 		return (level / (float) scale) * 100;
 	}
@@ -28,7 +33,7 @@ public class BatteryDO {
 		return health;
 	}
 
-	public BatteryDO setHealth(String health) {
+	public BatteryDO setHealth(final String health) {
 		this.health = health;
 		return this;
 	}
@@ -37,7 +42,7 @@ public class BatteryDO {
 		return level;
 	}
 
-	public BatteryDO setLevel(int level) {
+	public BatteryDO setLevel(final int level) {
 		this.level = level;
 		return this;
 	}
@@ -46,7 +51,7 @@ public class BatteryDO {
 		return plugged;
 	}
 
-	public BatteryDO setPlugged(int plugged) {
+	public BatteryDO setPlugged(final int plugged) {
 		this.plugged = plugged;
 		return this;
 	}
@@ -55,7 +60,7 @@ public class BatteryDO {
 		return present;
 	}
 
-	public BatteryDO setPresent(boolean present) {
+	public BatteryDO setPresent(final boolean present) {
 		this.present = present;
 		return this;
 	}
@@ -64,7 +69,7 @@ public class BatteryDO {
 		return scale;
 	}
 
-	public BatteryDO setScale(int scale) {
+	public BatteryDO setScale(final int scale) {
 		this.scale = scale;
 		return this;
 	}
@@ -73,7 +78,7 @@ public class BatteryDO {
 		return status;
 	}
 
-	public BatteryDO setStatus(int status) {
+	public BatteryDO setStatus(final int status) {
 		this.status = status;
 		return this;
 	}
@@ -82,7 +87,7 @@ public class BatteryDO {
 		return technology;
 	}
 
-	public BatteryDO setTechnology(String technology) {
+	public BatteryDO setTechnology(final String technology) {
 		this.technology = technology;
 		return this;
 	}
@@ -91,7 +96,7 @@ public class BatteryDO {
 		return temperature;
 	}
 
-	public BatteryDO setTemperature(int temperature) {
+	public BatteryDO setTemperature(final int temperature) {
 		this.temperature = temperature;
 		return this;
 	}
@@ -100,7 +105,7 @@ public class BatteryDO {
 		return voltage;
 	}
 
-	public BatteryDO setVoltage(int voltage) {
+	public BatteryDO setVoltage(final int voltage) {
 		this.voltage = voltage;
 		return this;
 	}
@@ -109,7 +114,7 @@ public class BatteryDO {
 		return capacity;
 	}
 
-	public BatteryDO setCapacity(int capacity) {
+	public BatteryDO setCapacity(final int capacity) {
 		this.capacity = capacity;
 		return this;
 	}
@@ -118,7 +123,7 @@ public class BatteryDO {
 		return powerSource;
 	}
 
-	public BatteryDO setPowerSource(String powerSource) {
+	public BatteryDO setPowerSource(final String powerSource) {
 		this.powerSource = powerSource;
 		return this;
 	}
@@ -127,7 +132,7 @@ public class BatteryDO {
 		return criticalHealth;
 	}
 
-	public BatteryDO setCriticalHealth(boolean criticalHealth) {
+	public BatteryDO setCriticalHealth(final boolean criticalHealth) {
 		this.criticalHealth = criticalHealth;
 		return this;
 	}
@@ -136,7 +141,7 @@ public class BatteryDO {
 		return warningHealth;
 	}
 
-	public BatteryDO setWarningHealth(boolean warningHealth) {
+	public BatteryDO setWarningHealth(final boolean warningHealth) {
 		this.warningHealth = warningHealth;
 		return this;
 	}
@@ -145,7 +150,7 @@ public class BatteryDO {
 		return intHealth;
 	}
 
-	public BatteryDO setIntHealth(int intHealth) {
+	public BatteryDO setIntHealth(final int intHealth) {
 		this.intHealth = intHealth;
 		return this;
 	}

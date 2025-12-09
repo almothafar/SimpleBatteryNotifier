@@ -6,6 +6,7 @@ import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import androidx.activity.result.ActivityResultLauncher;
@@ -24,38 +25,63 @@ import com.almothafar.simplebatterynotifier.ui.widgets.CircularProgressBar;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
+/**
+ * Main activity displaying battery status with circular progress bar
+ */
 public class MainActivity extends AppCompatActivity {
 
+	private static final String TAG = "MainActivity";
 	private static final long UPDATER_DELAY = 300;
 	private static final long UPDATER_PERIOD = 3000;
+
 	// Use Handler(Looper) constructor - Handler() deprecated to prevent null Looper
-	final Handler handler = new Handler(Looper.getMainLooper());
-	// SETTINGS_RESULT constant removed - no longer needed with ActivityResultLauncher (doesn't use request codes)
-	int batteryPercentage;
-	String subTitle;
-	BatteryDO batteryDO;
-	TimerTask updateTask;
-	Timer timer = new Timer();
+	private final Handler handler = new Handler(Looper.getMainLooper());
+	private final Timer timer = new Timer();
+
+	private int batteryPercentage;
+	private String subTitle;
+	private BatteryDO batteryDO;
+	private TimerTask updateTask;
 	private ActivityResultLauncher<Intent> settingsLauncher;
 
+	/**
+	 * Create the options menu
+	 *
+	 * @param menu The options menu
+	 * @return True if menu was created successfully
+	 */
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
+	public boolean onCreateOptionsMenu(final Menu menu) {
 		getMenuInflater().inflate(R.menu.menu_main, menu);
 		return true;
 	}
 
+	/**
+	 * Handle options menu item selection
+	 *
+	 * @param item The selected menu item
+	 * @return True if item was handled
+	 */
 	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		int id = item.getItemId();
+	public boolean onOptionsItemSelected(final MenuItem item) {
+		final int id = item.getItemId();
 		if (id == R.id.action_settings) {
-			OpenSettings();
+			openSettings();
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
 	}
 
+	/**
+	 * Initialize the activity
+	 *
+	 * @param savedInstanceState Saved state bundle
+	 */
 	@Override
-	protected void onCreate(Bundle savedInstanceState) {
+	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		// Enable edge-to-edge display
@@ -64,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_main);
 
 		// Set up the Toolbar
-		Toolbar toolbar = findViewById(R.id.toolbar);
+		final Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
 
 		// setStatusBarColor() and setNavigationBarColor() removed - deprecated in API 35
@@ -77,97 +103,127 @@ public class MainActivity extends AppCompatActivity {
 				new ActivityResultContracts.StartActivityForResult(),
 				result -> {
 					// When returning from settings, refresh the UI with updated preferences
-					initialFirstValues();
+					initializeFirstValues();
 				}
 		);
 
-		// If not started will start it.
-		// TODO check if service is running before do this.
+		// Start the power connection service
 		startService(new Intent(this, PowerConnectionService.class));
-
-
 	}
 
+	/**
+	 * Called when activity is resumed
+	 */
 	@Override
 	protected void onPostResume() {
 		super.onPostResume();
 
-		initialFirstValues();
+		initializeFirstValues();
 
 		startUpdateTimer();
 	}
 
+	/**
+	 * Clean up resources when activity is destroyed
+	 */
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
 		timer.cancel();
 	}
 
+	/**
+	 * Fill battery information from system
+	 * Updates batteryDO, batteryPercentage, and subTitle fields
+	 */
 	protected void fillBatteryInfo() {
 		batteryDO = SystemService.getBatteryInfo(this);
 
-		boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
-		boolean isFull = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_FULL;
+		// CRITICAL: Check for null batteryDO
+		if (isNull(batteryDO)) {
+			Log.w(TAG, "Unable to retrieve battery information");
+			batteryPercentage = 0;
+			subTitle = getResources().getString(R.string.discharging);
+			return;
+		}
+
+		final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
+		final boolean isFull = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_FULL;
 
 		batteryPercentage = (int) batteryDO.getBatteryPercentage();
 
-		if (isCharging) {
+		if (isFull) {
+			subTitle = getResources().getString(R.string.charged);
+		} else if (isCharging) {
 			subTitle = getResources().getString(R.string.charging);
 		} else {
 			subTitle = getResources().getString(R.string.discharging);
 		}
-		if (isFull) {
-			subTitle = getResources().getString(R.string.charged);
-		}
 	}
 
+	/**
+	 * Start the timer to periodically update battery information
+	 */
 	private void startUpdateTimer() {
 		updateTask = new TimerTask() {
+			@Override
 			public void run() {
 				handler.post(() -> {
-					final CircularProgressBar c2 = findViewById(R.id.batteryPercentage);
+					final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
 					fillBatteryInfo();
-					c2.setProgress(batteryPercentage);
-					c2.setTitle(batteryPercentage + "%");
-					c2.setSubTitle(subTitle);
+					progressBar.setProgress(batteryPercentage);
+					progressBar.setTitle(batteryPercentage + "%");
+					progressBar.setSubTitle(subTitle);
 
-					FragmentManager fragmentManager = getSupportFragmentManager();
-					BatteryDetailsFragment batteryDetailsFragment = (BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
-					batteryDetailsFragment.updateBatteryDetails(batteryDO);
+					final FragmentManager fragmentManager = getSupportFragmentManager();
+					final BatteryDetailsFragment batteryDetailsFragment =
+							(BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
+
+					if (nonNull(batteryDetailsFragment) && nonNull(batteryDO)) {
+						batteryDetailsFragment.updateBatteryDetails(batteryDO);
+					}
 				});
 			}
 		};
-		timer.schedule(updateTask, UPDATER_DELAY, UPDATER_PERIOD);  // here is t.schedule( , delay, period);
+		timer.schedule(updateTask, UPDATER_DELAY, UPDATER_PERIOD);
 	}
 
-	private void initialFirstValues() {
+	/**
+	 * Initialize first values and animate the progress bar
+	 */
+	private void initializeFirstValues() {
 		fillBatteryInfo();
-		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 
-		final CircularProgressBar c2 = findViewById(R.id.batteryPercentage);
-		c2.setWarningLevel(sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
-		c2.setCriticalLevel(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20));
-		c2.animateProgressTo(0, batteryPercentage, new CircularProgressBar.ProgressAnimationListener() {
+		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
+		progressBar.setWarningLevel(sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
+		progressBar.setCriticalLevel(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20));
+		progressBar.animateProgressTo(0, batteryPercentage, new CircularProgressBar.ProgressAnimationListener() {
 
 			@Override
 			public void onAnimationStart() {
+				// Animation started
 			}
 
 			@Override
 			public void onAnimationFinish() {
+				// Animation finished
 			}
 
 			@Override
-			public void onAnimationProgress(int progress) {
-				c2.setTitle(progress + "%");
-				c2.setSubTitle(subTitle);
+			public void onAnimationProgress(final int progress) {
+				progressBar.setTitle(progress + "%");
+				progressBar.setSubTitle(subTitle);
 			}
 		});
 	}
 
-	private void OpenSettings() {
-		Intent i = new Intent(this, SettingsActivity.class);
+	/**
+	 * Open the settings activity
+	 */
+	private void openSettings() {
+		final Intent intent = new Intent(this, SettingsActivity.class);
 		// Use modern ActivityResultLauncher instead of deprecated startActivityForResult()
-		settingsLauncher.launch(i);
+		settingsLauncher.launch(intent);
 	}
 }

@@ -15,51 +15,57 @@ import com.almothafar.simplebatterynotifier.ui.widgets.NumberPickerPreference;
  * Dialog fragment for NumberPickerPreference
  */
 public class NumberPickerPreferenceDialogFragmentCompat extends PreferenceDialogFragmentCompat {
-	private NumberPicker mNumberPicker;
+	private NumberPicker numberPicker;
 
-	public static NumberPickerPreferenceDialogFragmentCompat newInstance(String key) {
-		NumberPickerPreferenceDialogFragmentCompat fragment = new NumberPickerPreferenceDialogFragmentCompat();
-		Bundle args = new Bundle(1);
+	/**
+	 * Create a new instance of the dialog fragment
+	 *
+	 * @param key The preference key
+	 * @return New dialog fragment instance
+	 */
+	public static NumberPickerPreferenceDialogFragmentCompat newInstance(final String key) {
+		final NumberPickerPreferenceDialogFragmentCompat fragment = new NumberPickerPreferenceDialogFragmentCompat();
+		final Bundle args = new Bundle(1);
 		args.putString(ARG_KEY, key);
 		fragment.setArguments(args);
 		return fragment;
 	}
 
 	@Override
-	protected View onCreateDialogView(@NonNull Context context) {
-		FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+	protected View onCreateDialogView(@NonNull final Context context) {
+		final FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
 				ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		layoutParams.gravity = Gravity.CENTER;
 
-		mNumberPicker = new NumberPicker(context);
-		mNumberPicker.setLayoutParams(layoutParams);
+		numberPicker = new NumberPicker(context);
+		numberPicker.setLayoutParams(layoutParams);
 
-		FrameLayout dialogView = new FrameLayout(context);
-		dialogView.addView(mNumberPicker);
+		final FrameLayout dialogView = new FrameLayout(context);
+		dialogView.addView(numberPicker);
 
 		return dialogView;
 	}
 
 	@Override
-	protected void onBindDialogView(@NonNull View view) {
+	protected void onBindDialogView(@NonNull final View view) {
 		super.onBindDialogView(view);
 
-		NumberPickerPreference preference = (NumberPickerPreference) getPreference();
+		final NumberPickerPreference preference = (NumberPickerPreference) getPreference();
 
 		// Set the number picker range and current value
-		mNumberPicker.setMinValue(preference.getMinValue());
-		mNumberPicker.setMaxValue(preference.getMaxValue());
-		mNumberPicker.setValue(preference.getValue());
-		mNumberPicker.setWrapSelectorWheel(false);
+		numberPicker.setMinValue(preference.getMinValue());
+		numberPicker.setMaxValue(preference.getMaxValue());
+		numberPicker.setValue(preference.getValue());
+		numberPicker.setWrapSelectorWheel(false);
 	}
 
 	@Override
-	public void onDialogClosed(boolean positiveResult) {
+	public void onDialogClosed(final boolean positiveResult) {
 		if (positiveResult) {
 			// Get the current value from the NumberPicker
-			int newValue = mNumberPicker.getValue();
+			final int newValue = numberPicker.getValue();
 
-			NumberPickerPreference preference = (NumberPickerPreference) getPreference();
+			final NumberPickerPreference preference = (NumberPickerPreference) getPreference();
 
 			if (preference.callChangeListener(newValue)) {
 				preference.setValue(newValue);
