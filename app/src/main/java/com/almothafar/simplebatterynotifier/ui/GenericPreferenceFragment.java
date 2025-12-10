@@ -194,11 +194,6 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 							}
 						}
 					}
-					case "NumberPickerPreference" -> {
-						// Handle number picker preference
-						final int value = sharedPreferences.getInt(pref.getKey(), 0);
-						pref.setSummary(String.valueOf(value));
-					}
 					case "TimePickerPreference" -> {
 						// Handle time picker preference
 						final String value = sharedPreferences.getString(pref.getKey(), "");
