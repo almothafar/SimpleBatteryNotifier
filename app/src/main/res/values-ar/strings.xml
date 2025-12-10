@@ -101,4 +101,8 @@
     <!-- Validation error messages -->
     <string name="error_warning_level_too_low">يجب أن يكون مستوى التحذير أعلى من المستوى الحرج (%d%%)</string>
     <string name="error_critical_level_too_high">يجب أن يكون المستوى الحرج أقل من مستوى التحذير (%d%%)</string>
+
+    <!-- Accessibility -->
+    <string name="battery_progress_description">البطارية عند %1$d بالمئة</string>
+    <string name="battery_details_separator">:</string>
 </resources>

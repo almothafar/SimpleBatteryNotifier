@@ -116,6 +116,9 @@ public class CircularProgressBar extends ProgressBar {
 		// Enable software layer so that shadow shows up properly for lines and arcs
 		setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 
+		// Enable accessibility support for screen readers (TalkBack)
+		setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+
 		try (final TypedArray styledAttributes = getContext().obtainStyledAttributes(attrs, R.styleable.CircularProgressBar, style, 0)) {
 			final Resources res = getResources();
 
@@ -222,7 +225,6 @@ public class CircularProgressBar extends ProgressBar {
 			public void onAnimationUpdate(final ValueAnimator animation) {
 				final int progress = (Integer) animation.getAnimatedValue();
 				if (progress != CircularProgressBar.this.getProgress()) {
-					Log.d(TAG, progress + "");
 					CircularProgressBar.this.setProgress(progress);
 					if (nonNull(listener)) {
 						listener.onAnimationProgress(progress);
@@ -414,6 +416,9 @@ public class CircularProgressBar extends ProgressBar {
 
 	/**
 	 * Set the progress value and trigger a redraw
+	 * <p>
+	 * Also updates the content description for accessibility support,
+	 * allowing screen readers (TalkBack) to announce the current battery percentage.
 	 *
 	 * @param progress The progress value
 	 */
@@ -421,8 +426,24 @@ public class CircularProgressBar extends ProgressBar {
 	public synchronized void setProgress(final int progress) {
 		super.setProgress(progress);
 
+		// Update content description for accessibility (screen readers)
+		updateAccessibilityDescription(progress);
+
 		// Force an update to redraw the progress bar
 		invalidate();
+	}
+
+	/**
+	 * Update the content description for accessibility
+	 * <p>
+	 * This allows screen readers like TalkBack to announce the battery percentage
+	 * to vision-impaired users. The description is updated whenever the progress changes.
+	 *
+	 * @param progress The current progress value
+	 */
+	private void updateAccessibilityDescription(final int progress) {
+		final String description = getContext().getString(R.string.battery_progress_description, progress);
+		setContentDescription(description);
 	}
 
 	/**

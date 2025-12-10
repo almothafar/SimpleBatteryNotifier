@@ -148,13 +148,15 @@ public class BatteryDetailsFragment extends Fragment {
 
 	/**
 	 * Create a separator TextView (colon)
+	 * <p>
+	 * Uses string resource for proper internationalization and RTL language support.
 	 *
 	 * @param view The fragment view
 	 * @return The created TextView
 	 */
 	private TextView createSeparatorTextView(final View view) {
 		final TextView textView = new TextView(view.getContext());
-		textView.setText(":");
+		textView.setText(getString(R.string.battery_details_separator));
 		textView.setGravity(Gravity.CENTER);
 		textView.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_label_color));
 		return textView;

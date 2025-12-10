@@ -132,4 +132,8 @@
 
     <!-- Notification service -->
     <string name="_default_notification_sound_uri">content://settings/system/notification_sound</string>
+
+    <!-- Accessibility -->
+    <string name="battery_progress_description">Battery at %1$d percent</string>
+    <string name="battery_details_separator">:</string>
 </resources>
