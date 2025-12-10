@@ -17,8 +17,7 @@ public final class BatteryDO {
 	private String powerSource;
 	private String health;
 	private int intHealth;
-	private boolean warningHealth;
-	private boolean criticalHealth;
+	private BatteryHealthStatus healthStatus = BatteryHealthStatus.UNKNOWN;
 
 	/**
 	 * Calculate battery percentage from level and scale
@@ -128,21 +127,12 @@ public final class BatteryDO {
 		return this;
 	}
 
-	public boolean isCriticalHealth() {
-		return criticalHealth;
+	public BatteryHealthStatus getHealthStatus() {
+		return healthStatus;
 	}
 
-	public BatteryDO setCriticalHealth(final boolean criticalHealth) {
-		this.criticalHealth = criticalHealth;
-		return this;
-	}
-
-	public boolean isWarningHealth() {
-		return warningHealth;
-	}
-
-	public BatteryDO setWarningHealth(final boolean warningHealth) {
-		this.warningHealth = warningHealth;
+	public BatteryDO setHealthStatus(final BatteryHealthStatus healthStatus) {
+		this.healthStatus = healthStatus;
 		return this;
 	}
 

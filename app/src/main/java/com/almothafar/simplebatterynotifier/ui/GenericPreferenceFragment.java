@@ -86,10 +86,15 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 
 	@Override
 	public void onDisplayPreferenceDialog(@NonNull final Preference preference) {
-		// Handle TimePickerPreference dialog
+		// Handle custom TimePickerPreference dialog
 		if (preference instanceof TimePickerPreference) {
 			final DialogFragment dialogFragment = TimePickerPreferenceDialogFragmentCompat
 					.newInstance(preference.getKey());
+
+			// Set target fragment (required for PreferenceDialogFragmentCompat)
+			// Note: setTargetFragment is deprecated but still required by PreferenceDialogFragmentCompat
+			//noinspection deprecation
+			dialogFragment.setTargetFragment(this, 0);
 			dialogFragment.show(getParentFragmentManager(),
 			                    "androidx.preference.PreferenceFragment.DIALOG");
 		} else {

@@ -18,6 +18,7 @@ import android.os.VibratorManager;
 import android.util.Log;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.model.BatteryHealthStatus;
 
 import java.io.IOException;
 
@@ -38,6 +39,7 @@ public final class SystemService {
 	 * Get battery information from the system
 	 *
 	 * @param context The application context
+	 *
 	 * @return BatteryDO object containing battery information, or null if battery status is unavailable
 	 */
 	public static BatteryDO getBatteryInfo(final Context context) {
@@ -58,6 +60,7 @@ public final class SystemService {
 	 * Get battery status intent from system
 	 *
 	 * @param context The application context
+	 *
 	 * @return Battery status intent, or null if unavailable
 	 */
 	private static Intent getBatteryStatusIntent(final Context context) {
@@ -75,6 +78,7 @@ public final class SystemService {
 	 * Extract all battery-related data from the intent
 	 *
 	 * @param batteryStatus The battery status intent
+	 *
 	 * @return BatteryExtras object containing all extracted data
 	 */
 	private static BatteryExtras extractBatteryExtras(final Intent batteryStatus) {
@@ -99,6 +103,7 @@ public final class SystemService {
 	 *
 	 * @param plugged   The plugged status from BatteryManager
 	 * @param resources Resources for string lookup
+	 *
 	 * @return Charger type string
 	 */
 	@SuppressLint("InlinedApi") // BATTERY_PLUGGED_WIRELESS added in API 17
@@ -126,10 +131,13 @@ public final class SystemService {
 	 * @param chargerType     Charger type string
 	 * @param batteryCapacity Battery capacity in mAh
 	 * @param resources       Resources for string lookup
+	 *
 	 * @return Populated BatteryDO object
 	 */
-	private static BatteryDO buildBatteryDataObject(final BatteryExtras extras, final String chargerType,
-	                                                 final int batteryCapacity, final Resources resources) {
+	private static BatteryDO buildBatteryDataObject(final BatteryExtras extras,
+	                                                final String chargerType,
+	                                                final int batteryCapacity,
+	                                                final Resources resources) {
 		final BatteryDO batteryDO = new BatteryDO();
 		batteryDO.setLevel(extras.level)
 		         .setScale(extras.scale)
@@ -143,73 +151,58 @@ public final class SystemService {
 		         .setCapacity(batteryCapacity)
 		         .setIntHealth(extras.health);
 
-		final String healthAsString = determineHealthString(extras.health, batteryDO, resources);
+		// Determine health status and set it on the battery object
+		final BatteryHealthStatus healthStatus = determineHealthStatus(extras.health);
+		batteryDO.setHealthStatus(healthStatus);
+
+		// Get the human-readable health string
+		final String healthAsString = getHealthString(extras.health, resources);
 		batteryDO.setHealth(healthAsString);
 
 		return batteryDO;
 	}
 
 	/**
-	 * Internal data class to hold extracted battery extras
+	 * Determine battery health status from BatteryManager health constant
+	 * <p>
+	 * This method has a single responsibility: converting the health constant
+	 * to a BatteryHealthStatus enum value.
+	 *
+	 * @param health Battery health constant from BatteryManager
+	 *
+	 * @return BatteryHealthStatus enum representing the health level
 	 */
-	private static final class BatteryExtras {
-		final int level;
-		final int scale;
-		final int status;
-		final int health;
-		final int plugged;
-		final int temperature;
-		final int voltage;
-		final boolean present;
-		final String technology;
-
-		BatteryExtras(final int level, final int scale, final int status, final int health,
-		              final int plugged, final int temperature, final int voltage,
-		              final boolean present, final String technology) {
-			this.level = level;
-			this.scale = scale;
-			this.status = status;
-			this.health = health;
-			this.plugged = plugged;
-			this.temperature = temperature;
-			this.voltage = voltage;
-			this.present = present;
-			this.technology = technology;
-		}
+	private static BatteryHealthStatus determineHealthStatus(final int health) {
+		return switch (health) {
+			case BatteryManager.BATTERY_HEALTH_GOOD -> BatteryHealthStatus.GOOD;
+			case BatteryManager.BATTERY_HEALTH_DEAD,
+			     BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> BatteryHealthStatus.CRITICAL;
+			case BatteryManager.BATTERY_HEALTH_COLD,
+			     BatteryManager.BATTERY_HEALTH_OVERHEAT,
+			     BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> BatteryHealthStatus.WARNING;
+			default -> BatteryHealthStatus.UNKNOWN;
+		};
 	}
 
 	/**
-	 * Determine battery health string and set warning/critical flags using switch expression
+	 * Get human-readable battery health string from BatteryManager health constant
+	 * <p>
+	 * This method has a single responsibility: converting the health constant
+	 * to a localized string resource.
 	 *
 	 * @param health    Battery health constant from BatteryManager
-	 * @param batteryDO The BatteryDO object to update with warning/critical flags
 	 * @param resources Resource instance for string lookup
+	 *
 	 * @return Human-readable health string
 	 */
-	private static String determineHealthString(final int health, final BatteryDO batteryDO, final Resources resources) {
-		// Use switch expression for cleaner code (Java 14+)
+	private static String getHealthString(final int health, final Resources resources) {
 		return switch (health) {
 			case BatteryManager.BATTERY_HEALTH_GOOD -> resources.getString(R.string.battery_health_good);
-			case BatteryManager.BATTERY_HEALTH_DEAD -> {
-				batteryDO.setCriticalHealth(true);
-				yield resources.getString(R.string.battery_health_dead);
-			}
-			case BatteryManager.BATTERY_HEALTH_COLD -> {
-				batteryDO.setWarningHealth(true);
-				yield resources.getString(R.string.battery_health_cold);
-			}
-			case BatteryManager.BATTERY_HEALTH_OVERHEAT -> {
-				batteryDO.setWarningHealth(true);
-				yield resources.getString(R.string.battery_health_overheat);
-			}
-			case BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> {
-				batteryDO.setCriticalHealth(true);
-				yield resources.getString(R.string.battery_health_over_voltage);
-			}
-			case BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> {
-				batteryDO.setWarningHealth(true);
-				yield resources.getString(R.string.battery_health_unspecified_failure);
-			}
+			case BatteryManager.BATTERY_HEALTH_DEAD -> resources.getString(R.string.battery_health_dead);
+			case BatteryManager.BATTERY_HEALTH_COLD -> resources.getString(R.string.battery_health_cold);
+			case BatteryManager.BATTERY_HEALTH_OVERHEAT -> resources.getString(R.string.battery_health_overheat);
+			case BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> resources.getString(R.string.battery_health_over_voltage);
+			case BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> resources.getString(R.string.battery_health_unspecified_failure);
 			default -> "";
 		};
 	}
@@ -225,6 +218,7 @@ public final class SystemService {
 	 * This is acceptable as capacity is informational only and not critical for app functionality.
 	 *
 	 * @param context The application context
+	 *
 	 * @return Battery capacity in mAh, or 0 if unavailable or unsupported
 	 */
 	@SuppressLint("DiscouragedPrivateApi")
@@ -286,8 +280,7 @@ public final class SystemService {
 			vibrator = vibratorManager.getDefaultVibrator();
 		} else {
 			// VIBRATOR_SERVICE deprecated in API 31, but required for API 26-30 (minSdk is 26)
-			@SuppressWarnings("deprecation")
-			final Vibrator systemService = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+			@SuppressWarnings("deprecation") final Vibrator systemService = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
 			vibrator = systemService;
 		}
 
@@ -337,6 +330,35 @@ public final class SystemService {
 			if (nonNull(errorMsg)) {
 				Log.e(TAG, errorMsg);
 			}
+		}
+	}
+
+	/**
+	 * Internal data class to hold extracted battery extras
+	 */
+	private static final class BatteryExtras {
+		final int level;
+		final int scale;
+		final int status;
+		final int health;
+		final int plugged;
+		final int temperature;
+		final int voltage;
+		final boolean present;
+		final String technology;
+
+		BatteryExtras(final int level, final int scale, final int status, final int health,
+		              final int plugged, final int temperature, final int voltage,
+		              final boolean present, final String technology) {
+			this.level = level;
+			this.scale = scale;
+			this.status = status;
+			this.health = health;
+			this.plugged = plugged;
+			this.temperature = temperature;
+			this.voltage = voltage;
+			this.present = present;
+			this.technology = technology;
 		}
 	}
 }
