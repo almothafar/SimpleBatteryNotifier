@@ -34,3 +34,4 @@ Icon?
 
 *.lock
 .claude/
+!.claude/guidelines.md
