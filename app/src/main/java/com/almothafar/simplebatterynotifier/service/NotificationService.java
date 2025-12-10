@@ -23,16 +23,28 @@ import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.ui.MainActivity;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 
+import java.lang.ref.WeakReference;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 /**
  * Service for managing battery notification creation and display
+ * <p>
+ * This is a utility class that handles all notification-related functionality including:
+ * - Creating notification channels
+ * - Building and sending battery status notifications
+ * - Playing notification sounds
+ * - Managing notification lifecycle
+ * <p>
+ * Thread Safety: This class uses a single-thread executor for async sound playback.
+ * The executor is managed statically and should be shutdown when the app terminates
+ * by calling {@link #shutdown()}.
  */
 public final class NotificationService {
 	// Notification types
@@ -56,11 +68,27 @@ public final class NotificationService {
 	private static final String ZEN_MODE = "zen_mode";
 	private static final int ZEN_MODE_IMPORTANT_INTERRUPTIONS = 1;
 
-	// Thread pool for async sound playback
+	/**
+	 * Thread pool for async sound playback
+	 * <p>
+	 * This single-thread executor is used throughout the app lifetime to play
+	 * notification sounds asynchronously. It should be shutdown when the app
+	 * terminates by calling {@link #shutdown()}.
+	 * <p>
+	 * Note: In practice, Android will clean up this executor when the process
+	 * terminates, but explicit cleanup is provided for proper resource management.
+	 */
 	private static final ExecutorService soundExecutor = Executors.newSingleThreadExecutor();
 
-	// Cached launcher icon bitmap (performance optimization)
-	private static Bitmap cachedLauncherIcon;
+	/**
+	 * Cached launcher icon bitmap (performance optimization)
+	 * <p>
+	 * Uses WeakReference to allow garbage collection if memory is tight.
+	 * The icon will be reloaded on next access if garbage collected.
+	 * This prevents holding a strong reference to a potentially large bitmap
+	 * throughout the app lifetime.
+	 */
+	private static WeakReference<Bitmap> cachedLauncherIcon;
 
 	// Thread-safe healthy charge state
 	private static volatile boolean isHealthyCharge;
@@ -140,6 +168,8 @@ public final class NotificationService {
 
 	/**
 	 * Clear all battery notifications
+	 *
+	 * @param context The application context
 	 */
 	public static void clearNotifications(final Context context) {
 		final NotificationManager manager = getNotificationManager(context);
@@ -150,6 +180,8 @@ public final class NotificationService {
 
 	/**
 	 * Set healthy charge mode
+	 * <p>
+	 * Thread-safe setter for the healthy charge state flag.
 	 *
 	 * @param healthy true if charging in healthy mode
 	 */
@@ -157,11 +189,48 @@ public final class NotificationService {
 		isHealthyCharge = healthy;
 	}
 
+	/**
+	 * Shutdown the sound executor service
+	 * <p>
+	 * This method should be called when the application is terminating to ensure
+	 * proper cleanup of the background thread pool. In practice, Android will clean
+	 * up the executor when the process terminates, but explicit shutdown is good
+	 * practice for resource management.
+	 * <p>
+	 * Note: This is typically called from Application.onTerminate(), though that
+	 * method is rarely invoked on production devices.
+	 */
+	public static void shutdown() {
+		soundExecutor.shutdown();
+		try {
+			if (!soundExecutor.awaitTermination(1, TimeUnit.SECONDS)) {
+				soundExecutor.shutdownNow();
+			}
+		} catch (InterruptedException e) {
+			soundExecutor.shutdownNow();
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	/**
+	 * Release the cached launcher icon bitmap
+	 * <p>
+	 * This method clears the cached bitmap reference to help with memory management.
+	 * The bitmap will be reloaded on next access if needed.
+	 */
+	public static void releaseCachedBitmap() {
+		if (nonNull(cachedLauncherIcon)) {
+			cachedLauncherIcon.clear();
+			cachedLauncherIcon = null;
+		}
+	}
+
 	// ========== Private Helper Methods ==========
 
 	/**
 	 * Check if app lacks POST_NOTIFICATIONS permission (required for API 33+)
 	 *
+	 * @param context The application context
 	 * @return true if permission is missing, false if granted or not required
 	 */
 	private static boolean lacksNotificationPermission(final Context context) {
@@ -173,6 +242,8 @@ public final class NotificationService {
 
 	/**
 	 * Create notification channels if they don't exist
+	 *
+	 * @param context The application context
 	 */
 	private static void createNotificationChannels(final Context context) {
 		final NotificationManager manager = getNotificationManager(context);
@@ -187,6 +258,12 @@ public final class NotificationService {
 
 	/**
 	 * Create a notification channel if it doesn't already exist
+	 *
+	 * @param manager   The NotificationManager
+	 * @param channelId The channel ID
+	 * @param name      The channel name
+	 * @param description The channel description
+	 * @param ledColor  The LED color for notifications
 	 */
 	private static void createChannelIfNotExists(final NotificationManager manager, final String channelId, final String name,
 	                                             final String description, final int ledColor) {
@@ -205,6 +282,10 @@ public final class NotificationService {
 
 	/**
 	 * Create notification builder with channel and icon
+	 *
+	 * @param context The application context
+	 * @param config  The notification configuration
+	 * @return Notification.Builder instance
 	 */
 	private static Notification.Builder createNotificationBuilder(final Context context, final NotificationConfig config) {
 		final Notification.Builder builder = new Notification.Builder(context, config.channelId).setSmallIcon(config.iconRes);
@@ -218,6 +299,10 @@ public final class NotificationService {
 
 	/**
 	 * Configure notification content (title, text, ticker)
+	 *
+	 * @param context The application context
+	 * @param builder The notification builder
+	 * @param config  The notification configuration
 	 */
 	private static void configureNotificationContent(final Context context, final Notification.Builder builder, final NotificationConfig config) {
 		builder.setTicker(config.ticker)
@@ -232,6 +317,10 @@ public final class NotificationService {
 
 	/**
 	 * Build the final notification
+	 *
+	 * @param builder The notification builder
+	 * @param config  The notification configuration
+	 * @return The built Notification
 	 */
 	private static Notification buildNotification(final Notification.Builder builder, final NotificationConfig config) {
 		final Notification notification = builder.build();
@@ -245,6 +334,9 @@ public final class NotificationService {
 
 	/**
 	 * Send notification to system
+	 *
+	 * @param context      The application context
+	 * @param notification The notification to send
 	 */
 	private static void sendNotificationToSystem(final Context context, final Notification notification) {
 		final NotificationManager manager = getNotificationManager(context);
@@ -255,6 +347,9 @@ public final class NotificationService {
 
 	/**
 	 * Play notification sound if conditions are met
+	 *
+	 * @param context The application context
+	 * @param config  The notification configuration
 	 */
 	private static void playSoundIfNeeded(final Context context, final NotificationConfig config) {
 		if (!config.withinTime) {
@@ -279,6 +374,9 @@ public final class NotificationService {
 
 	/**
 	 * Check if device is in Do Not Disturb mode
+	 *
+	 * @param context The application context
+	 * @return true if in DND mode, false otherwise
 	 */
 	private static boolean isInDoNotDisturbMode(final Context context) {
 		try {
@@ -290,6 +388,10 @@ public final class NotificationService {
 
 	/**
 	 * Check if current time is within notification time range
+	 *
+	 * @param startTime Start time string (HH:mm format)
+	 * @param endTime   End time string (HH:mm format)
+	 * @return true if current time is within range
 	 */
 	private static boolean isWithinTime(final String startTime, final String endTime) {
 		final int startHour = GeneralHelper.getHour(startTime);
@@ -319,6 +421,9 @@ public final class NotificationService {
 
 	/**
 	 * Get NotificationManager system service
+	 *
+	 * @param context The application context
+	 * @return NotificationManager instance, or null if unavailable
 	 */
 	private static NotificationManager getNotificationManager(final Context context) {
 		return (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -326,16 +431,32 @@ public final class NotificationService {
 
 	/**
 	 * Get cached launcher icon bitmap (performance optimization)
+	 * <p>
+	 * Uses WeakReference to allow garbage collection if memory is needed.
+	 * The bitmap will be automatically reloaded if it was garbage collected.
+	 *
+	 * @param context The application context
+	 * @return Launcher icon bitmap
 	 */
 	private static Bitmap getLauncherIcon(final Context context) {
-		if (isNull(cachedLauncherIcon)) {
-			cachedLauncherIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+		Bitmap bitmap = null;
+		if (nonNull(cachedLauncherIcon)) {
+			bitmap = cachedLauncherIcon.get();
 		}
-		return cachedLauncherIcon;
+
+		if (isNull(bitmap)) {
+			bitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+			cachedLauncherIcon = new WeakReference<>(bitmap);
+		}
+
+		return bitmap;
 	}
 
 	/**
 	 * Create PendingIntent for MainActivity
+	 *
+	 * @param context The application context
+	 * @return PendingIntent for MainActivity
 	 */
 	private static PendingIntent createMainActivityIntent(final Context context) {
 		final Intent intent = new Intent(context, MainActivity.class);
@@ -345,6 +466,9 @@ public final class NotificationService {
 
 	/**
 	 * Configuration object for notification creation (reduces parameter count)
+	 * <p>
+	 * This class encapsulates all configuration needed to build a notification,
+	 * extracted from SharedPreferences and notification type.
 	 */
 	private static class NotificationConfig {
 		final int type;
@@ -359,9 +483,17 @@ public final class NotificationService {
 		final boolean ignoreSilent;
 		final boolean stickyNotification;
 
+		/**
+		 * Create a NotificationConfig from preferences and type
+		 *
+		 * @param context The application context
+		 * @param prefs   SharedPreferences containing user settings
+		 * @param type    Notification type (CRITICAL_TYPE, WARNING_TYPE, or FULL_LEVEL_TYPE)
+		 */
 		NotificationConfig(final Context context, final SharedPreferences prefs, final int type) {
 			this.type = type;
 
+			// Load common preferences
 			final int warningLevel = prefs.getInt(context.getString(R.string._pref_key_warn_battery_level), 40);
 			final int criticalLevel = prefs.getInt(context.getString(R.string._pref_key_critical_battery_level), 20);
 			final boolean limitedTime = prefs.getBoolean(context.getString(R.string._pref_key_notifications_time_range), false);
@@ -378,10 +510,11 @@ public final class NotificationService {
 			this.withinTime = isWithinTime(startTime, endTime) || !limitedTime;
 			this.ignoreSilent = !prefs.getBoolean(context.getString(R.string._pref_key_notifications_apply_silent_mode), false);
 
-			final String defaultSound = "content://settings/system/notification_sound";
+			final String defaultSound = context.getString(R.string._default_notification_sound_uri);
 
+			// Configure based on notification type
 			switch (type) {
-				case CRITICAL_TYPE:
+				case CRITICAL_TYPE -> {
 					this.channelId = CHANNEL_ID_CRITICAL;
 					this.iconRes = R.drawable.ic_stat_device_battery_charging_20;
 					this.alarmSound = prefs.getString(context.getString(R.string._pref_key_notifications_alert_sound_ringtone), defaultSound);
@@ -389,9 +522,8 @@ public final class NotificationService {
 					this.title = context.getString(R.string.notification_critical_title);
 					this.content = context.getString(R.string.notification_critical_content, criticalLevel);
 					this.bigContent = context.getString(R.string.notification_critical_content_big, criticalLevel);
-					break;
-
-				case WARNING_TYPE:
+				}
+				case WARNING_TYPE -> {
 					this.channelId = CHANNEL_ID_WARNING;
 					this.iconRes = R.drawable.ic_stat_device_battery_charging_50;
 					this.alarmSound = prefs.getString(context.getString(R.string._pref_key_notifications_warning_sound_ringtone), defaultSound);
@@ -399,10 +531,8 @@ public final class NotificationService {
 					this.title = context.getString(R.string.notification_warning_title);
 					this.content = context.getString(R.string.notification_warning_content, warningLevel);
 					this.bigContent = context.getString(R.string.notification_warning_content_big, warningLevel);
-					break;
-
-				case FULL_LEVEL_TYPE:
-				default:
+				}
+				case FULL_LEVEL_TYPE -> {
 					this.channelId = CHANNEL_ID_FULL;
 					this.iconRes = R.drawable.ic_stat_device_battery_charging_full;
 					this.alarmSound = prefs.getString(context.getString(R.string._pref_key_notifications_full_sound_ringtone), defaultSound);
@@ -412,7 +542,17 @@ public final class NotificationService {
 					             : context.getString(R.string.notification_full_level_title_regular);
 					this.content = context.getString(R.string.notification_full_level_content);
 					this.bigContent = context.getString(R.string.notification_full_level_content_big);
-					break;
+				}
+				default -> {
+					// Fallback to FULL_LEVEL_TYPE configuration
+					this.channelId = CHANNEL_ID_FULL;
+					this.iconRes = R.drawable.ic_stat_device_battery_charging_full;
+					this.alarmSound = defaultSound;
+					this.ticker = "";
+					this.title = "";
+					this.content = "";
+					this.bigContent = "";
+				}
 			}
 		}
 	}

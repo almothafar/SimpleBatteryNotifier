@@ -125,4 +125,11 @@
     <string name="_pref_value_temperatures_unit_f">fahrenheit</string>
     <string name="_pref_value_notifications_time_range_end">23:00</string>
     <string name="_pref_value_notifications_time_range_start">08:00</string>
+
+    <!-- Validation error messages -->
+    <string name="error_warning_level_too_low">Warning level must be higher than critical level (%d%%)</string>
+    <string name="error_critical_level_too_high">Critical level must be lower than warning level (%d%%)</string>
+
+    <!-- Notification service -->
+    <string name="_default_notification_sound_uri">content://settings/system/notification_sound</string>
 </resources>
