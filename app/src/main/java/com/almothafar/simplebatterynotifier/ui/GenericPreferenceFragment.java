@@ -245,14 +245,41 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 				});
 			}
 
-			// Add a change listener for SeekBarPreference to show percentage
+			// Add a change listener for battery level SeekBarPreferences
 			if (p instanceof SeekBarPreference) {
 				final String key = p.getKey();
 				if (nonNull(key) && (key.equals(getString(R.string._pref_key_warn_battery_level)) ||
 						key.equals(getString(R.string._pref_key_critical_battery_level)))) {
 					p.setOnPreferenceChangeListener((pref, newValue) -> {
 						if (newValue instanceof Integer) {
-							pref.setSummary(newValue + "%");
+							final int value = (Integer) newValue;
+
+							// Validate warning and critical levels don't overlap
+							if (key.equals(getString(R.string._pref_key_warn_battery_level))) {
+								// Changing warning level - ensure it's higher than critical
+								final int criticalLevel = sharedPreferences.getInt(
+										getString(R.string._pref_key_critical_battery_level), 20);
+								if (value <= criticalLevel) {
+									// Show a toast or message to the user
+									android.widget.Toast.makeText(pref.getContext(),
+											"Warning level must be higher than critical level (" + criticalLevel + "%)",
+											android.widget.Toast.LENGTH_SHORT).show();
+									return false; // Reject the change
+								}
+							} else if (key.equals(getString(R.string._pref_key_critical_battery_level))) {
+								// Changing critical level - ensure it's lower than warning
+								final int warningLevel = sharedPreferences.getInt(
+										getString(R.string._pref_key_warn_battery_level), 40);
+								if (value >= warningLevel) {
+									// Show a toast or message to the user
+									android.widget.Toast.makeText(pref.getContext(),
+											"Critical level must be lower than warning level (" + warningLevel + "%)",
+											android.widget.Toast.LENGTH_SHORT).show();
+									return false; // Reject the change
+								}
+							}
+
+							pref.setSummary(value + "%");
 						}
 						return true;
 					});
