@@ -18,10 +18,7 @@
 package com.almothafar.simplebatterynotifier.ui.widgets;
 
 import android.animation.Animator;
-import android.animation.Animator.AnimatorListener;
-import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
-import android.animation.ValueAnimator.AnimatorUpdateListener;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
@@ -32,7 +29,6 @@ import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 import android.widget.ProgressBar;
@@ -50,11 +46,12 @@ import static java.util.Objects.nonNull;
 public class CircularProgressBar extends ProgressBar {
 	private static final String TAG = "CircularProgressBar";
 
-	private static final int STROKE_WIDTH = 30;
+	// Balanced modern design
+	private static final int STROKE_WIDTH = 25; // Balanced thickness
 	private static final long ANIMATION_DURATION = 1000;
-	private static final int DEFAULT_TITLE_SIZE = 60;
+	private static final int DEFAULT_TITLE_SIZE = 64; // Slightly larger for readability
 	private static final int DEFAULT_SUBTITLE_SIZE = 20;
-	private static final int STROKE_PADDING = 5;
+	private static final int STROKE_PADDING = 4;
 	private static final float START_ANGLE = 135;
 	private static final float SWEEP_ANGLE = 270;
 
@@ -71,7 +68,7 @@ public class CircularProgressBar extends ProgressBar {
 	private String title = "";
 	private String subTitle = "";
 	private boolean hasShadow = true;
-	private int shadowColor = Color.BLACK;
+	private int shadowColor = Color.argb(180, 0, 0, 0);
 
 	/**
 	 * Constructor for programmatic instantiation
@@ -107,77 +104,6 @@ public class CircularProgressBar extends ProgressBar {
 	}
 
 	/**
-	 * Initialize the view with custom attributes
-	 *
-	 * @param attrs Attribute set from XML
-	 * @param style Style attribute
-	 */
-	private void initialize(final AttributeSet attrs, final int style) {
-		// Enable software layer so that shadow shows up properly for lines and arcs
-		setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-
-		// Enable accessibility support for screen readers (TalkBack)
-		setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
-
-		try (final TypedArray styledAttributes = getContext().obtainStyledAttributes(attrs, R.styleable.CircularProgressBar, style, 0)) {
-			final Resources res = getResources();
-
-			this.hasShadow = styledAttributes.getBoolean(R.styleable.CircularProgressBar_cpb_hasShadow, true);
-
-			int color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_progressColor,
-					GeneralHelper.getColor(res, R.color.circular_progress_default_progress));
-			progressColorPaint.setColor(color);
-
-			color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_backgroundColor,
-					GeneralHelper.getColor(res, R.color.circular_progress_default_background));
-			backgroundColorPaint.setColor(color);
-
-			color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_titleColor,
-					GeneralHelper.getColor(res, R.color.circular_progress_default_title));
-			titlePaint.setColor(color);
-
-			color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_subtitleColor,
-					GeneralHelper.getColor(res, R.color.circular_progress_default_subtitle));
-			subtitlePaint.setColor(color);
-
-			final String titleAttr = styledAttributes.getString(R.styleable.CircularProgressBar_cpb_title);
-			if (nonNull(titleAttr)) {
-				title = titleAttr;
-			}
-
-			final String subtitleAttr = styledAttributes.getString(R.styleable.CircularProgressBar_cpb_subtitle);
-			if (nonNull(subtitleAttr)) {
-				subTitle = subtitleAttr;
-			}
-
-			final int strokeWidth = styledAttributes.getInt(R.styleable.CircularProgressBar_cpb_strokeWidth, STROKE_WIDTH);
-			final int titleTextSize = styledAttributes.getInt(R.styleable.CircularProgressBar_cpb_titleTextSize, DEFAULT_TITLE_SIZE);
-			final int subtitleTextSize = styledAttributes.getInt(R.styleable.CircularProgressBar_cpb_subtitleTextSize, DEFAULT_SUBTITLE_SIZE);
-
-			// No need to manually recycle - try-with-resources handles it automatically
-
-			progressColorPaint.setAntiAlias(true);
-			progressColorPaint.setStyle(Paint.Style.STROKE);
-			progressColorPaint.setStrokeWidth(GeneralHelper.dpToPixel(res, strokeWidth));
-
-			backgroundColorPaint.setAntiAlias(true);
-			backgroundColorPaint.setStyle(Paint.Style.STROKE);
-			backgroundColorPaint.setStrokeWidth(GeneralHelper.dpToPixel(res, strokeWidth + STROKE_PADDING));
-
-			titlePaint.setTextSize(GeneralHelper.dpToPixel(res, titleTextSize));
-			titlePaint.setStyle(Style.FILL);
-			titlePaint.setAntiAlias(true);
-			titlePaint.setTypeface(Typeface.create("Roboto-Thin", Typeface.NORMAL));
-			titlePaint.setShadowLayer(0.1f, 0, 1, Color.GRAY);
-
-			subtitlePaint.setTextSize(GeneralHelper.dpToPixel(res, subtitleTextSize));
-			subtitlePaint.setStyle(Style.FILL);
-			subtitlePaint.setAntiAlias(true);
-			subtitlePaint.setTypeface(Typeface.create("Roboto-Thin", Typeface.BOLD));
-		}
-	}
-
-	/**
 	 * Animate the progress from start value to end value
 	 *
 	 * @param start    Starting progress value
@@ -189,27 +115,19 @@ public class CircularProgressBar extends ProgressBar {
 			setProgress(start);
 		}
 
-		final ObjectAnimator progressBarAnimator = ObjectAnimator.ofInt(this, "animateProgress", start, end);
+		// Use ValueAnimator instead of ObjectAnimator (no property setter needed)
+		final ValueAnimator progressBarAnimator = ValueAnimator.ofInt(start, end);
 		progressBarAnimator.setDuration(ANIMATION_DURATION);
 		progressBarAnimator.setInterpolator(new LinearInterpolator());
 
-		progressBarAnimator.addListener(new AnimatorListener() {
-			@Override
-			public void onAnimationCancel(final Animator animation) {
-				// Animation cancelled
-			}
-
+		// Use AnimatorListenerAdapter to avoid empty method implementations
+		progressBarAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
 			@Override
 			public void onAnimationEnd(final Animator animation) {
 				CircularProgressBar.this.setProgress(end);
 				if (nonNull(listener)) {
 					listener.onAnimationFinish();
 				}
-			}
-
-			@Override
-			public void onAnimationRepeat(final Animator animation) {
-				// Animation repeated
 			}
 
 			@Override
@@ -220,16 +138,11 @@ public class CircularProgressBar extends ProgressBar {
 			}
 		});
 
-		progressBarAnimator.addUpdateListener(new AnimatorUpdateListener() {
-			@Override
-			public void onAnimationUpdate(final ValueAnimator animation) {
-				final int progress = (Integer) animation.getAnimatedValue();
-				if (progress != CircularProgressBar.this.getProgress()) {
-					CircularProgressBar.this.setProgress(progress);
-					if (nonNull(listener)) {
-						listener.onAnimationProgress(progress);
-					}
-				}
+		progressBarAnimator.addUpdateListener(animation -> {
+			final int progress = (Integer) animation.getAnimatedValue();
+			CircularProgressBar.this.setProgress(progress);
+			if (nonNull(listener)) {
+				listener.onAnimationProgress(progress);
 			}
 		});
 		progressBarAnimator.start();
@@ -356,15 +269,12 @@ public class CircularProgressBar extends ProgressBar {
 	 */
 	@Override
 	protected synchronized void onDraw(@NonNull final Canvas canvas) {
-		canvas.drawArc(circleBounds, START_ANGLE, SWEEP_ANGLE, false, backgroundColorPaint);
-
+		final Resources res = getResources();
 		final int progress = getProgress();
 		final float scale = getMax() > 0 ? (float) progress / getMax() * SWEEP_ANGLE : 0;
 
-		if (hasShadow) {
-			progressColorPaint.setShadowLayer(3, 0, 1, shadowColor);
-		}
-		final Resources res = getResources();
+		// Draw a background track
+		canvas.drawArc(circleBounds, START_ANGLE, SWEEP_ANGLE, false, backgroundColorPaint);
 
 		// Determine progress color based on battery level
 		if (progress >= warningLevel) {
@@ -373,6 +283,13 @@ public class CircularProgressBar extends ProgressBar {
 			progressColorPaint.setColor(GeneralHelper.getColor(res, R.color.circular_progress_default_progress_warning));
 		} else {
 			progressColorPaint.setColor(GeneralHelper.getColor(res, R.color.circular_progress_default_progress_alert));
+		}
+
+		// Draw progress arc with shadow for depth
+		if (hasShadow) {
+			progressColorPaint.setShadowLayer(12f, 2, 6, shadowColor);
+		} else {
+			progressColorPaint.clearShadowLayer();
 		}
 		canvas.drawArc(circleBounds, START_ANGLE, scale, false, progressColorPaint);
 
@@ -407,11 +324,13 @@ public class CircularProgressBar extends ProgressBar {
 		final int height = getDefaultSize(getSuggestedMinimumHeight(), heightMeasureSpec);
 		final int width = GeneralHelper.dpToPixel(getResources(), getDefaultSize(getSuggestedMinimumWidth(), widthMeasureSpec));
 		final int min = Math.min(width, height);
-		final int strokeWidth = GeneralHelper.dpToPixel(getResources(), STROKE_WIDTH);
+		final int strokeWidthPx = GeneralHelper.dpToPixel(getResources(), STROKE_WIDTH);
 
-		setMeasuredDimension(min + 2 * strokeWidth, min + 2 * strokeWidth);
+		setMeasuredDimension(min + 2 * strokeWidthPx, min + 2 * strokeWidthPx);
 
-		circleBounds.set(strokeWidth, strokeWidth, min + strokeWidth, min + strokeWidth);
+		// Set bounds with proper inset for stroke (using float for RectF)
+		final float size = min + strokeWidthPx;
+		circleBounds.set((float) strokeWidthPx, (float) strokeWidthPx, size, size);
 	}
 
 	/**
@@ -431,6 +350,83 @@ public class CircularProgressBar extends ProgressBar {
 
 		// Force an update to redraw the progress bar
 		invalidate();
+	}
+
+	/**
+	 * Initialize the view with custom attributes
+	 *
+	 * @param attrs Attribute set from XML
+	 * @param style Style attribute
+	 */
+	private void initialize(final AttributeSet attrs, final int style) {
+		// Enable software layer so that shadow shows up properly for lines and arcs
+		setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+
+		// Enable accessibility support for screen readers (TalkBack)
+		setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+
+		try (final TypedArray styledAttributes = getContext().obtainStyledAttributes(attrs, R.styleable.CircularProgressBar, style, 0)) {
+			final Resources res = getResources();
+
+			this.hasShadow = styledAttributes.getBoolean(R.styleable.CircularProgressBar_cpb_hasShadow, true);
+
+			int color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_progressColor,
+			                                      GeneralHelper.getColor(res, R.color.circular_progress_default_progress));
+			progressColorPaint.setColor(color);
+
+			color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_backgroundColor,
+			                                  GeneralHelper.getColor(res, R.color.circular_progress_default_background));
+			backgroundColorPaint.setColor(color);
+
+			color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_titleColor,
+			                                  GeneralHelper.getColor(res, R.color.circular_progress_default_title));
+			titlePaint.setColor(color);
+
+			color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_subtitleColor,
+			                                  GeneralHelper.getColor(res, R.color.circular_progress_default_subtitle));
+			subtitlePaint.setColor(color);
+
+			final String titleAttr = styledAttributes.getString(R.styleable.CircularProgressBar_cpb_title);
+			if (nonNull(titleAttr)) {
+				title = titleAttr;
+			}
+
+			final String subtitleAttr = styledAttributes.getString(R.styleable.CircularProgressBar_cpb_subtitle);
+			if (nonNull(subtitleAttr)) {
+				subTitle = subtitleAttr;
+			}
+
+			final int strokeWidth = styledAttributes.getInt(R.styleable.CircularProgressBar_cpb_strokeWidth, STROKE_WIDTH);
+			final int titleTextSize = styledAttributes.getInt(R.styleable.CircularProgressBar_cpb_titleTextSize, DEFAULT_TITLE_SIZE);
+			final int subtitleTextSize = styledAttributes.getInt(R.styleable.CircularProgressBar_cpb_subtitleTextSize, DEFAULT_SUBTITLE_SIZE);
+
+			// No need to manually recycle - try-with-resources handles it automatically
+
+			// Modern progress arc with smooth rounded ends
+			progressColorPaint.setAntiAlias(true);
+			progressColorPaint.setStyle(Paint.Style.STROKE);
+			progressColorPaint.setStrokeWidth(GeneralHelper.dpToPixel(res, strokeWidth));
+			progressColorPaint.setStrokeCap(Paint.Cap.ROUND); // Smooth rounded caps
+
+			// Background arc
+			backgroundColorPaint.setAntiAlias(true);
+			backgroundColorPaint.setStyle(Paint.Style.STROKE);
+			backgroundColorPaint.setStrokeWidth(GeneralHelper.dpToPixel(res, strokeWidth + STROKE_PADDING));
+			backgroundColorPaint.setStrokeCap(Paint.Cap.ROUND); // Smooth rounded caps
+
+			// Percentage text - bold and clear
+			titlePaint.setTextSize(GeneralHelper.dpToPixel(res, titleTextSize));
+			titlePaint.setStyle(Style.FILL);
+			titlePaint.setAntiAlias(true);
+			titlePaint.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+			titlePaint.setShadowLayer(3f, 0, 2, Color.argb(50, 0, 0, 0)); // Subtle shadow
+
+			// Status text
+			subtitlePaint.setTextSize(GeneralHelper.dpToPixel(res, subtitleTextSize));
+			subtitlePaint.setStyle(Style.FILL);
+			subtitlePaint.setAntiAlias(true);
+			subtitlePaint.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+		}
 	}
 
 	/**
