@@ -21,7 +21,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
                     'proguard-rules.pro'
         }
-        debug { }
+        debug {
+            applicationIdSuffix ".debug"
+        }
     }
 
     compileOptions {
@@ -39,6 +41,7 @@ dependencies {
 
     implementation 'androidx.preference:preference:1.2.1'     // AndroidX settings UI
     implementation 'androidx.activity:activity:1.12.1'        // Activity Result API (for ringtone picker)
+    implementation 'androidx.cardview:cardview:1.0.0'         // CardView for battery insights
 
     // Add more AndroidX as you update imports (e.g., constraintlayout)
     // implementation 'androidx.constraintlayout:constraintlayout:2.1.4'

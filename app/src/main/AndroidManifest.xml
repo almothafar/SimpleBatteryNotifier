@@ -49,5 +49,12 @@
                 android:theme="@style/AppTheme.NoActionBar"
                 android:parentActivityName=".ui.MainActivity"/>
 
+        <!-- Battery Insights activity -->
+        <activity
+                android:name=".ui.BatteryInsightsActivity"
+                android:label="@string/battery_insights_title"
+                android:theme="@style/AppTheme.NoActionBar"
+                android:parentActivityName=".ui.MainActivity"/>
+
     </application>
 </manifest>

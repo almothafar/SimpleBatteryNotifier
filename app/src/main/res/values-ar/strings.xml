@@ -9,6 +9,8 @@
     <string name="charger_disconnected">Charger Disconnected</string>
     <string name="charging">تشحن</string>
     <string name="discharging">تستهلك</string>
+    <string name="not_charging">لا تشحن</string>
+    <string name="unknown">غير معروف</string>
     <string name="full">كامل</string>
     <string name="charged">مشحونة</string>
 

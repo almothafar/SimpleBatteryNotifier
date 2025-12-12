@@ -10,17 +10,16 @@
 
     <!-- Modern Toolbar with system window insets -->
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="?attr/actionBarSize"
-        android:background="@color/title_bar_background_color"
-        android:elevation="4dp"
-        android:fitsSystemWindows="true"
-        android:theme="@style/ToolBarStyle"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:title="@string/app_name"
-        app:titleTextColor="@android:color/white" />
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/title_bar_background_color"
+            android:elevation="4dp"
+            android:fitsSystemWindows="true"
+            android:theme="@style/ToolBarStyle"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+            app:title="@string/app_name"
+            app:titleTextColor="@android:color/white"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -46,9 +45,89 @@
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/detailsFragmentLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:name="com.almothafar.simplebatterynotifier.ui.BatteryDetailsFragment"
         tools:layout="@layout/fragment_battery_details" />
 
+    <!-- Battery Health Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:paddingBottom="32dp"
+        android:background="@android:color/white"
+        android:fitsSystemWindows="true">
+
+        <!-- Charge Cycles Display -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/charge_cycles"
+                android:textSize="14sp"
+                android:textColor="@color/battery_details_label_color" />
+
+            <TextView
+                android:id="@+id/chargeCyclesMainText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/battery_details_value_color" />
+
+        </LinearLayout>
+
+        <!-- Battery Insights Button -->
+        <Button
+            android:id="@+id/batteryInsightsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/view_battery_insights"
+            android:textColor="@android:color/white"
+            android:background="@color/title_bar_background_color"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Developer Signature -->
+        <LinearLayout
+            android:id="@+id/developerSignatureMainLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/developed_by"
+                android:textSize="11sp"
+                android:textColor="@color/battery_details_label_color"
+                android:layout_marginBottom="2dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/developer_name"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/title_bar_background_color" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </LinearLayout>

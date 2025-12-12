@@ -1,23 +1,35 @@
 package com.almothafar.simplebatterynotifier.ui;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+import com.google.android.material.snackbar.Snackbar;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.ui.widgets.CircularProgressBar;
@@ -46,6 +58,12 @@ public class MainActivity extends AppCompatActivity {
 	private BatteryDO batteryDO;
 	private TimerTask updateTask;
 	private ActivityResultLauncher<Intent> settingsLauncher;
+	private ActivityResultLauncher<String> notificationPermissionLauncher;
+
+	// UI elements
+	private TextView chargeCyclesText;
+	private Button batteryInsightsButton;
+	private LinearLayout developerSignatureLayout;
 
 	/**
 	 * Create the options menu
@@ -107,6 +125,35 @@ public class MainActivity extends AppCompatActivity {
 				}
 		);
 
+		// Register notification permission launcher for Android 13+ (API 33+)
+		notificationPermissionLauncher = registerForActivityResult(
+				new ActivityResultContracts.RequestPermission(),
+				isGranted -> {
+					if (isGranted) {
+						Log.d(TAG, "Notification permission granted");
+						Toast.makeText(this, "Thank you! Notifications are now enabled.", Toast.LENGTH_SHORT).show();
+					} else {
+						Log.w(TAG, "Notification permission denied");
+						showPermissionDeniedSnackbar();
+					}
+				}
+		);
+
+		// Request notification permission if needed (Android 13+)
+		requestNotificationPermissionIfNeeded();
+
+		// Initialize UI elements
+		chargeCyclesText = findViewById(R.id.chargeCyclesMainText);
+		batteryInsightsButton = findViewById(R.id.batteryInsightsButton);
+		developerSignatureLayout = findViewById(R.id.developerSignatureMainLayout);
+
+		// Set up button click listeners
+		batteryInsightsButton.setOnClickListener(v -> openBatteryInsights());
+		developerSignatureLayout.setOnClickListener(v -> openDeveloperLink());
+
+		// Update charge cycles display
+		updateChargeCycles();
+
 		// Start the power connection service
 		startService(new Intent(this, PowerConnectionService.class));
 	}
@@ -119,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
 		super.onPostResume();
 
 		initializeFirstValues();
+		updateChargeCycles(); // Update charge cycles display
 
 		startUpdateTimer();
 	}
@@ -143,21 +191,25 @@ public class MainActivity extends AppCompatActivity {
 		if (isNull(batteryDO)) {
 			Log.w(TAG, "Unable to retrieve battery information");
 			batteryPercentage = 0;
-			subTitle = getResources().getString(R.string.discharging);
+			subTitle = getResources().getString(R.string.unknown);
 			return;
 		}
 
-		final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
-		final boolean isFull = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_FULL;
-
+		final int status = batteryDO.getStatus();
 		batteryPercentage = (int) batteryDO.getBatteryPercentage();
 
-		if (isFull) {
+		// Map battery status to appropriate string resource
+		if (status == BatteryManager.BATTERY_STATUS_FULL) {
 			subTitle = getResources().getString(R.string.charged);
-		} else if (isCharging) {
+		} else if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
 			subTitle = getResources().getString(R.string.charging);
-		} else {
+		} else if (status == BatteryManager.BATTERY_STATUS_NOT_CHARGING) {
+			subTitle = getResources().getString(R.string.not_charging);
+		} else if (status == BatteryManager.BATTERY_STATUS_DISCHARGING) {
 			subTitle = getResources().getString(R.string.discharging);
+		} else {
+			// BATTERY_STATUS_UNKNOWN or any other status
+			subTitle = getResources().getString(R.string.unknown);
 		}
 	}
 
@@ -219,11 +271,86 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	/**
+	 * Request notification permission if needed (Android 13+)
+	 */
+	private void requestNotificationPermissionIfNeeded() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+					!= PackageManager.PERMISSION_GRANTED) {
+				Log.d(TAG, "Requesting notification permission");
+				notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+			}
+		}
+	}
+
+	/**
+	 * Shows a Snackbar when permission is denied, with action to open notification settings
+	 */
+	private void showPermissionDeniedSnackbar() {
+		Snackbar.make(
+				findViewById(R.id.containerLayout),
+				"Notifications are important for this app to work properly",
+				Snackbar.LENGTH_LONG
+		).setAction("Open Settings", v -> openNotificationSettings()).show();
+	}
+
+	/**
+	 * Opens the app's notification settings page directly
+	 */
+	private void openNotificationSettings() {
+		final Intent intent = new Intent();
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			// Android 8.0+: Open app notification settings directly
+			intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+			intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+		} else {
+			// Older Android: Open app details settings
+			intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+			intent.setData(Uri.fromParts("package", getPackageName(), null));
+		}
+
+		startActivity(intent);
+	}
+
+	/**
 	 * Open the settings activity
 	 */
 	private void openSettings() {
 		final Intent intent = new Intent(this, SettingsActivity.class);
 		// Use modern ActivityResultLauncher instead of deprecated startActivityForResult()
 		settingsLauncher.launch(intent);
+	}
+
+	/**
+	 * Open the battery insights activity
+	 */
+	private void openBatteryInsights() {
+		final Intent intent = new Intent(this, BatteryInsightsActivity.class);
+		startActivity(intent);
+	}
+
+	/**
+	 * Update the charge cycles display
+	 */
+	private void updateChargeCycles() {
+		final int cycles = BatteryHealthTracker.getChargeCycles(this);
+		chargeCyclesText.setText(String.valueOf(cycles));
+	}
+
+	/**
+	 * Open the developer's link (GitHub/website)
+	 */
+	private void openDeveloperLink() {
+		try {
+			String link = getString(R.string.developer_link);
+			if (!link.startsWith("http://") && !link.startsWith("https://")) {
+				link = "https://" + link;
+			}
+			final Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(link));
+			startActivity(browserIntent);
+		} catch (final Exception e) {
+			Log.e(TAG, "Error opening developer link", e);
+		}
 	}
 }

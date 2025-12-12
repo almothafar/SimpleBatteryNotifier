@@ -9,6 +9,7 @@ import android.os.BatteryManager;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 
@@ -56,6 +57,9 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 
 		final BatteryDO batteryDO = SystemService.getBatteryInfo(context);
 		final int percentage = (int) batteryDO.getBatteryPercentage();
+
+		// Track battery health and charge cycles
+		BatteryHealthTracker.recordBatteryState(context, percentage, status);
 
 		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
 		final int warningLevel = sharedPref.getInt(context.getString(R.string._pref_key_warn_battery_level), 40);
