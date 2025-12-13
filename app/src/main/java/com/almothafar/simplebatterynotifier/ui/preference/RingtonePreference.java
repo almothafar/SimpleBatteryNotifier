@@ -30,10 +30,12 @@ public class RingtonePreference extends Preference {
 	 * @param defStyleAttr Default style attribute
 	 * @param defStyleRes  Default style resource
 	 */
-	public RingtonePreference(final Context context, final AttributeSet attrs,
-	                          final int defStyleAttr, final int defStyleRes) {
+	public RingtonePreference(final Context context,
+	                          final AttributeSet attrs,
+	                          final int defStyleAttr,
+	                          final int defStyleRes) {
 		super(context, attrs, defStyleAttr, defStyleRes);
-		initialize(context, attrs);
+		initialize(attrs);
 	}
 
 	/**
@@ -45,7 +47,7 @@ public class RingtonePreference extends Preference {
 	 */
 	public RingtonePreference(final Context context, final AttributeSet attrs, final int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
-		initialize(context, attrs);
+		initialize(attrs);
 	}
 
 	/**
@@ -56,7 +58,7 @@ public class RingtonePreference extends Preference {
 	 */
 	public RingtonePreference(final Context context, final AttributeSet attrs) {
 		super(context, attrs);
-		initialize(context, attrs);
+		initialize(attrs);
 	}
 
 	/**
@@ -66,7 +68,7 @@ public class RingtonePreference extends Preference {
 	 */
 	public RingtonePreference(final Context context) {
 		super(context);
-		initialize(context, null);
+		initialize(null);
 	}
 
 	/**
@@ -123,11 +125,26 @@ public class RingtonePreference extends Preference {
 	 *
 	 * @param a     TypedArray containing the attribute values
 	 * @param index Index of the default value
+	 *
 	 * @return The default ringtone URI string
 	 */
 	@Override
 	protected Object onGetDefaultValue(final TypedArray a, final int index) {
 		return a.getString(index);
+	}
+
+	/**
+	 * Called when preference is attached to the preference hierarchy
+	 * Ensures summary is updated when the preference is displayed
+	 */
+	@Override
+	public void onAttached() {
+		super.onAttached();
+		// Ensure the summary is updated when a preference is attached
+		if (currentRingtoneUri == null) {
+			currentRingtoneUri = getPersistedString("");
+		}
+		updateSummary();
 	}
 
 	/**
@@ -156,26 +173,11 @@ public class RingtonePreference extends Preference {
 	}
 
 	/**
-	 * Called when preference is attached to the preference hierarchy
-	 * Ensures summary is updated when preference is displayed
-	 */
-	@Override
-	public void onAttached() {
-		super.onAttached();
-		// Ensure summary is updated when preference is attached
-		if (currentRingtoneUri == null) {
-			currentRingtoneUri = getPersistedString("");
-		}
-		updateSummary();
-	}
-
-	/**
 	 * Initialize the preference from attributes
 	 *
-	 * @param context The context
-	 * @param attrs   Attribute set, may be null
+	 * @param attrs Attribute set may be null
 	 */
-	private void initialize(final Context context, final AttributeSet attrs) {
+	private void initialize(final AttributeSet attrs) {
 		if (nonNull(attrs)) {
 			// Read ringtoneType attribute if present
 			final int type = attrs.getAttributeIntValue("http://schemas.android.com/apk/res/android", "ringtoneType", -1);
