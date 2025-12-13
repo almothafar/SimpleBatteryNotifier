@@ -139,8 +139,10 @@ public class RingtonePreference extends Preference {
 	protected void onSetInitialValue(final Object defaultValue) {
 		String uri = getPersistedString(null);
 
-		// If no persisted value exists, use the default or system default
-		if (uri == null || uri.isEmpty()) {
+		// Only apply default if preference has never been set (first install)
+		// If uri is null, preference has never been set
+		// If uri is "", user explicitly selected "None" - respect their choice
+		if (uri == null) {
 			if (nonNull(defaultValue) && !defaultValue.toString().isEmpty()) {
 				uri = defaultValue.toString();
 			} else {

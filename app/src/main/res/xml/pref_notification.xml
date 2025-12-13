@@ -28,29 +28,6 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Critical Battery Level"
-        app:iconSpaceReserved="false">
-
-        <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
-            android:defaultValue="content://settings/system/notification_sound"
-            android:key="@string/_pref_key_notifications_alert_sound_ringtone"
-            android:ringtoneType="notification"
-            android:title="@string/notifications_alert_sound_ringtone"
-            app:iconSpaceReserved="false" />
-
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="@string/_pref_key_notify_every_tick"
-            android:summaryOff="@string/notify_every_tick_summary_off"
-            android:summaryOn="@string/notify_every_tick_summary_on"
-            android:switchTextOff="@string/off"
-            android:switchTextOn="@string/on"
-            android:title="@string/notify_every_tick"
-            app:iconSpaceReserved="false" />
-
-    </PreferenceCategory>
-
-    <PreferenceCategory
         android:title="Full Battery"
         app:iconSpaceReserved="false">
 
@@ -94,6 +71,29 @@
             android:key="@string/_pref_key_notifications_warning_sound_ringtone"
             android:ringtoneType="notification"
             android:title="@string/notifications_warning_sound_ringtone"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Critical Battery Level"
+        app:iconSpaceReserved="false">
+
+        <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
+            android:defaultValue="content://settings/system/notification_sound"
+            android:key="@string/_pref_key_notifications_alert_sound_ringtone"
+            android:ringtoneType="notification"
+            android:title="@string/notifications_alert_sound_ringtone"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="@string/_pref_key_notify_every_tick"
+            android:summaryOff="@string/notify_every_tick_summary_off"
+            android:summaryOn="@string/notify_every_tick_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/notify_every_tick"
             app:iconSpaceReserved="false" />
 
     </PreferenceCategory>
