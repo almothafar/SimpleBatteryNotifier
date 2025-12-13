@@ -24,6 +24,9 @@ import androidx.preference.PreferenceScreen;
 import androidx.preference.SeekBarPreference;
 
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference;
+import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreference;
+import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreferenceDialogFragmentCompat;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.util.Set;

@@ -1,4 +1,4 @@
-package com.almothafar.simplebatterynotifier.ui.fragment;
+package com.almothafar.simplebatterynotifier.ui.preference;
 
 import android.content.Context;
 import android.content.res.TypedArray;
