@@ -211,6 +211,12 @@ public class MainActivity extends BaseActivity {
 					progressBar.setTitle(batteryPercentage + "%");
 					progressBar.setSubTitle(subTitle);
 
+					// Update charging animation based on battery status
+					if (nonNull(batteryDO)) {
+						final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
+						progressBar.setCharging(isCharging);
+					}
+
 					final FragmentManager fragmentManager = getSupportFragmentManager();
 					final BatteryDetailsFragment batteryDetailsFragment =
 							(BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);

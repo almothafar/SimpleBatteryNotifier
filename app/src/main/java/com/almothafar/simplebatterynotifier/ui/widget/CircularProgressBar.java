@@ -49,11 +49,14 @@ public class CircularProgressBar extends ProgressBar {
 	// Balanced modern design
 	private static final int STROKE_WIDTH = 25; // Balanced thickness
 	private static final long ANIMATION_DURATION = 1000;
+	private static final long PULSE_DURATION = 2000; // 2-second breathing cycle
 	private static final int DEFAULT_TITLE_SIZE = 64; // Slightly larger for readability
 	private static final int DEFAULT_SUBTITLE_SIZE = 20;
 	private static final int STROKE_PADDING = 4;
 	private static final float START_ANGLE = 135;
 	private static final float SWEEP_ANGLE = 270;
+	private static final float PULSE_MIN_SCALE = 0.95f; // Subtle pulse effect
+	private static final float PULSE_MAX_SCALE = 1.0f;
 
 	// Warning and critical levels are static to maintain consistency across all instances
 	private static int warningLevel = 40;
@@ -64,11 +67,18 @@ public class CircularProgressBar extends ProgressBar {
 	private final Paint backgroundColorPaint = new Paint();
 	private final Paint titlePaint = new Paint();
 	private final Paint subtitlePaint = new Paint();
+	private final Paint glowPaint = new Paint();
 
 	private String title = "";
 	private String subTitle = "";
 	private boolean hasShadow = true;
 	private int shadowColor = Color.argb(180, 0, 0, 0);
+
+	// Charging animation state
+	private boolean isCharging = false;
+	private ValueAnimator pulseAnimator;
+	private float currentPulseScale = 1.0f;
+	private int currentGlowAlpha = 0;
 
 	/**
 	 * Constructor for programmatic instantiation
@@ -263,6 +273,63 @@ public class CircularProgressBar extends ProgressBar {
 	}
 
 	/**
+	 * Set charging state and start/stop pulse animation
+	 *
+	 * @param charging True if battery is charging, false otherwise
+	 */
+	public void setCharging(final boolean charging) {
+		if (this.isCharging == charging) {
+			return; // No change in state
+		}
+
+		this.isCharging = charging;
+
+		if (charging) {
+			startPulseAnimation();
+		} else {
+			stopPulseAnimation();
+		}
+	}
+
+	/**
+	 * Start the gentle breathing pulse animation for charging state
+	 */
+	private void startPulseAnimation() {
+		if (nonNull(pulseAnimator) && pulseAnimator.isRunning()) {
+			return; // Already running
+		}
+
+		// Create pulse animator that oscillates between min and max scale
+		pulseAnimator = ValueAnimator.ofFloat(PULSE_MIN_SCALE, PULSE_MAX_SCALE);
+		pulseAnimator.setDuration(PULSE_DURATION);
+		pulseAnimator.setRepeatCount(ValueAnimator.INFINITE);
+		pulseAnimator.setRepeatMode(ValueAnimator.REVERSE);
+		pulseAnimator.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+
+		pulseAnimator.addUpdateListener(animation -> {
+			currentPulseScale = (float) animation.getAnimatedValue();
+			// Glow alpha varies with scale (0-40 for subtle effect)
+			currentGlowAlpha = (int) ((currentPulseScale - PULSE_MIN_SCALE) / (PULSE_MAX_SCALE - PULSE_MIN_SCALE) * 40);
+			invalidate(); // Trigger redraw
+		});
+
+		pulseAnimator.start();
+	}
+
+	/**
+	 * Stop the pulse animation
+	 */
+	private void stopPulseAnimation() {
+		if (nonNull(pulseAnimator)) {
+			pulseAnimator.cancel();
+			pulseAnimator = null;
+		}
+		currentPulseScale = 1.0f;
+		currentGlowAlpha = 0;
+		invalidate();
+	}
+
+	/**
 	 * Draw the circular progress bar
 	 *
 	 * @param canvas The canvas to draw on
@@ -273,16 +340,37 @@ public class CircularProgressBar extends ProgressBar {
 		final int progress = getProgress();
 		final float scale = getMax() > 0 ? (float) progress / getMax() * SWEEP_ANGLE : 0;
 
+		// Apply pulse scale if charging
+		if (isCharging && currentPulseScale != 1.0f) {
+			canvas.save();
+			final float pivotX = getMeasuredWidth() / 2f;
+			final float pivotY = getMeasuredHeight() / 2f;
+			canvas.scale(currentPulseScale, currentPulseScale, pivotX, pivotY);
+		}
+
 		// Draw a background track
 		canvas.drawArc(circleBounds, START_ANGLE, SWEEP_ANGLE, false, backgroundColorPaint);
 
 		// Determine progress color based on battery level
+		final int progressColor;
 		if (progress >= warningLevel) {
-			progressColorPaint.setColor(GeneralHelper.getColor(res, R.color.circular_progress_default_progress));
+			progressColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress);
 		} else if (progress > criticalLevel) {
-			progressColorPaint.setColor(GeneralHelper.getColor(res, R.color.circular_progress_default_progress_warning));
+			progressColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress_warning);
 		} else {
-			progressColorPaint.setColor(GeneralHelper.getColor(res, R.color.circular_progress_default_progress_alert));
+			progressColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress_alert);
+		}
+		progressColorPaint.setColor(progressColor);
+
+		// Draw subtle glow layer when charging
+		if (isCharging && currentGlowAlpha > 0) {
+			glowPaint.setColor(progressColor);
+			glowPaint.setAlpha(currentGlowAlpha);
+			glowPaint.setStyle(Paint.Style.STROKE);
+			glowPaint.setStrokeWidth(progressColorPaint.getStrokeWidth() + GeneralHelper.dpToPixel(res, 8));
+			glowPaint.setStrokeCap(Paint.Cap.ROUND);
+			glowPaint.setAntiAlias(true);
+			canvas.drawArc(circleBounds, START_ANGLE, scale, false, glowPaint);
 		}
 
 		// Draw progress arc with shadow for depth
@@ -308,6 +396,11 @@ public class CircularProgressBar extends ProgressBar {
 			xPos = (int) (getMeasuredWidth() / 2f - subtitlePaint.measureText(subTitle) / 2);
 
 			canvas.drawText(subTitle, xPos, yPos, subtitlePaint);
+		}
+
+		// Restore canvas state if we applied pulse scale
+		if (isCharging && currentPulseScale != 1.0f) {
+			canvas.restore();
 		}
 
 		super.onDraw(canvas);
@@ -350,6 +443,15 @@ public class CircularProgressBar extends ProgressBar {
 
 		// Force an update to redraw the progress bar
 		invalidate();
+	}
+
+	/**
+	 * Clean up animator when view is detached
+	 */
+	@Override
+	protected void onDetachedFromWindow() {
+		super.onDetachedFromWindow();
+		stopPulseAnimation();
 	}
 
 	/**
