@@ -62,15 +62,16 @@
         android:paddingBottom="@dimen/content_navigation_bar_padding"
         android:background="@android:color/white">
 
-        <!-- Battery Insights Button -->
-        <Button
+        <!-- Battery Insights Button - Material3 -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/batteryInsightsButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/view_battery_insights"
             android:textColor="@android:color/white"
-            android:background="@color/top_background_color"
-            android:layout_marginBottom="8dp" />
+            app:backgroundTint="@color/top_background_color"
+            android:layout_marginBottom="8dp"
+            style="@style/Widget.Material3.Button" />
 
         <!-- Developer Signature Fragment -->
         <androidx.fragment.app.FragmentContainerView
