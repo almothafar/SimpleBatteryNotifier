@@ -176,6 +176,7 @@ public class RingtonePreference extends Preference {
 				}
 			}
 		}
-		setSummary("Default");
+		// Empty or null URI means no ringtone selected (silent/none)
+		setSummary("None");
 	}
 }
