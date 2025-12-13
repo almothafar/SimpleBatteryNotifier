@@ -53,4 +53,10 @@
 
     <style name="DefaultTextStyle" parent="@android:style/TextAppearance.Medium">
     </style>
+
+    <!-- SeekBar Preference style with better touch targets -->
+    <style name="PreferenceSeekBar" parent="@style/Preference.SeekBarPreference.Material">
+        <item name="android:minHeight">64dp</item>
+        <item name="seekBarIncrement">1</item>
+    </style>
 </resources>

@@ -26,7 +26,9 @@
             android:min="30"
             android:max="50"
             android:title="@string/warn_start_level"
+            style="@style/PreferenceSeekBar"
             app:showSeekBarValue="true"
+            app:adjustable="true"
             app:iconSpaceReserved="false" />
 
         <SeekBarPreference
@@ -35,7 +37,9 @@
             android:min="10"
             android:max="20"
             android:title="@string/alert_start_level"
+            style="@style/PreferenceSeekBar"
             app:showSeekBarValue="true"
+            app:adjustable="true"
             app:iconSpaceReserved="false" />
 
     </PreferenceCategory>
