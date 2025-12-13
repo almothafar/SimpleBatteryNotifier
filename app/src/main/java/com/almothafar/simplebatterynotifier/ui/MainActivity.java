@@ -14,9 +14,9 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Button;
 import android.widget.Toast;
 import com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -57,7 +57,7 @@ public class MainActivity extends BaseActivity {
 	private ActivityResultLauncher<String> notificationPermissionLauncher;
 
 	// UI elements
-	private Button batteryInsightsButton;
+	private MaterialButton batteryInsightsButton;
 
 	/**
 	 * Create the options menu

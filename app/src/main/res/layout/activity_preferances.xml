@@ -12,8 +12,8 @@
         android:layout_height="?attr/actionBarSize"
         android:minHeight="?attr/actionBarSize"
         android:theme="@style/ToolBarStyle"
-        android:popupTheme="@style/AppTheme"
-        app:popupTheme="@style/AppTheme"
+        android:popupTheme="@style/ThemeOverlay.Material3.Light"
+        app:popupTheme="@style/ThemeOverlay.Material3.Light"
         app:theme="@style/ToolBarStyle"
         android:background="@color/title_bar_background_color"
         android:elevation="4dp" />

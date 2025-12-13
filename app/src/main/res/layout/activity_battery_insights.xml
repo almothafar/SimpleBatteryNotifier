@@ -17,7 +17,7 @@
             android:background="@color/title_bar_background_color"
             android:elevation="4dp"
             android:theme="@style/ToolBarStyle"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+            app:popupTheme="@style/ThemeOverlay.Material3.Light"
             app:title="@string/battery_insights_title"
             app:titleTextColor="@android:color/white"/>
 

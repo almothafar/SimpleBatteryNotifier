@@ -2,6 +2,7 @@ package com.almothafar.simplebatterynotifier.ui.preference;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -118,14 +119,54 @@ public class RingtonePreference extends Preference {
 	}
 
 	/**
+	 * Get the default value from XML attributes
+	 *
+	 * @param a     TypedArray containing the attribute values
+	 * @param index Index of the default value
+	 * @return The default ringtone URI string
+	 */
+	@Override
+	protected Object onGetDefaultValue(final TypedArray a, final int index) {
+		return a.getString(index);
+	}
+
+	/**
 	 * Set the initial value from preferences
 	 *
 	 * @param defaultValue The default value if no persisted value exists
 	 */
 	@Override
 	protected void onSetInitialValue(final Object defaultValue) {
-		final String uri = getPersistedString(nonNull(defaultValue) ? (String) defaultValue : "");
+		String uri = getPersistedString(null);
+
+		// Only apply default if preference has never been set (first install)
+		// If uri is null, preference has never been set
+		// If uri is "", user explicitly selected "None" - respect their choice
+		if (uri == null) {
+			if (nonNull(defaultValue) && !defaultValue.toString().isEmpty()) {
+				uri = defaultValue.toString();
+			} else {
+				// Use the actual system default notification sound
+				final Uri defaultNotificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+				uri = nonNull(defaultNotificationUri) ? defaultNotificationUri.toString() : "";
+			}
+		}
+
 		setRingtoneUri(uri);
+	}
+
+	/**
+	 * Called when preference is attached to the preference hierarchy
+	 * Ensures summary is updated when preference is displayed
+	 */
+	@Override
+	public void onAttached() {
+		super.onAttached();
+		// Ensure summary is updated when preference is attached
+		if (currentRingtoneUri == null) {
+			currentRingtoneUri = getPersistedString("");
+		}
+		updateSummary();
 	}
 
 	/**
@@ -162,6 +203,7 @@ public class RingtonePreference extends Preference {
 				}
 			}
 		}
-		setSummary("Default");
+		// Empty or null URI means no ringtone selected (silent/none)
+		setSummary("None");
 	}
 }
