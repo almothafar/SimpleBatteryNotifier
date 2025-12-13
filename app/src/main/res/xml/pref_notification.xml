@@ -21,7 +21,7 @@
         android:title="@string/sticky_notification"
         app:iconSpaceReserved="false" />
 
-    <com.almothafar.simplebatterynotifier.ui.fragment.RingtonePreference
+    <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
         android:defaultValue="content://settings/system/notification_sound"
         android:key="@string/_pref_key_notifications_alert_sound_ringtone"
         android:ringtoneType="notification"
@@ -48,7 +48,7 @@
         android:title="@string/notify_for_full_level"
         app:iconSpaceReserved="false" />
 
-    <com.almothafar.simplebatterynotifier.ui.fragment.RingtonePreference
+    <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
         android:defaultValue="content://settings/system/notification_sound"
         android:dependency="@string/_pref_key_notify_for_full_level"
         android:key="@string/_pref_key_notifications_full_sound_ringtone"
@@ -66,7 +66,7 @@
         android:title="@string/notify_for_warning_level"
         app:iconSpaceReserved="false" />
 
-    <com.almothafar.simplebatterynotifier.ui.fragment.RingtonePreference
+    <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
         android:defaultValue="content://settings/system/notification_sound"
         android:dependency="@string/_pref_key_notify_for_warning_level"
         android:key="@string/_pref_key_notifications_warning_sound_ringtone"
