@@ -92,4 +92,16 @@ public class TimePickerPreference extends DialogPreference {
 		final String time = getPersistedString(nonNull(defaultValue) ? defaultValue.toString() : "00:00");
 		setTime(time);
 	}
+
+	/**
+	 * Called when preference is attached to the preference hierarchy
+	 * Ensures summary is updated when preference is displayed
+	 */
+	@Override
+	public void onAttached() {
+		super.onAttached();
+		// Ensure summary is always displayed with current time value
+		final String time = getPersistedString("00:00");
+		setSummary(time);
+	}
 }
