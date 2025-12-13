@@ -15,7 +15,7 @@ if (versionPropsFile.exists()) {
 }
 
 // Auto-increment version code on release builds
-task('incrementVersion') {
+tasks.register('incrementVersion') {
     doLast {
         def currentCode = versionProps['versionCode'].toInteger()
         versionProps['versionCode'] = (currentCode + 1).toString()
@@ -25,9 +25,9 @@ task('incrementVersion') {
 }
 
 // Hook into assembleRelease to auto-increment
-tasks.whenTaskAdded { task ->
-    if (task.name == 'assembleRelease') {
-        task.dependsOn 'incrementVersion'
+afterEvaluate {
+    tasks.named('assembleRelease').configure {
+        dependsOn 'incrementVersion'
     }
 }
 
