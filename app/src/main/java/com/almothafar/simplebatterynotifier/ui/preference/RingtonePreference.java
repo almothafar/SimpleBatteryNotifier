@@ -129,6 +129,20 @@ public class RingtonePreference extends Preference {
 	}
 
 	/**
+	 * Called when preference is attached to the preference hierarchy
+	 * Ensures summary is updated when preference is displayed
+	 */
+	@Override
+	public void onAttached() {
+		super.onAttached();
+		// Ensure summary is updated when preference is attached
+		if (currentRingtoneUri == null) {
+			currentRingtoneUri = getPersistedString("");
+		}
+		updateSummary();
+	}
+
+	/**
 	 * Initialize the preference from attributes
 	 *
 	 * @param context The context
