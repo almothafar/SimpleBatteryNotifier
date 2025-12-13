@@ -14,7 +14,7 @@
         android:background="@color/title_bar_background_color"
         android:elevation="4dp"
         android:theme="@style/ToolBarStyle"
-        app:popupTheme="@style/AppTheme" />
+        app:popupTheme="@style/ThemeOverlay.Material3.Light" />
 
     <FrameLayout
         android:id="@+id/settings_container"
