@@ -49,7 +49,8 @@ public class CircularProgressBar extends ProgressBar {
 	// Balanced modern design
 	private static final int STROKE_WIDTH = 25; // Balanced thickness
 	private static final long ANIMATION_DURATION = 1000;
-	private static final long PULSE_DURATION = 2000; // 2-second breathing cycle
+	private static final long PULSE_DURATION_CHARGING = 2000; // 2-second breathing cycle for charging
+	private static final long PULSE_DURATION_CRITICAL = 1500; // 1.5-second cycle for critical
 	private static final int DEFAULT_TITLE_SIZE = 64; // Slightly larger for readability
 	private static final int DEFAULT_SUBTITLE_SIZE = 20;
 	private static final int STROKE_PADDING = 4;
@@ -74,8 +75,9 @@ public class CircularProgressBar extends ProgressBar {
 	private boolean hasShadow = true;
 	private int shadowColor = Color.argb(180, 0, 0, 0);
 
-	// Charging animation state
+	// Animation state
 	private boolean isCharging = false;
+	private boolean isCritical = false;
 	private ValueAnimator pulseAnimator;
 	private float currentPulseScale = 1.0f;
 	private int currentGlowAlpha = 0;
@@ -273,7 +275,7 @@ public class CircularProgressBar extends ProgressBar {
 	}
 
 	/**
-	 * Set charging state and start/stop pulse animation
+	 * Set charging state and update pulse animation
 	 *
 	 * @param charging True if battery is charging, false otherwise
 	 */
@@ -283,33 +285,56 @@ public class CircularProgressBar extends ProgressBar {
 		}
 
 		this.isCharging = charging;
+		updateAnimationState();
+	}
 
-		if (charging) {
+	/**
+	 * Update animation state based on charging and battery level
+	 * Called internally when progress changes or charging state changes
+	 */
+	private void updateAnimationState() {
+		final int progress = getProgress();
+		final boolean wasCritical = this.isCritical;
+
+		// Update critical state (only when not charging)
+		this.isCritical = !isCharging && progress <= criticalLevel;
+
+		// Determine if we need pulse animation
+		final boolean needsPulse = isCharging || isCritical;
+
+		// If animation state changed, restart with appropriate settings
+		if (needsPulse && (!nonNull(pulseAnimator) || !pulseAnimator.isRunning() || wasCritical != isCritical)) {
+			stopPulseAnimation();
 			startPulseAnimation();
-		} else {
+		} else if (!needsPulse) {
 			stopPulseAnimation();
 		}
 	}
 
 	/**
-	 * Start the gentle breathing pulse animation for charging state
+	 * Start the gentle breathing pulse animation
+	 * Uses different duration based on charging vs critical state
 	 */
 	private void startPulseAnimation() {
 		if (nonNull(pulseAnimator) && pulseAnimator.isRunning()) {
 			return; // Already running
 		}
 
+		// Determine pulse duration and intensity based on state
+		final long pulseDuration = isCharging ? PULSE_DURATION_CHARGING : PULSE_DURATION_CRITICAL;
+		final int maxGlowAlpha = isCritical ? 60 : 40; // More intense glow for critical
+
 		// Create pulse animator that oscillates between min and max scale
 		pulseAnimator = ValueAnimator.ofFloat(PULSE_MIN_SCALE, PULSE_MAX_SCALE);
-		pulseAnimator.setDuration(PULSE_DURATION);
+		pulseAnimator.setDuration(pulseDuration);
 		pulseAnimator.setRepeatCount(ValueAnimator.INFINITE);
 		pulseAnimator.setRepeatMode(ValueAnimator.REVERSE);
 		pulseAnimator.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
 
 		pulseAnimator.addUpdateListener(animation -> {
 			currentPulseScale = (float) animation.getAnimatedValue();
-			// Glow alpha varies with scale (0-40 for subtle effect)
-			currentGlowAlpha = (int) ((currentPulseScale - PULSE_MIN_SCALE) / (PULSE_MAX_SCALE - PULSE_MIN_SCALE) * 40);
+			// Glow alpha varies with scale
+			currentGlowAlpha = (int) ((currentPulseScale - PULSE_MIN_SCALE) / (PULSE_MAX_SCALE - PULSE_MIN_SCALE) * maxGlowAlpha);
 			invalidate(); // Trigger redraw
 		});
 
@@ -340,8 +365,9 @@ public class CircularProgressBar extends ProgressBar {
 		final int progress = getProgress();
 		final float scale = getMax() > 0 ? (float) progress / getMax() * SWEEP_ANGLE : 0;
 
-		// Apply pulse scale if charging
-		if (isCharging && currentPulseScale != 1.0f) {
+		// Apply pulse scale if charging or critical
+		final boolean shouldPulse = isCharging || isCritical;
+		if (shouldPulse && currentPulseScale != 1.0f) {
 			canvas.save();
 			final float pivotX = getMeasuredWidth() / 2f;
 			final float pivotY = getMeasuredHeight() / 2f;
@@ -362,8 +388,8 @@ public class CircularProgressBar extends ProgressBar {
 		}
 		progressColorPaint.setColor(progressColor);
 
-		// Draw subtle glow layer when charging
-		if (isCharging && currentGlowAlpha > 0) {
+		// Draw subtle glow layer when charging or critical
+		if (shouldPulse && currentGlowAlpha > 0) {
 			glowPaint.setColor(progressColor);
 			glowPaint.setAlpha(currentGlowAlpha);
 			glowPaint.setStyle(Paint.Style.STROKE);
@@ -399,7 +425,7 @@ public class CircularProgressBar extends ProgressBar {
 		}
 
 		// Restore canvas state if we applied pulse scale
-		if (isCharging && currentPulseScale != 1.0f) {
+		if (shouldPulse && currentPulseScale != 1.0f) {
 			canvas.restore();
 		}
 
@@ -440,6 +466,9 @@ public class CircularProgressBar extends ProgressBar {
 
 		// Update content description for accessibility (screen readers)
 		updateAccessibilityDescription(progress);
+
+		// Update animation state based on new progress
+		updateAnimationState();
 
 		// Force an update to redraw the progress bar
 		invalidate();
