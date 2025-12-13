@@ -6,17 +6,15 @@ import android.os.BatteryManager;
 import android.util.Log;
 import androidx.preference.PreferenceManager;
 
-import java.util.Calendar;
-
 import static java.util.Objects.isNull;
 
 /**
  * Tracks battery health metrics including charge cycles and estimated battery health.
- *
+ * <p>
  * Charge Cycle Definition:
  * A full charge cycle is counted when the battery charges from <= 20% to >= 95%.
  * This follows industry standards where partial charges accumulate to form complete cycles.
- *
+ * <p>
  * Battery Health Estimation:
  * Based on charge cycles and typical lithium-ion battery degradation patterns:
  * - 0-300 cycles: Excellent (95-100% health)
@@ -46,9 +44,9 @@ public class BatteryHealthTracker {
 	/**
 	 * Records battery state and updates charge cycle count if appropriate.
 	 *
-	 * @param context Application context
+	 * @param context      Application context
 	 * @param batteryLevel Current battery percentage (0-100)
-	 * @param status Battery charging status from BatteryManager
+	 * @param status       Battery charging status from BatteryManager
 	 */
 	public static void recordBatteryState(final Context context, final int batteryLevel, final int status) {
 		if (isNull(context)) {
@@ -61,8 +59,8 @@ public class BatteryHealthTracker {
 		// Initialize first use date if not set
 		if (prefs.getLong(PREF_FIRST_USE_DATE, 0) == 0) {
 			prefs.edit()
-					.putLong(PREF_FIRST_USE_DATE, System.currentTimeMillis())
-					.apply();
+			     .putLong(PREF_FIRST_USE_DATE, System.currentTimeMillis())
+			     .apply();
 			Log.d(TAG, "First use date initialized");
 		}
 
@@ -74,9 +72,9 @@ public class BatteryHealthTracker {
 		// Start a charge cycle when battery is low
 		if (batteryLevel <= LOW_BATTERY_THRESHOLD && !cycleInProgress) {
 			prefs.edit()
-					.putBoolean(PREF_CYCLE_IN_PROGRESS, true)
-					.putLong(PREF_LAST_LOW_BATTERY, System.currentTimeMillis())
-					.apply();
+			     .putBoolean(PREF_CYCLE_IN_PROGRESS, true)
+			     .putLong(PREF_LAST_LOW_BATTERY, System.currentTimeMillis())
+			     .apply();
 			Log.d(TAG, "Charge cycle started at " + batteryLevel + "%");
 		}
 
@@ -84,17 +82,17 @@ public class BatteryHealthTracker {
 		if (cycleInProgress && isCharging && batteryLevel >= FULL_BATTERY_THRESHOLD) {
 			final int currentCycles = prefs.getInt(PREF_CHARGE_CYCLES, 0);
 			prefs.edit()
-					.putInt(PREF_CHARGE_CYCLES, currentCycles + 1)
-					.putBoolean(PREF_CYCLE_IN_PROGRESS, false)
-					.apply();
+			     .putInt(PREF_CHARGE_CYCLES, currentCycles + 1)
+			     .putBoolean(PREF_CYCLE_IN_PROGRESS, false)
+			     .apply();
 			Log.i(TAG, "Charge cycle completed! Total cycles: " + (currentCycles + 1));
 		}
 
 		// Reset cycle tracking if battery goes back to high without charging
 		if (cycleInProgress && !isCharging && batteryLevel > FULL_BATTERY_THRESHOLD) {
 			prefs.edit()
-					.putBoolean(PREF_CYCLE_IN_PROGRESS, false)
-					.apply();
+			     .putBoolean(PREF_CYCLE_IN_PROGRESS, false)
+			     .apply();
 			Log.d(TAG, "Charge cycle reset - battery was not charged to full");
 		}
 	}
@@ -103,6 +101,7 @@ public class BatteryHealthTracker {
 	 * Gets the total number of completed charge cycles.
 	 *
 	 * @param context Application context
+	 *
 	 * @return Number of charge cycles, or 0 if not initialized
 	 */
 	public static int getChargeCycles(final Context context) {
@@ -117,6 +116,7 @@ public class BatteryHealthTracker {
 	 * Gets the date when health tracking was first initialized.
 	 *
 	 * @param context Application context
+	 *
 	 * @return Timestamp in milliseconds, or 0 if not initialized
 	 */
 	public static long getFirstUseDate(final Context context) {
@@ -131,6 +131,7 @@ public class BatteryHealthTracker {
 	 * Calculates the number of days since health tracking started.
 	 *
 	 * @param context Application context
+	 *
 	 * @return Number of days, or 0 if not initialized
 	 */
 	public static int getDaysSinceFirstUse(final Context context) {
@@ -144,13 +145,14 @@ public class BatteryHealthTracker {
 
 	/**
 	 * Estimates battery health as a percentage based on charge cycles.
-	 *
+	 * <p>
 	 * Algorithm:
 	 * - Starts at 100% for new batteries
 	 * - Degrades gradually with charge cycles
 	 * - Uses industry-standard degradation curves for lithium-ion batteries
 	 *
 	 * @param context Application context
+	 *
 	 * @return Estimated battery health percentage (0-100)
 	 */
 	public static int getEstimatedHealthPercentage(final Context context) {
@@ -185,6 +187,7 @@ public class BatteryHealthTracker {
 	 * Gets a human-readable health status description.
 	 *
 	 * @param context Application context
+	 *
 	 * @return Health status: "Excellent", "Good", "Fair", or "Poor"
 	 */
 	public static String getHealthStatus(final Context context) {
@@ -205,6 +208,7 @@ public class BatteryHealthTracker {
 	 * Gets a detailed health description with recommendations.
 	 *
 	 * @param context Application context
+	 *
 	 * @return Detailed health description
 	 */
 	public static String getHealthDescription(final Context context) {
@@ -232,11 +236,55 @@ public class BatteryHealthTracker {
 		}
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		prefs.edit()
-				.remove(PREF_CHARGE_CYCLES)
-				.remove(PREF_FIRST_USE_DATE)
-				.remove(PREF_LAST_LOW_BATTERY)
-				.remove(PREF_CYCLE_IN_PROGRESS)
-				.apply();
+		     .remove(PREF_CHARGE_CYCLES)
+		     .remove(PREF_FIRST_USE_DATE)
+		     .remove(PREF_LAST_LOW_BATTERY)
+		     .remove(PREF_CYCLE_IN_PROGRESS)
+		     .apply();
 		Log.i(TAG, "Battery health data reset");
+	}
+
+	/**
+	 * Adds test charge cycles for debugging/testing purposes.
+	 * DEBUG/TEST METHOD - Do not use in production!
+	 *
+	 * @param context Application context
+	 * @param cyclesToAdd Number of cycles to add
+	 */
+	public static void addTestChargeCycles(final Context context, final int cyclesToAdd) {
+		if (isNull(context)) {
+			return;
+		}
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final int currentCycles = prefs.getInt(PREF_CHARGE_CYCLES, 0);
+		prefs.edit()
+		     .putInt(PREF_CHARGE_CYCLES, currentCycles + cyclesToAdd)
+		     .apply();
+		Log.i(TAG, "Added " + cyclesToAdd + " test charge cycles. Total: " + (currentCycles + cyclesToAdd));
+	}
+
+	/**
+	 * Gets debug information about the current tracking state.
+	 * DEBUG/TEST METHOD - Returns detailed tracking status.
+	 *
+	 * @param context Application context
+	 * @return Debug information string
+	 */
+	public static String getDebugInfo(final Context context) {
+		if (isNull(context)) {
+			return "Context is null";
+		}
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final int cycles = prefs.getInt(PREF_CHARGE_CYCLES, 0);
+		final long firstUse = prefs.getLong(PREF_FIRST_USE_DATE, 0);
+		final boolean cycleInProgress = prefs.getBoolean(PREF_CYCLE_IN_PROGRESS, false);
+		final long lastLowBattery = prefs.getLong(PREF_LAST_LOW_BATTERY, 0);
+
+		return "Tracking Status:\n" +
+				"- First Use: " + (firstUse == 0 ? "Not initialized" : new java.util.Date(firstUse)) + "\n" +
+				"- Charge Cycles: " + cycles + "\n" +
+				"- Cycle in Progress: " + cycleInProgress + "\n" +
+				"- Last Low Battery: " + (lastLowBattery == 0 ? "Never" : new java.util.Date(lastLowBattery)) + "\n" +
+				"- Days Since First Use: " + getDaysSinceFirstUse(context);
 	}
 }

@@ -17,7 +17,7 @@
         android:background="@color/top_background_color"
         android:id="@+id/percentageLayout">
 
-        <com.almothafar.simplebatterynotifier.ui.widgets.CircularProgressBar
+        <com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar
             android:id="@+id/batteryPercentage"
             style="@style/Widget.ProgressBar.CircularProgressBar"
             android:layout_width="wrap_content"
@@ -32,7 +32,7 @@
         android:id="@+id/detailsFragmentLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:name="com.almothafar.simplebatterynotifier.ui.BatteryDetailsFragment"
+        android:name="com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment"
         tools:layout="@layout/fragment_battery_details" />
 
 </LinearLayout>

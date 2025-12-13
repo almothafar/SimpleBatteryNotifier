@@ -47,7 +47,7 @@ public class PowerConnectionService extends Service {
 	 */
 	private void registerPowerConnectionReceiver() {
 		final Intent batteryStatus = getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-		final int plugged = isNull(batteryStatus) ? -1 : batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+		final int plugged = batteryStatus == null ? -1 : batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
 
 		powerConnectionReceiver = new PowerConnectionReceiver();
 		PowerConnectionReceiver.setCurrentState(plugged);

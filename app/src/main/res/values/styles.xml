@@ -48,6 +48,9 @@
     <style name="AppTheme.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <!-- Ensure system bars are NOT translucent to prevent overlap -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
     </style>
 
     <style name="DefaultTextStyle" parent="@android:style/TextAppearance.Medium">

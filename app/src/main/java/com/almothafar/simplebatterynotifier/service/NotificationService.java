@@ -216,7 +216,7 @@ public final class NotificationService {
 	 * Release the cached launcher icon bitmap
 	 * <p>
 	 * This method clears the cached bitmap reference to help with memory management.
-	 * The bitmap will be reloaded on next access if needed.
+	 * The bitmap will be reloaded on the next access if needed.
 	 */
 	public static void releaseCachedBitmap() {
 		if (nonNull(cachedLauncherIcon)) {

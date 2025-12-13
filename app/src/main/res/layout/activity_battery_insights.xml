@@ -1,159 +1,163 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@android:color/white">
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:background="@android:color/white">
 
     <!-- Toolbar matching main activity -->
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="?attr/actionBarSize"
-        android:background="@color/title_bar_background_color"
-        android:elevation="4dp"
-        android:fitsSystemWindows="true"
-        android:theme="@style/ToolBarStyle"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:title="@string/battery_insights_title"
-        app:titleTextColor="@android:color/white" />
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="?attr/actionBarSize"
+            android:paddingTop="@dimen/toolbar_status_bar_padding"
+            android:background="@color/title_bar_background_color"
+            android:elevation="4dp"
+            android:theme="@style/ToolBarStyle"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+            app:title="@string/battery_insights_title"
+            app:titleTextColor="@android:color/white"/>
 
     <!-- Scrollable content -->
     <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="@dimen/content_navigation_bar_padding">
 
             <!-- Health Status Card -->
             <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp"
-                app:contentPadding="20dp">
-
-                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center">
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="4dp"
+                    app:contentPadding="20dp">
+
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center">
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/battery_health"
-                        android:textSize="16sp"
-                        android:textColor="@color/battery_details_label_color"
-                        android:layout_marginBottom="8dp" />
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/battery_health"
+                            android:textSize="16sp"
+                            android:textColor="@color/battery_details_label_color"
+                            android:layout_marginBottom="8dp"/>
 
                     <TextView
-                        android:id="@+id/healthPercentageText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="100%"
-                        android:textSize="56sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/top_background_color"
-                        android:layout_marginBottom="8dp" />
+                            android:id="@+id/healthPercentageText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100%"
+                            android:textSize="56sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/top_background_color"
+                            android:layout_marginBottom="8dp"/>
 
                     <TextView
-                        android:id="@+id/healthStatusText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Excellent"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/title_bar_background_color" />
+                            android:id="@+id/healthStatusText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Excellent"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/title_bar_background_color"/>
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <!-- Metrics Grid -->
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="2"
-                android:layout_marginBottom="16dp">
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:weightSum="2"
+                    android:layout_marginBottom="16dp">
 
                 <!-- Charge Cycles Card -->
                 <androidx.cardview.widget.CardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    app:cardCornerRadius="8dp"
-                    app:cardElevation="4dp"
-                    app:contentPadding="16dp">
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="4dp"
+                        app:contentPadding="16dp">
 
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="center">
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center">
 
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/charge_cycles"
-                            android:textSize="14sp"
-                            android:textColor="@color/battery_details_label_color"
-                            android:layout_marginBottom="8dp" />
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/charge_cycles"
+                                android:textSize="14sp"
+                                android:textColor="@color/battery_details_label_color"
+                                android:layout_marginBottom="8dp"/>
 
                         <TextView
-                            android:id="@+id/chargeCyclesText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textSize="32sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/battery_details_value_color" />
+                                android:id="@+id/chargeCyclesText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textSize="32sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/battery_details_value_color"/>
 
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
                 <!-- Days in Use Card -->
                 <androidx.cardview.widget.CardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    app:cardCornerRadius="8dp"
-                    app:cardElevation="4dp"
-                    app:contentPadding="16dp">
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="4dp"
+                        app:contentPadding="16dp">
 
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="center">
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center">
 
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/days_in_use"
-                            android:textSize="14sp"
-                            android:textColor="@color/battery_details_label_color"
-                            android:layout_marginBottom="8dp" />
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/days_in_use"
+                                android:textSize="14sp"
+                                android:textColor="@color/battery_details_label_color"
+                                android:layout_marginBottom="8dp"/>
 
                         <TextView
-                            android:id="@+id/daysInUseText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textSize="32sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/battery_details_value_color" />
+                                android:id="@+id/daysInUseText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textSize="32sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/battery_details_value_color"/>
 
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
@@ -162,120 +166,87 @@
 
             <!-- Health Description Card -->
             <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp"
-                app:contentPadding="16dp">
-
-                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="4dp"
+                    app:contentPadding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/about_battery_health"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/battery_details_label_color"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/healthDescriptionText"
+                <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/battery_health_description_placeholder"
-                        android:textSize="14sp"
-                        android:textColor="@color/default_text_color"
-                        android:lineSpacingMultiplier="1.2" />
+                        android:orientation="vertical">
+
+                    <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/about_battery_health"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/battery_details_label_color"
+                            android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                            android:id="@+id/healthDescriptionText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/battery_health_description_placeholder"
+                            android:textSize="14sp"
+                            android:textColor="@color/default_text_color"
+                            android:lineSpacingMultiplier="1.2"/>
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <!-- How It Works Card -->
             <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp"
-                app:contentPadding="16dp">
-
-                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="4dp"
+                    app:contentPadding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/how_it_works"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/battery_details_label_color"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
+                <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/how_battery_health_works"
-                        android:textSize="14sp"
-                        android:textColor="@color/default_text_color"
-                        android:lineSpacingMultiplier="1.2" />
+                        android:orientation="vertical">
+
+                    <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/how_it_works"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/battery_details_label_color"
+                            android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/how_battery_health_works"
+                            android:textSize="14sp"
+                            android:textColor="@color/default_text_color"
+                            android:lineSpacingMultiplier="1.2"/>
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <!-- Spacer to push signature to bottom when content is short -->
             <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:minHeight="16dp" />
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:minHeight="16dp"/>
 
-            <!-- Developer Signature -->
-            <LinearLayout
-                android:id="@+id/developerSignatureLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="16dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
-
-                <TextView
-                    android:layout_width="wrap_content"
+            <!-- Developer Signature Fragment -->
+            <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/signatureFragmentLayout"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/developed_by"
-                    android:textSize="12sp"
-                    android:textColor="@color/battery_details_label_color"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/developerNameText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/developer_name"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/title_bar_background_color"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/developerLinkText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/developer_link"
-                    android:textSize="12sp"
-                    android:textColor="@color/title_bar_background_color"
-                    android:textStyle="italic" />
-
-            </LinearLayout>
+                    android:name="com.almothafar.simplebatterynotifier.ui.fragment.SignatureFragment"
+                    tools:layout="@layout/fragment_signature"/>
 
         </LinearLayout>
 

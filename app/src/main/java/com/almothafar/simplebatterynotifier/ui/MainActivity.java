@@ -15,24 +15,20 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
+import com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment;
 import com.google.android.material.snackbar.Snackbar;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.WindowCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
-import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
-import com.almothafar.simplebatterynotifier.ui.widgets.CircularProgressBar;
+import com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -43,7 +39,7 @@ import static java.util.Objects.nonNull;
 /**
  * Main activity displaying battery status with circular progress bar
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
 
 	private static final String TAG = "MainActivity";
 	private static final long UPDATER_DELAY = 300;
@@ -61,9 +57,7 @@ public class MainActivity extends AppCompatActivity {
 	private ActivityResultLauncher<String> notificationPermissionLauncher;
 
 	// UI elements
-	private TextView chargeCyclesText;
 	private Button batteryInsightsButton;
-	private LinearLayout developerSignatureLayout;
 
 	/**
 	 * Create the options menu
@@ -102,17 +96,14 @@ public class MainActivity extends AppCompatActivity {
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		// Enable edge-to-edge display
-		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-
 		setContentView(R.layout.activity_main);
 
 		// Set up the Toolbar
 		final Toolbar toolbar = findViewById(R.id.toolbar);
-		setSupportActionBar(toolbar);
+		setupToolbar(toolbar);
 
 		// setStatusBarColor() and setNavigationBarColor() removed - deprecated in API 35
-		// Edge-to-edge is already enabled via WindowCompat.setDecorFitsSystemWindows()
+		// Edge-to-edge is already enabled via BaseActivity
 		// System bar colors should be set in themes (values/themes.xml) instead
 
 		// Register activity result launcher for settings
@@ -143,16 +134,10 @@ public class MainActivity extends AppCompatActivity {
 		requestNotificationPermissionIfNeeded();
 
 		// Initialize UI elements
-		chargeCyclesText = findViewById(R.id.chargeCyclesMainText);
 		batteryInsightsButton = findViewById(R.id.batteryInsightsButton);
-		developerSignatureLayout = findViewById(R.id.developerSignatureMainLayout);
 
 		// Set up button click listeners
 		batteryInsightsButton.setOnClickListener(v -> openBatteryInsights());
-		developerSignatureLayout.setOnClickListener(v -> openDeveloperLink());
-
-		// Update charge cycles display
-		updateChargeCycles();
 
 		// Start the power connection service
 		startService(new Intent(this, PowerConnectionService.class));
@@ -166,7 +151,6 @@ public class MainActivity extends AppCompatActivity {
 		super.onPostResume();
 
 		initializeFirstValues();
-		updateChargeCycles(); // Update charge cycles display
 
 		startUpdateTimer();
 	}
@@ -328,29 +312,5 @@ public class MainActivity extends AppCompatActivity {
 	private void openBatteryInsights() {
 		final Intent intent = new Intent(this, BatteryInsightsActivity.class);
 		startActivity(intent);
-	}
-
-	/**
-	 * Update the charge cycles display
-	 */
-	private void updateChargeCycles() {
-		final int cycles = BatteryHealthTracker.getChargeCycles(this);
-		chargeCyclesText.setText(String.valueOf(cycles));
-	}
-
-	/**
-	 * Open the developer's link (GitHub/website)
-	 */
-	private void openDeveloperLink() {
-		try {
-			String link = getString(R.string.developer_link);
-			if (!link.startsWith("http://") && !link.startsWith("https://")) {
-				link = "https://" + link;
-			}
-			final Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(link));
-			startActivity(browserIntent);
-		} catch (final Exception e) {
-			Log.e(TAG, "Error opening developer link", e);
-		}
 	}
 }

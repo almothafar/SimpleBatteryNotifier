@@ -13,8 +13,6 @@ import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 
-import static java.util.Objects.isNull;
-
 /**
  * Broadcast receiver for monitoring battery level changes.
  * Sends notifications when battery reaches critical/warning levels or becomes full.
@@ -47,7 +45,7 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	@Override
 	public void onReceive(final Context context, final Intent intent) {
 		final Intent batteryStatus = context.getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-		if (isNull(batteryStatus)) {
+		if (batteryStatus == null) {
 			return; // Cannot determine battery status, exit early
 		}
 
@@ -56,7 +54,7 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		final boolean isFull = status == BatteryManager.BATTERY_STATUS_FULL;
 
 		final BatteryDO batteryDO = SystemService.getBatteryInfo(context);
-		final int percentage = (int) batteryDO.getBatteryPercentage();
+		final int percentage = batteryDO == null ? 100 : (int) batteryDO.getBatteryPercentage();
 
 		// Track battery health and charge cycles
 		BatteryHealthTracker.recordBatteryState(context, percentage, status);

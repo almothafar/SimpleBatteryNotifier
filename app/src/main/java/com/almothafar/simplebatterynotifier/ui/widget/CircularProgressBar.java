@@ -15,7 +15,7 @@
  *
  */
 
-package com.almothafar.simplebatterynotifier.ui.widgets;
+package com.almothafar.simplebatterynotifier.ui.widget;
 
 import android.animation.Animator;
 import android.animation.ValueAnimator;

@@ -5,4 +5,8 @@
 
     <dimen name="battery_details_cell_padding">20sp</dimen>
     <dimen name="battery_details_cell_padding_top">10sp</dimen>
+
+    <!-- System UI overlap fixes -->
+    <dimen name="toolbar_status_bar_padding">24dp</dimen>
+    <dimen name="content_navigation_bar_padding">64dp</dimen>
 </resources>

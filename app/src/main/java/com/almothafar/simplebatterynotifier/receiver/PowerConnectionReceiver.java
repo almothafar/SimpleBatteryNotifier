@@ -66,7 +66,7 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	@Override
 	public void onReceive(final Context context, final Intent intent) {
 		final Intent batteryStatus = context.getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-		if (isNull(batteryStatus)) {
+		if (batteryStatus == null) {
 			Log.w(TAG, "Unable to retrieve battery status");
 			return; // Cannot determine battery status, exit early
 		}

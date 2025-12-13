@@ -1,4 +1,4 @@
-package com.almothafar.simplebatterynotifier.ui;
+package com.almothafar.simplebatterynotifier.ui.fragment;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -10,15 +10,16 @@ import android.view.ViewGroup;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 
-import java.util.HashMap;
-import java.util.Locale;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static java.util.Objects.isNull;
@@ -48,10 +49,12 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param inflater           The LayoutInflater to inflate views
 	 * @param container          The parent view container
 	 * @param savedInstanceState Saved state bundle
+	 *
 	 * @return The created view
 	 */
 	@Override
-	public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
+	public View onCreateView(final LayoutInflater inflater,
+	                         final ViewGroup container,
 	                         final Bundle savedInstanceState) {
 		final View view = inflater.inflate(R.layout.fragment_battery_details, container, false);
 		this.viewRef = view;
@@ -90,6 +93,18 @@ public class BatteryDetailsFragment extends Fragment {
 	}
 
 	/**
+	 * Update the battery details with new data
+	 *
+	 * @param batteryDO The new battery data object
+	 */
+	public void updateBatteryDetails(final BatteryDO batteryDO) {
+		this.batteryDO = batteryDO;
+		if (nonNull(viewRef) && nonNull(batteryDO)) {
+			this.createDetailsTable(viewRef);
+		}
+	}
+
+	/**
 	 * Create a single table row with label, separator, and value
 	 *
 	 * @param view           The fragment view
@@ -97,31 +112,29 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param value          The value text
 	 * @param cellPadding    The horizontal cell padding
 	 * @param cellPaddingTop The top cell padding
+	 *
 	 * @return The created table row
 	 */
 	private TableRow createTableRow(final View view, final String label, final String value,
-	                                 final int cellPadding, final int cellPaddingTop) {
+	                                final int cellPadding, final int cellPaddingTop) {
 		final TableRow row = new TableRow(view.getContext());
 		final TableRow.LayoutParams layoutParams = new TableRow.LayoutParams(
 				TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT, 1.0f);
 		row.setLayoutParams(layoutParams);
 		row.setWeightSum(3);
 
+		// Enable proper RTL layout support
+		ViewCompat.setLayoutDirection(row, ViewCompat.LAYOUT_DIRECTION_LOCALE);
+
 		final TextView textViewLabel = createLabelTextView(view, label, cellPadding, cellPaddingTop);
 		final TextView textViewSep = createSeparatorTextView(view);
 		final TextView textViewValue = createValueTextView(view, value, cellPadding, cellPaddingTop);
 
-		// Handle RTL languages (Arabic) by reversing the view order
-		// TODO: This is a workaround - should be handled with proper RTL layout support
-		if (Locale.getDefault().getLanguage().equalsIgnoreCase("ar")) {
-			row.addView(textViewValue);
-			row.addView(textViewSep);
-			row.addView(textViewLabel);
-		} else {
-			row.addView(textViewLabel);
-			row.addView(textViewSep);
-			row.addView(textViewValue);
-		}
+		// Add views in logical order (label -> separator -> value)
+		// RTL languages will automatically reverse the visual order
+		row.addView(textViewLabel);
+		row.addView(textViewSep);
+		row.addView(textViewValue);
 
 		return row;
 	}
@@ -133,10 +146,11 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param text           The label text
 	 * @param cellPadding    The horizontal cell padding
 	 * @param cellPaddingTop The top cell padding
+	 *
 	 * @return The created TextView
 	 */
 	private TextView createLabelTextView(final View view, final String text,
-	                                      final int cellPadding, final int cellPaddingTop) {
+	                                     final int cellPadding, final int cellPaddingTop) {
 		final TextView textView = new TextView(view.getContext());
 		textView.setTextAppearance(R.style.DefaultTextStyle);
 		textView.setText(text);
@@ -152,6 +166,7 @@ public class BatteryDetailsFragment extends Fragment {
 	 * Uses string resource for proper internationalization and RTL language support.
 	 *
 	 * @param view The fragment view
+	 *
 	 * @return The created TextView
 	 */
 	private TextView createSeparatorTextView(final View view) {
@@ -169,10 +184,13 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param text           The value text
 	 * @param cellPadding    The horizontal cell padding
 	 * @param cellPaddingTop The top cell padding
+	 *
 	 * @return The created TextView
 	 */
-	private TextView createValueTextView(final View view, final String text,
-	                                      final int cellPadding, final int cellPaddingTop) {
+	private TextView createValueTextView(final View view,
+	                                     final String text,
+	                                     final int cellPadding,
+	                                     final int cellPaddingTop) {
 		final TextView textView = new TextView(view.getContext());
 		textView.setTextAppearance(R.style.DefaultTextStyle);
 		textView.setText(text);
@@ -183,24 +201,12 @@ public class BatteryDetailsFragment extends Fragment {
 	}
 
 	/**
-	 * Update the battery details with new data
-	 *
-	 * @param batteryDO The new battery data object
-	 */
-	public void updateBatteryDetails(final BatteryDO batteryDO) {
-		this.batteryDO = batteryDO;
-		if (nonNull(viewRef) && nonNull(batteryDO)) {
-			this.createDetailsTable(viewRef);
-		}
-	}
-
-	/**
 	 * Fill the battery information map with current battery data
 	 *
 	 * @param view The fragment view
 	 */
 	private void fillBatteryInfo(final View view) {
-		valuesMap = new HashMap<>();
+		valuesMap = new LinkedHashMap<>();
 		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(view.getContext());
 
 		final String temperatureStr = sharedPref.getString(
@@ -216,6 +222,11 @@ public class BatteryDetailsFragment extends Fragment {
 
 		valuesMap.put(getResources().getString(R.string.technology), batteryDO.getTechnology());
 		valuesMap.put(getResources().getString(R.string.capacity), batteryDO.getCapacity() + " mAh");
+
+		// Add charge cycles from the battery health tracker - positioned right after capacity
+		final int chargeCycles = BatteryHealthTracker.getChargeCycles(view.getContext());
+		valuesMap.put(getResources().getString(R.string.charge_cycles), String.valueOf(chargeCycles));
+
 		valuesMap.put(getResources().getString(R.string.voltage), batteryDO.getVoltage() + " mV");
 		valuesMap.put(getResources().getString(R.string.power_source), batteryDO.getPowerSource());
 		valuesMap.put(getResources().getString(R.string.temperature), temperature + temperatureShort);

@@ -3,10 +3,7 @@ package com.almothafar.simplebatterynotifier.ui;
 import android.os.Bundle;
 import android.view.MenuItem;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.view.WindowCompat;
 import androidx.fragment.app.Fragment;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
@@ -19,7 +16,7 @@ import static java.util.Objects.nonNull;
  * Modern Settings Activity using AndroidX Preferences
  * Provides hierarchical settings navigation with preference fragments
  */
-public class SettingsActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
+public class SettingsActivity extends BaseActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
 	private static final String TITLE_TAG = "settingsActivityTitle";
 
 	/**
@@ -95,22 +92,14 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		// Enable edge-to-edge display
-		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-
 		setContentView(R.layout.activity_settings);
 
-		// Set up the toolbar
+		// Set up the toolbar with back button
 		final Toolbar toolbar = findViewById(R.id.toolbar);
-		setSupportActionBar(toolbar);
-		final ActionBar supportActionBar = getSupportActionBar();
-		if (nonNull(supportActionBar)) {
-			supportActionBar.setDisplayHomeAsUpEnabled(true);
-			supportActionBar.setDisplayShowHomeEnabled(true);
-		}
+		setupToolbar(toolbar, true);
 
 		// setStatusBarColor() and setNavigationBarColor() removed - deprecated in API 35
-		// Edge-to-edge is already enabled via WindowCompat.setDecorFitsSystemWindows()
+		// Edge-to-edge is already enabled via BaseActivity
 		// System bar colors should be set in themes (values/themes.xml) instead
 
 		// Load root preferences if this is the first creation

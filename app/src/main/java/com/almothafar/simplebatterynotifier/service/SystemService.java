@@ -92,8 +92,8 @@ public final class SystemService {
 
 		// CRITICAL: Check for null extras before accessing
 		final Bundle extras = batteryStatus.getExtras();
-		final boolean present = nonNull(extras) && extras.getBoolean(BatteryManager.EXTRA_PRESENT);
-		final String technology = nonNull(extras) ? extras.getString(BatteryManager.EXTRA_TECHNOLOGY) : "";
+		final boolean present = extras != null && extras.getBoolean(BatteryManager.EXTRA_PRESENT);
+		final String technology = extras != null ? extras.getString(BatteryManager.EXTRA_TECHNOLOGY) : "";
 
 		return new BatteryExtras(level, scale, status, health, plugged, temperature, voltage, present, technology);
 	}
@@ -221,7 +221,7 @@ public final class SystemService {
 	 *
 	 * @return Battery capacity in mAh, or 0 if unavailable or unsupported
 	 */
-	@SuppressLint("DiscouragedPrivateApi")
+	@SuppressLint({"DiscouragedPrivateApi", "PrivateApi"})
 	public static synchronized int getBatteryCapacity(final Context context) {
 		// Power profile class name - internal API, not guaranteed to be available
 		final String POWER_PROFILE_CLASS = "com.android.internal.os.PowerProfile";
@@ -327,7 +327,7 @@ public final class SystemService {
 			}
 		} catch (IOException e) {
 			final String errorMsg = e.getMessage();
-			if (nonNull(errorMsg)) {
+			if (errorMsg != null) {
 				Log.e(TAG, errorMsg);
 			}
 		}
@@ -336,29 +336,14 @@ public final class SystemService {
 	/**
 	 * Internal data class to hold extracted battery extras
 	 */
-	private static final class BatteryExtras {
-		final int level;
-		final int scale;
-		final int status;
-		final int health;
-		final int plugged;
-		final int temperature;
-		final int voltage;
-		final boolean present;
-		final String technology;
-
-		BatteryExtras(final int level, final int scale, final int status, final int health,
-		              final int plugged, final int temperature, final int voltage,
-		              final boolean present, final String technology) {
-			this.level = level;
-			this.scale = scale;
-			this.status = status;
-			this.health = health;
-			this.plugged = plugged;
-			this.temperature = temperature;
-			this.voltage = voltage;
-			this.present = present;
-			this.technology = technology;
-		}
+	private record BatteryExtras(int level,
+	                             int scale,
+	                             int status,
+	                             int health,
+	                             int plugged,
+	                             int temperature,
+	                             int voltage,
+	                             boolean present,
+	                             String technology) {
 	}
 }

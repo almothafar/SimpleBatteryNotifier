@@ -11,14 +11,14 @@
         android:title="@string/notifications_time_range"
         app:iconSpaceReserved="false" />
 
-    <com.almothafar.simplebatterynotifier.ui.TimePickerPreference
+    <com.almothafar.simplebatterynotifier.ui.fragment.TimePickerPreference
         android:dependency="@string/_pref_key_notifications_time_range"
         android:defaultValue="@string/_pref_value_notifications_time_range_start"
         android:key="@string/_pref_key_notifications_time_range_start"
         android:title="@string/notifications_time_range_start"
         app:iconSpaceReserved="false" />
 
-    <com.almothafar.simplebatterynotifier.ui.TimePickerPreference
+    <com.almothafar.simplebatterynotifier.ui.fragment.TimePickerPreference
         android:dependency="@string/_pref_key_notifications_time_range"
         android:defaultValue="@string/_pref_value_notifications_time_range_end"
         android:key="@string/_pref_key_notifications_time_range_end"

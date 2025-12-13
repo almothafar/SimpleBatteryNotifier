@@ -1,4 +1,4 @@
-package com.almothafar.simplebatterynotifier.ui;
+package com.almothafar.simplebatterynotifier.ui.fragment;
 
 import android.content.Context;
 import android.content.Intent;
@@ -9,7 +9,6 @@ import android.util.AttributeSet;
 import android.util.Log;
 import androidx.preference.Preference;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 /**
