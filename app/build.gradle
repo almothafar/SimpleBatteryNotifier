@@ -2,6 +2,35 @@ plugins {
     id 'com.android.application'
 }
 
+// Load version from properties file
+def versionPropsFile = file('../version.properties')
+def versionProps = new Properties()
+
+if (versionPropsFile.exists()) {
+    versionProps.load(new FileInputStream(versionPropsFile))
+} else {
+    // Fallback defaults if file doesn't exist
+    versionProps['versionCode'] = '70'
+    versionProps['versionPrefix'] = '2.0'
+}
+
+// Auto-increment version code on release builds
+task('incrementVersion') {
+    doLast {
+        def currentCode = versionProps['versionCode'].toInteger()
+        versionProps['versionCode'] = (currentCode + 1).toString()
+        versionProps.store(versionPropsFile.newWriter(), "Auto-incremented by build")
+        println("Version incremented to ${versionProps['versionCode']}")
+    }
+}
+
+// Hook into assembleRelease to auto-increment
+tasks.whenTaskAdded { task ->
+    if (task.name == 'assembleRelease') {
+        task.dependsOn 'incrementVersion'
+    }
+}
+
 android {
     namespace 'com.almothafar.simplebatterynotifier'
 
@@ -11,8 +40,8 @@ android {
         applicationId "com.almothafar.simplebatterynotifier"
         minSdk = 26
         targetSdk = 36
-        versionCode 69
-        versionName "1.1.69"
+        versionCode versionProps['versionCode'].toInteger()
+        versionName "${versionProps['versionPrefix']}.${versionProps['versionCode']}"
     }
 
     buildTypes {
@@ -22,7 +51,7 @@ android {
                     'proguard-rules.pro'
         }
         debug {
-            applicationIdSuffix ".debug"
+//            applicationIdSuffix ".debug"
         }
     }
 
