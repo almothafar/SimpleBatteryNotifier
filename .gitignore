@@ -36,3 +36,4 @@ Icon?
 .claude/
 !.claude/guidelines.md
 app/release/
+*.log
