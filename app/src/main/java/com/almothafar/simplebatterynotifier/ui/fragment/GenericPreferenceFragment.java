@@ -49,6 +49,11 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	private static final int DEFAULT_WARNING_BATTERY_LEVEL = 40;
 	private static final int DEFAULT_CRITICAL_BATTERY_LEVEL = 20;
 
+	// High-temperature threshold bounds, stored canonically in °C (from pref_notification.xml)
+	private static final int DEFAULT_TEMPERATURE_THRESHOLD_C = 45;
+	private static final int MIN_TEMPERATURE_C = 40;
+	private static final int MAX_TEMPERATURE_C = 60;
+
 	private RingtonePreference currentRingtonePreference;
 	private ActivityResultLauncher<Intent> ringtonePickerLauncher;
 
@@ -120,11 +125,73 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 					setPreferencesFromResource(R.xml.pref_general, rootKey);
 				} else if (category.equals(getString(R.string.pref_category_notifications))) {
 					setPreferencesFromResource(R.xml.pref_notification, rootKey);
+					configureTemperatureThreshold();
 				} else if (category.equals(getString(R.string.pref_category_time_settings))) {
 					setPreferencesFromResource(R.xml.pref_time_settings, rootKey);
 				}
 			}
 		}
+	}
+
+	/**
+	 * Configure the high-temperature threshold slider to display the user's temperature unit.
+	 * <p>
+	 * The value is stored canonically in °C (so the receiver compares without knowing the unit and
+	 * changing the unit can't corrupt it). When the user prefers Fahrenheit the slider shows °F,
+	 * converting on display and persisting back to °C. The preference is made non-persistent so its
+	 * raw °F display value isn't written to the °C key.
+	 */
+	private void configureTemperatureThreshold() {
+		final SeekBarPreference pref = findPreference(getString(R.string._pref_key_high_temperature_threshold));
+		if (isNull(pref)) {
+			return;
+		}
+		final SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
+		if (isNull(prefs)) {
+			return;
+		}
+
+		final boolean fahrenheit = isFahrenheit(prefs);
+		final int storedCelsius = prefs.getInt(
+				getString(R.string._pref_key_high_temperature_threshold), DEFAULT_TEMPERATURE_THRESHOLD_C);
+
+		pref.setPersistent(false); // We persist °C ourselves; the slider shows the user's unit
+		if (fahrenheit) {
+			pref.setMin(celsiusToFahrenheit(MIN_TEMPERATURE_C));
+			pref.setMax(celsiusToFahrenheit(MAX_TEMPERATURE_C));
+			pref.setValue(celsiusToFahrenheit(storedCelsius));
+		} else {
+			pref.setMin(MIN_TEMPERATURE_C);
+			pref.setMax(MAX_TEMPERATURE_C);
+			pref.setValue(storedCelsius);
+		}
+
+		pref.setOnPreferenceChangeListener((preference, newValue) -> {
+			final int displayValue = (Integer) newValue;
+			final int celsius = fahrenheit ? fahrenheitToCelsius(displayValue) : displayValue;
+			prefs.edit().putInt(getString(R.string._pref_key_high_temperature_threshold), celsius).apply();
+			return true; // Accept the new display value
+		});
+
+		pref.setSummary(pref.getValue() + (fahrenheit ? " °F" : " °C"));
+	}
+
+	/**
+	 * @return true if the user's temperature unit preference is Fahrenheit
+	 */
+	private boolean isFahrenheit(final SharedPreferences prefs) {
+		final String unit = prefs.getString(
+				getString(R.string._pref_key_temperatures_unit),
+				getString(R.string._pref_value_temperatures_unit_c));
+		return getString(R.string._pref_value_temperatures_unit_f).equalsIgnoreCase(unit);
+	}
+
+	private static int celsiusToFahrenheit(final int celsius) {
+		return Math.round(celsius * 9f / 5f + 32f);
+	}
+
+	private static int fahrenheitToCelsius(final int fahrenheit) {
+		return Math.round((fahrenheit - 32) * 5f / 9f);
 	}
 
 	/**
@@ -263,7 +330,9 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 		if (isBatteryLevelPreference(key)) {
 			seekBarPref.setSummary(seekBarPref.getValue() + "%");
 		} else if (key.equals(getString(R.string._pref_key_high_temperature_threshold))) {
-			seekBarPref.setSummary(seekBarPref.getValue() + " °C");
+			final SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
+			final boolean fahrenheit = nonNull(prefs) && isFahrenheit(prefs);
+			seekBarPref.setSummary(seekBarPref.getValue() + (fahrenheit ? " °F" : " °C"));
 		}
 	}
 

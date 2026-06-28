@@ -110,7 +110,7 @@
     <string name="notify_high_temperature">High Temperature Alert</string>
     <string name="notify_high_temperature_summary_on">Warns you when the battery gets too hot (heavy load, charging, hot environment)</string>
     <string name="notify_high_temperature_summary_off">High temperature alerts are disabled</string>
-    <string name="high_temperature_threshold">Alert above temperature (°C)</string>
+    <string name="high_temperature_threshold">Alert above temperature</string>
     <string name="notification_temperature_channel_name">Battery Temperature</string>
     <string name="notification_temperature_channel_description">Alerts when the battery temperature is unsafe</string>
     <string name="notification_temperature_ticker">Battery is hot</string>
