@@ -139,8 +139,9 @@ public class MainActivity extends BaseActivity {
 		// Set up button click listeners
 		batteryInsightsButton.setOnClickListener(v -> openBatteryInsights());
 
-		// Start the power connection service
-		startService(new Intent(this, PowerConnectionService.class));
+		// Start the power connection service as a foreground service so monitoring
+		// survives the app being closed (required on Android 8+).
+		ContextCompat.startForegroundService(this, new Intent(this, PowerConnectionService.class));
 	}
 
 	/**

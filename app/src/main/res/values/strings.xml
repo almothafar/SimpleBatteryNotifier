@@ -100,6 +100,12 @@
     <string name="notification_charge_started_title_regular">Regular charging started</string>
     <string name="notification_charge_started_content">Battery charging with %1$s </string>
 
+    <!-- Persistent foreground-service status notification -->
+    <string name="notification_status_channel_name">Battery Status</string>
+    <string name="notification_status_channel_description">Ongoing battery status while monitoring is active</string>
+    <!-- e.g. "85% · Discharging · 32.0 °C" -->
+    <string name="notification_status_content">%1$d%% · %2$s · %3$s</string>
+
     <!-- Battery Insights Screen -->
     <string name="battery_insights_title">Battery Insights</string>
     <string name="battery_insights_menu">Battery Insights</string>
