@@ -42,8 +42,9 @@ public abstract class BaseActivity extends AppCompatActivity {
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		// Edge-to-edge display disabled - causes too many layout issues
-		// Using standard window decorations instead
+		// Android 15+ (targetSdk 35+) enforces edge-to-edge regardless of this code. System-bar
+		// insets are handled per-screen via applyBottomSystemBarInset(); the toolbar's top spacing
+		// is currently provided by the toolbar_status_bar_padding dimension.
 	}
 
 	/**

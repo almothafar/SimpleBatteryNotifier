@@ -1,6 +1,5 @@
 package com.almothafar.simplebatterynotifier.ui.fragment;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -12,12 +11,12 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
-import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
+import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -207,18 +206,6 @@ public class BatteryDetailsFragment extends Fragment {
 	 */
 	private void fillBatteryInfo(final View view) {
 		valuesMap = new LinkedHashMap<>();
-		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(view.getContext());
-
-		final String temperatureStr = sharedPref.getString(
-				getString(R.string._pref_key_temperatures_unit),
-				getString(R.string._pref_value_temperatures_unit_c));
-		String temperatureShort = " ".concat(getResources().getString(R.string.celsius_short));
-		float temperature = batteryDO.getTemperature() / 10f;
-
-		if (temperatureStr.equalsIgnoreCase(getString(R.string._pref_value_temperatures_unit_f))) {
-			temperature = GeneralHelper.fromCtoF(temperature);
-			temperatureShort = " ".concat(getResources().getString(R.string.fahrenheit_short));
-		}
 
 		valuesMap.put(getResources().getString(R.string.technology), batteryDO.getTechnology());
 		valuesMap.put(getResources().getString(R.string.capacity), batteryDO.getCapacity() + " mAh");
@@ -229,7 +216,8 @@ public class BatteryDetailsFragment extends Fragment {
 
 		valuesMap.put(getResources().getString(R.string.voltage), batteryDO.getVoltage() + " mV");
 		valuesMap.put(getResources().getString(R.string.power_source), batteryDO.getPowerSource());
-		valuesMap.put(getResources().getString(R.string.temperature), temperature + temperatureShort);
+		valuesMap.put(getResources().getString(R.string.temperature),
+				TemperatureUtils.format(view.getContext(), batteryDO.getTemperature()));
 		valuesMap.put(getResources().getString(R.string.health), batteryDO.getHealth());
 	}
 }

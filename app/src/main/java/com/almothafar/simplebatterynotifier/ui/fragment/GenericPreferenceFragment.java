@@ -24,7 +24,9 @@ import androidx.preference.PreferenceScreen;
 import androidx.preference.SeekBarPreference;
 
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference;
+import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreference;
 import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreferenceDialogFragmentCompat;
 import com.google.android.material.snackbar.Snackbar;
@@ -119,11 +121,64 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 					setPreferencesFromResource(R.xml.pref_general, rootKey);
 				} else if (category.equals(getString(R.string.pref_category_notifications))) {
 					setPreferencesFromResource(R.xml.pref_notification, rootKey);
+					configureTemperatureThreshold();
 				} else if (category.equals(getString(R.string.pref_category_time_settings))) {
 					setPreferencesFromResource(R.xml.pref_time_settings, rootKey);
 				}
 			}
 		}
+	}
+
+	/**
+	 * Configure the high-temperature threshold slider to display the user's temperature unit.
+	 * <p>
+	 * The value is stored canonically in °C (so the receiver compares without knowing the unit and
+	 * changing the unit can't corrupt it). When the user prefers Fahrenheit the slider shows °F,
+	 * converting on display and persisting back to °C. The preference is made non-persistent so its
+	 * raw °F display value isn't written to the °C key.
+	 */
+	private void configureTemperatureThreshold() {
+		final SeekBarPreference pref = findPreference(getString(R.string._pref_key_high_temperature_threshold));
+		if (isNull(pref)) {
+			return;
+		}
+		final SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
+		if (isNull(prefs)) {
+			return;
+		}
+
+		final boolean fahrenheit = TemperatureUtils.isFahrenheit(requireContext());
+		final int storedCelsius = prefs.getInt(
+				getString(R.string._pref_key_high_temperature_threshold),
+				TemperatureUtils.DEFAULT_HIGH_TEMP_THRESHOLD_C);
+
+		pref.setPersistent(false); // We persist °C ourselves; the slider shows the user's unit
+		if (fahrenheit) {
+			pref.setMin(TemperatureUtils.celsiusToFahrenheit(TemperatureUtils.MIN_HIGH_TEMP_THRESHOLD_C));
+			pref.setMax(TemperatureUtils.celsiusToFahrenheit(TemperatureUtils.MAX_HIGH_TEMP_THRESHOLD_C));
+			pref.setValue(TemperatureUtils.celsiusToFahrenheit(storedCelsius));
+		} else {
+			pref.setMin(TemperatureUtils.MIN_HIGH_TEMP_THRESHOLD_C);
+			pref.setMax(TemperatureUtils.MAX_HIGH_TEMP_THRESHOLD_C);
+			pref.setValue(storedCelsius);
+		}
+
+		pref.setOnPreferenceChangeListener((preference, newValue) -> {
+			final int displayValue = (Integer) newValue;
+			final int celsius = fahrenheit ? TemperatureUtils.fahrenheitToCelsius(displayValue) : displayValue;
+			prefs.edit().putInt(getString(R.string._pref_key_high_temperature_threshold), celsius).apply();
+			return true; // Accept the new display value
+		});
+
+		pref.setSummary(pref.getValue() + temperatureUnitSuffix(fahrenheit));
+	}
+
+	/**
+	 * @param fahrenheit whether the user's display unit is Fahrenheit
+	 * @return " °F" or " °C", localized
+	 */
+	private String temperatureUnitSuffix(final boolean fahrenheit) {
+		return " " + getString(fahrenheit ? R.string.fahrenheit_short : R.string.celsius_short);
 	}
 
 	/**
@@ -198,6 +253,12 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 		// Update summary when preference changes
 		final Preference pref = findPreference(key);
 		updatePreferencesSummary(sharedPreferences, pref);
+
+		// The Vibrate toggle changes channel settings, which Android caches; recreate the alert
+		// channels so the new setting takes effect.
+		if (nonNull(key) && key.equals(getString(R.string._pref_key_notifications_vibrate))) {
+			NotificationService.refreshAlertChannels(requireContext());
+		}
 	}
 
 	/**
@@ -250,8 +311,13 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	 */
 	private void updateSeekBarPreferenceSummary(final SeekBarPreference seekBarPref) {
 		final String key = seekBarPref.getKey();
-		if (nonNull(key) && isBatteryLevelPreference(key)) {
+		if (isNull(key)) {
+			return;
+		}
+		if (isBatteryLevelPreference(key)) {
 			seekBarPref.setSummary(seekBarPref.getValue() + "%");
+		} else if (key.equals(getString(R.string._pref_key_high_temperature_threshold))) {
+			seekBarPref.setSummary(seekBarPref.getValue() + temperatureUnitSuffix(TemperatureUtils.isFahrenheit(requireContext())));
 		}
 	}
 

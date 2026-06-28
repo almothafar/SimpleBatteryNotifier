@@ -24,10 +24,10 @@ import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.ui.MainActivity;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
+import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
 import java.lang.ref.WeakReference;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.LocalTime;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -62,12 +62,15 @@ public final class NotificationService {
 	private static final String CHANNEL_ID_WARNING = "battery_warning";
 	private static final String CHANNEL_ID_FULL = "battery_full";
 	private static final String CHANNEL_ID_STATUS = "battery_status";
+	private static final String CHANNEL_ID_TEMPERATURE = "battery_temperature";
 
 	// Notification settings
 	private static final long[] VIBRATION_PATTERN = {0, 500, 250, 500, 250};
 	private static final int NOTIFICATION_ID = 1641987;
 	// Separate ID for the persistent foreground-service status notification
 	private static final int ONGOING_NOTIFICATION_ID = 1641988;
+	// Separate ID so a temperature alert doesn't replace a battery-level alert
+	private static final int TEMPERATURE_NOTIFICATION_ID = 1641989;
 
 	// Do Not Disturb mode constants
 	private static final String ZEN_MODE = "zen_mode";
@@ -169,6 +172,51 @@ public final class NotificationService {
 				.setStyle(new Notification.BigTextStyle().bigText(content));
 
 		sendNotificationToSystem(context, builder.build());
+	}
+
+	/**
+	 * Send a high-temperature safety alert.
+	 * <p>
+	 * Uses a dedicated channel and notification ID so it does not replace battery-level alerts.
+	 * Honors the same quiet-hours and silent-mode preferences as the other alerts, reusing the
+	 * critical alert sound.
+	 *
+	 * @param context    The application context
+	 * @param rawTenthsC Battery temperature in tenths of a degree Celsius (as reported by BatteryManager)
+	 */
+	public static void sendTemperatureNotification(final Context context, final int rawTenthsC) {
+		if (lacksNotificationPermission(context)) {
+			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, temperature alert not sent");
+			return;
+		}
+
+		createNotificationChannels(context);
+
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final String temperature = TemperatureUtils.format(context, rawTenthsC);
+
+		final Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID_TEMPERATURE)
+				.setSmallIcon(R.drawable.ic_stat_device_battery_charging_20)
+				.setTicker(context.getString(R.string.notification_temperature_ticker))
+				.setContentTitle(context.getString(R.string.notification_temperature_title))
+				.setContentText(context.getString(R.string.notification_temperature_content, temperature))
+				.setWhen(System.currentTimeMillis())
+				.setLargeIcon(getLauncherIcon(context))
+				.setContentIntent(createMainActivityIntent(context))
+				.setVisibility(Notification.VISIBILITY_PUBLIC)
+				.setStyle(new Notification.BigTextStyle()
+						          .bigText(context.getString(R.string.notification_temperature_content_big, temperature)));
+
+		final NotificationManager manager = getNotificationManager(context);
+		if (nonNull(manager)) {
+			manager.notify(TEMPERATURE_NOTIFICATION_ID, builder.build());
+		}
+
+		final String sound = prefs.getString(
+				context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
+				context.getString(R.string._default_notification_sound_uri));
+		playAlarm(context, sound, isWithinNotificationWindow(context, prefs), shouldIgnoreSilentMode(context, prefs),
+				isVibrationEnabled(context, prefs));
 	}
 
 	/**
@@ -310,9 +358,15 @@ public final class NotificationService {
 			return;
 		}
 
-		createChannelIfNotExists(manager, CHANNEL_ID_CRITICAL, "Battery Critical Alerts", "Critical battery level alerts", Color.RED);
-		createChannelIfNotExists(manager, CHANNEL_ID_WARNING, "Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00));
-		createChannelIfNotExists(manager, CHANNEL_ID_FULL, "Battery Full", "Battery fully charged notifications", Color.GREEN);
+		final boolean vibrate = PreferenceManager.getDefaultSharedPreferences(context)
+		                                          .getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
+
+		createChannelIfNotExists(manager, CHANNEL_ID_CRITICAL, "Battery Critical Alerts", "Critical battery level alerts", Color.RED, vibrate);
+		createChannelIfNotExists(manager, CHANNEL_ID_WARNING, "Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00), vibrate);
+		createChannelIfNotExists(manager, CHANNEL_ID_FULL, "Battery Full", "Battery fully charged notifications", Color.GREEN, vibrate);
+		createChannelIfNotExists(manager, CHANNEL_ID_TEMPERATURE,
+				context.getString(R.string.notification_temperature_channel_name),
+				context.getString(R.string.notification_temperature_channel_description), Color.RED, vibrate);
 		createStatusChannelIfNotExists(manager,
 				context.getString(R.string.notification_status_channel_name),
 				context.getString(R.string.notification_status_channel_description));
@@ -351,9 +405,10 @@ public final class NotificationService {
 	 * @param name      The channel name
 	 * @param description The channel description
 	 * @param ledColor  The LED color for notifications
+	 * @param vibrate   Whether the channel should vibrate (from the user's Vibrate preference)
 	 */
 	private static void createChannelIfNotExists(final NotificationManager manager, final String channelId, final String name,
-	                                             final String description, final int ledColor) {
+	                                             final String description, final int ledColor, final boolean vibrate) {
 		if (nonNull(manager.getNotificationChannel(channelId))) {
 			return;
 		}
@@ -362,9 +417,31 @@ public final class NotificationService {
 		channel.setDescription(description);
 		channel.enableLights(true);
 		channel.setLightColor(ledColor);
-		channel.enableVibration(true);
-		channel.setVibrationPattern(VIBRATION_PATTERN);
+		channel.enableVibration(vibrate);
+		if (vibrate) {
+			channel.setVibrationPattern(VIBRATION_PATTERN);
+		}
 		manager.createNotificationChannel(channel);
+	}
+
+	/**
+	 * Re-create the alert channels so a changed "Vibrate" preference takes effect.
+	 * <p>
+	 * Android caches a channel's settings after first creation, so the channels must be deleted
+	 * and recreated for a new vibration setting to apply. The silent status channel is untouched.
+	 *
+	 * @param context The application context
+	 */
+	public static void refreshAlertChannels(final Context context) {
+		final NotificationManager manager = getNotificationManager(context);
+		if (isNull(manager)) {
+			return;
+		}
+		manager.deleteNotificationChannel(CHANNEL_ID_CRITICAL);
+		manager.deleteNotificationChannel(CHANNEL_ID_WARNING);
+		manager.deleteNotificationChannel(CHANNEL_ID_FULL);
+		manager.deleteNotificationChannel(CHANNEL_ID_TEMPERATURE);
+		createNotificationChannels(context);
 	}
 
 	/**
@@ -439,20 +516,21 @@ public final class NotificationService {
 	 * @param config  The notification configuration
 	 */
 	private static void playSoundIfNeeded(final Context context, final NotificationConfig config) {
-		playAlarm(context, config.alarmSound, config.withinTime, config.ignoreSilent);
+		playAlarm(context, config.alarmSound, config.withinTime, config.ignoreSilent, config.vibrate);
 	}
 
 	/**
-	 * Play the alert sound (and vibrate) when the phone is silenced but the user opted to
-	 * override silent mode. In normal ringer mode the notification channel plays its own sound.
+	 * Play the alert sound (and optionally vibrate) when the phone is silenced but the user opted
+	 * to override silent mode. In normal ringer mode the notification channel plays its own sound.
 	 *
 	 * @param context      The application context
 	 * @param soundUriStr  The alarm sound URI string
 	 * @param withinTime   Whether the current time is inside the allowed notification window
 	 * @param ignoreSilent Whether the user opted to override silent/DND mode
+	 * @param vibrate      Whether the user enabled vibration
 	 */
 	private static void playAlarm(final Context context, final String soundUriStr,
-	                              final boolean withinTime, final boolean ignoreSilent) {
+	                              final boolean withinTime, final boolean ignoreSilent, final boolean vibrate) {
 		if (!withinTime) {
 			return;
 		}
@@ -468,9 +546,22 @@ public final class NotificationService {
 		if (ignoreSilent && isNotNormalRingerMode) {
 			soundExecutor.execute(() -> {
 				SystemService.playSound(context, soundUri);
-				SystemService.vibratePhone(context);
+				if (vibrate) {
+					SystemService.vibratePhone(context);
+				}
 			});
 		}
+	}
+
+	/**
+	 * Read the user's "Vibrate" preference (defaults to enabled).
+	 *
+	 * @param context The application context
+	 * @param prefs   SharedPreferences containing user settings
+	 * @return true if vibration is enabled
+	 */
+	private static boolean isVibrationEnabled(final Context context, final SharedPreferences prefs) {
+		return prefs.getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
 	}
 
 	/**
@@ -525,29 +616,38 @@ public final class NotificationService {
 	 * @return true if current time is within range
 	 */
 	private static boolean isWithinTime(final String startTime, final String endTime) {
-		final int startHour = GeneralHelper.getHour(startTime);
-		final int startMinute = GeneralHelper.getMinute(startTime);
-		final int endHour = GeneralHelper.getHour(endTime);
-		final int endMinute = GeneralHelper.getMinute(endTime);
+		final LocalTime now = LocalTime.now();
+		final int nowMinutes = now.getHour() * 60 + now.getMinute();
+		final int startMinutes = GeneralHelper.getHour(startTime) * 60 + GeneralHelper.getMinute(startTime);
+		final int endMinutes = GeneralHelper.getHour(endTime) * 60 + GeneralHelper.getMinute(endTime);
+		return isWithinTimeRange(nowMinutes, startMinutes, endMinutes);
+	}
 
-		final Date currentTime = new Date();
-
-		final Calendar startCal = Calendar.getInstance();
-		startCal.setTime(currentTime);
-		startCal.set(Calendar.HOUR_OF_DAY, startHour);
-		startCal.set(Calendar.MINUTE, startMinute);
-
-		final Calendar endCal = Calendar.getInstance();
-		endCal.setTime(currentTime);
-		endCal.set(Calendar.HOUR_OF_DAY, endHour);
-		endCal.set(Calendar.MINUTE, endMinute);
-
-		// Handle overnight time ranges (e.g., 8:00 PM to 6:00 AM)
-		if (endHour <= startHour) {
-			endCal.add(Calendar.DATE, 1);
+	/**
+	 * Pure minute-of-day range check. Handles same-day, overnight and equal-times windows
+	 * (the previous implementation ignored minutes and mishandled overnight ranges that shared
+	 * the same hour bucket).
+	 * <ul>
+	 *   <li>start &lt; end: inside when {@code start <= now < end} (e.g. 08:00–23:00).</li>
+	 *   <li>start &gt; end: overnight window, inside when {@code now >= start || now < end} (e.g. 22:00–06:00).</li>
+	 *   <li>start == end: treated as a 24-hour window (always inside).</li>
+	 * </ul>
+	 * Start is inclusive, end is exclusive.
+	 *
+	 * @param nowMinutes   Current time as minutes since midnight
+	 * @param startMinutes Window start as minutes since midnight
+	 * @param endMinutes   Window end as minutes since midnight
+	 * @return true if now falls inside the window
+	 */
+	static boolean isWithinTimeRange(final int nowMinutes, final int startMinutes, final int endMinutes) {
+		if (startMinutes == endMinutes) {
+			return true; // Whole day
 		}
-
-		return currentTime.after(startCal.getTime()) && currentTime.before(endCal.getTime());
+		if (startMinutes < endMinutes) {
+			return nowMinutes >= startMinutes && nowMinutes < endMinutes;
+		}
+		// Overnight window wraps past midnight
+		return nowMinutes >= startMinutes || nowMinutes < endMinutes;
 	}
 
 	/**
@@ -605,7 +705,7 @@ public final class NotificationService {
 	private static String statusText(final Context context, final BatteryDO batteryDO) {
 		final int percentage = isNull(batteryDO) ? 0 : Math.round(batteryDO.getBatteryPercentage());
 		final String statusLabel = statusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
-		final String temperature = isNull(batteryDO) ? "" : formatTemperature(context, batteryDO.getTemperature());
+		final String temperature = isNull(batteryDO) ? "" : TemperatureUtils.format(context, batteryDO.getTemperature());
 		return context.getString(R.string.notification_status_content, percentage, statusLabel, temperature);
 	}
 
@@ -624,28 +724,6 @@ public final class NotificationService {
 			case BatteryManager.BATTERY_STATUS_DISCHARGING -> context.getString(R.string.discharging);
 			default -> context.getString(R.string.unknown);
 		};
-	}
-
-	/**
-	 * Format the battery temperature respecting the user's unit preference (°C/°F).
-	 *
-	 * @param context     The application context
-	 * @param rawTenthsC  Temperature in tenths of a degree Celsius (as reported by BatteryManager)
-	 * @return Formatted temperature with unit suffix
-	 */
-	private static String formatTemperature(final Context context, final int rawTenthsC) {
-		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-		final String unit = prefs.getString(
-				context.getString(R.string._pref_key_temperatures_unit),
-				context.getString(R.string._pref_value_temperatures_unit_c));
-
-		float temperature = rawTenthsC / 10f;
-		String suffix = context.getString(R.string.celsius_short);
-		if (unit.equalsIgnoreCase(context.getString(R.string._pref_value_temperatures_unit_f))) {
-			temperature = GeneralHelper.fromCtoF(temperature);
-			suffix = context.getString(R.string.fahrenheit_short);
-		}
-		return temperature + " " + suffix;
 	}
 
 	/**
@@ -684,6 +762,7 @@ public final class NotificationService {
 		final String alarmSound;
 		final boolean withinTime;
 		final boolean ignoreSilent;
+		final boolean vibrate;
 		final boolean stickyNotification;
 
 		/**
@@ -703,6 +782,7 @@ public final class NotificationService {
 			this.stickyNotification = prefs.getBoolean(context.getString(R.string._pref_key_notifications_sticky), false);
 			this.withinTime = isWithinNotificationWindow(context, prefs);
 			this.ignoreSilent = shouldIgnoreSilentMode(context, prefs);
+			this.vibrate = isVibrationEnabled(context, prefs);
 
 			final String defaultSound = context.getString(R.string._default_notification_sound_uri);
 

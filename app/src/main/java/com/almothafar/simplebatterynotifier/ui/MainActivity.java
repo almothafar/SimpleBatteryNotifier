@@ -102,9 +102,9 @@ public class MainActivity extends BaseActivity {
 		final Toolbar toolbar = findViewById(R.id.toolbar);
 		setupToolbar(toolbar);
 
-		// setStatusBarColor() and setNavigationBarColor() removed - deprecated in API 35
-		// Edge-to-edge is already enabled via BaseActivity
-		// System bar colors should be set in themes (values/themes.xml) instead
+		// setStatusBarColor()/setNavigationBarColor() removed (deprecated in API 35).
+		// Edge-to-edge is enforced by the platform on Android 15+; system-bar insets are handled
+		// in BaseActivity. System bar colors should be set via themes (values/themes.xml).
 
 		// Register activity result launcher for settings
 		// Replaces deprecated startActivityForResult() - modern approach doesn't require result handling
