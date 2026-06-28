@@ -111,6 +111,24 @@ public class BatteryHealthTracker {
 	}
 
 	/**
+	 * Gets the best-available charge cycle count: the OS-reported value where the device exposes it
+	 * (Android 14+ {@code EXTRA_CYCLE_COUNT}), otherwise this app's own tracked estimate.
+	 * <p>
+	 * Used for both the displayed cycle count and the health estimate so the two stay consistent.
+	 *
+	 * @param context Application context
+	 *
+	 * @return Charge cycle count (OS-reported if available, else the tracked estimate)
+	 */
+	public static int getEffectiveCycleCount(final Context context) {
+		if (isNull(context)) {
+			return 0;
+		}
+		final int osCycleCount = SystemService.getChargeCycleCount(context);
+		return osCycleCount > 0 ? osCycleCount : getChargeCycles(context);
+	}
+
+	/**
 	 * Gets the date when health tracking was first initialized.
 	 *
 	 * @param context Application context
@@ -154,7 +172,7 @@ public class BatteryHealthTracker {
 	 * @return Estimated battery health percentage (0-100)
 	 */
 	public static int getEstimatedHealthPercentage(final Context context) {
-		final int cycles = getChargeCycles(context);
+		final int cycles = getEffectiveCycleCount(context);
 
 		// Excellent health: 0-300 cycles (100% to 95%)
 		if (cycles < EXCELLENT_THRESHOLD) {
@@ -189,7 +207,7 @@ public class BatteryHealthTracker {
 	 * @return Health status: "Excellent", "Good", "Fair", or "Poor"
 	 */
 	public static String getHealthStatus(final Context context) {
-		final int cycles = getChargeCycles(context);
+		final int cycles = getEffectiveCycleCount(context);
 
 		if (cycles < EXCELLENT_THRESHOLD) {
 			return "Excellent";
@@ -210,7 +228,7 @@ public class BatteryHealthTracker {
 	 * @return Detailed health description
 	 */
 	public static String getHealthDescription(final Context context) {
-		final int cycles = getChargeCycles(context);
+		final int cycles = getEffectiveCycleCount(context);
 
 		if (cycles < EXCELLENT_THRESHOLD) {
 			return "Your battery is in excellent condition. Continue with normal usage patterns.";
