@@ -25,6 +25,12 @@ public final class BatteryDO {
 	 * @return Battery percentage (0-100)
 	 */
 	public float getBatteryPercentage() {
+		// Guard against a missing/invalid scale. BatteryManager defaults scale to -1 when
+		// unavailable; dividing by 0 or a negative scale would yield Infinity/NaN, which then
+		// becomes Integer.MAX_VALUE once callers cast to int and breaks threshold comparisons.
+		if (scale <= 0) {
+			return 0f;
+		}
 		return (level / (float) scale) * 100;
 	}
 
