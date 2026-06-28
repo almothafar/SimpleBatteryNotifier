@@ -98,6 +98,9 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
 		final Toolbar toolbar = findViewById(R.id.toolbar);
 		setupToolbar(toolbar, true);
 
+		// Keep the (potentially long) preference list clear of the system navigation bar.
+		applyBottomSystemBarInset(findViewById(R.id.settings_container));
+
 		// setStatusBarColor() and setNavigationBarColor() removed - deprecated in API 35
 		// Edge-to-edge is already enabled via BaseActivity
 		// System bar colors should be set in themes (values/themes.xml) instead
