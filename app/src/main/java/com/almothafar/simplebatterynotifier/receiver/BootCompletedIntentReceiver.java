@@ -3,6 +3,7 @@ package com.almothafar.simplebatterynotifier.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import androidx.core.content.ContextCompat;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 
 import static java.util.Objects.nonNull;
@@ -29,8 +30,9 @@ public class BootCompletedIntentReceiver extends BroadcastReceiver {
 	public void onReceive(final Context context, final Intent intent) {
 		// Verify the intent action to prevent spoofed intents
 		if (nonNull(intent) && Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-			// Start the PowerConnectionService which will register battery monitoring receivers
-			context.startService(new Intent(context, PowerConnectionService.class));
+			// Start as a foreground service: a plain startService() from a background
+			// boot broadcast throws on Android 8+ (BackgroundServiceStartNotAllowedException).
+			ContextCompat.startForegroundService(context, new Intent(context, PowerConnectionService.class));
 		}
 	}
 }

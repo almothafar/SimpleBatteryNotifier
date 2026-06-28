@@ -100,6 +100,24 @@
     <string name="notification_charge_started_title_regular">Regular charging started</string>
     <string name="notification_charge_started_content">Battery charging with %1$s </string>
 
+    <!-- Persistent foreground-service status notification -->
+    <string name="notification_status_channel_name">Battery Status</string>
+    <string name="notification_status_channel_description">Ongoing battery status while monitoring is active</string>
+    <!-- e.g. "85% · Discharging · 32.0 °C" -->
+    <string name="notification_status_content">%1$d%% · %2$s · %3$s</string>
+
+    <!-- High temperature alert -->
+    <string name="notify_high_temperature">High Temperature Alert</string>
+    <string name="notify_high_temperature_summary_on">Warns you when the battery gets too hot (heavy load, charging, hot environment)</string>
+    <string name="notify_high_temperature_summary_off">High temperature alerts are disabled</string>
+    <string name="high_temperature_threshold">Alert above temperature (°C)</string>
+    <string name="notification_temperature_channel_name">Battery Temperature</string>
+    <string name="notification_temperature_channel_description">Alerts when the battery temperature is unsafe</string>
+    <string name="notification_temperature_ticker">Battery is hot</string>
+    <string name="notification_temperature_title">Battery temperature is high</string>
+    <string name="notification_temperature_content">Battery is at %1$s. Reduce load and let it cool down.</string>
+    <string name="notification_temperature_content_big">Your battery is at %1$s, which is above the safe range. High temperature accelerates battery wear and can be unsafe. Stop charging or heavy use (games, navigation, camera) and let the phone cool down.</string>
+
     <!-- Battery Insights Screen -->
     <string name="battery_insights_title">Battery Insights</string>
     <string name="battery_insights_menu">Battery Insights</string>
@@ -136,6 +154,8 @@
     <string name="_pref_key_notifications_time_range_end">key_notifications_time_range_end</string>
     <string name="_pref_key_notifications_apply_silent_mode">key_notifications_apply_silent_mode</string>
     <string name="_pref_key_notify_every_tick">key_notify_every_tick</string>
+    <string name="_pref_key_notify_high_temperature">key_notify_high_temperature</string>
+    <string name="_pref_key_high_temperature_threshold">key_high_temperature_threshold</string>
 
     <string name="_pref_value_temperatures_unit_c">celsius</string>
     <string name="_pref_value_temperatures_unit_f">fahrenheit</string>

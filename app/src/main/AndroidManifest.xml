@@ -9,6 +9,11 @@
     <uses-permission
             android:name="android.permission.POST_NOTIFICATIONS"
             tools:targetApi="33"/>
+    <!-- Foreground service keeps battery monitoring alive when the app is closed -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission
+            android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"
+            tools:targetApi="34"/>
 
     <application
             android:allowBackup="true"
@@ -28,11 +33,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Service kept internal -->
+        <!-- Foreground service: keeps battery monitoring alive in the background -->
         <service
                 android:name=".service.PowerConnectionService"
                 android:enabled="true"
-                android:exported="false"/>
+                android:exported="false"
+                android:foregroundServiceType="specialUse">
+            <property
+                    android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                    android:value="Continuous battery-level monitoring to deliver low, critical and full-charge alerts while the app is closed."/>
+        </service>
 
         <!-- Boot receiver: exported so system can deliver the broadcast on 12+ -->
         <receiver
