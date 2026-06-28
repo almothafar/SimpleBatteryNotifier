@@ -24,6 +24,7 @@ import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.ui.MainActivity;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
+import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
 import java.lang.ref.WeakReference;
 import java.time.LocalTime;
@@ -192,7 +193,7 @@ public final class NotificationService {
 		createNotificationChannels(context);
 
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-		final String temperature = formatTemperature(context, rawTenthsC);
+		final String temperature = TemperatureUtils.format(context, rawTenthsC);
 
 		final Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID_TEMPERATURE)
 				.setSmallIcon(R.drawable.ic_stat_device_battery_charging_20)
@@ -704,7 +705,7 @@ public final class NotificationService {
 	private static String statusText(final Context context, final BatteryDO batteryDO) {
 		final int percentage = isNull(batteryDO) ? 0 : Math.round(batteryDO.getBatteryPercentage());
 		final String statusLabel = statusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
-		final String temperature = isNull(batteryDO) ? "" : formatTemperature(context, batteryDO.getTemperature());
+		final String temperature = isNull(batteryDO) ? "" : TemperatureUtils.format(context, batteryDO.getTemperature());
 		return context.getString(R.string.notification_status_content, percentage, statusLabel, temperature);
 	}
 
@@ -723,28 +724,6 @@ public final class NotificationService {
 			case BatteryManager.BATTERY_STATUS_DISCHARGING -> context.getString(R.string.discharging);
 			default -> context.getString(R.string.unknown);
 		};
-	}
-
-	/**
-	 * Format the battery temperature respecting the user's unit preference (°C/°F).
-	 *
-	 * @param context     The application context
-	 * @param rawTenthsC  Temperature in tenths of a degree Celsius (as reported by BatteryManager)
-	 * @return Formatted temperature with unit suffix
-	 */
-	private static String formatTemperature(final Context context, final int rawTenthsC) {
-		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-		final String unit = prefs.getString(
-				context.getString(R.string._pref_key_temperatures_unit),
-				context.getString(R.string._pref_value_temperatures_unit_c));
-
-		float temperature = rawTenthsC / 10f;
-		String suffix = context.getString(R.string.celsius_short);
-		if (unit.equalsIgnoreCase(context.getString(R.string._pref_value_temperatures_unit_f))) {
-			temperature = GeneralHelper.fromCtoF(temperature);
-			suffix = context.getString(R.string.fahrenheit_short);
-		}
-		return temperature + " " + suffix;
 	}
 
 	/**

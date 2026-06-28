@@ -12,6 +12,7 @@ import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
+import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
 /**
  * Broadcast receiver for monitoring battery level changes.
@@ -26,10 +27,9 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	private static final Object LOCK = new Object();
 
 	/**
-	 * Default high-temperature threshold in °C, and how far the battery must cool below it
-	 * before another alert can fire (hysteresis prevents repeated alerts during one hot spell).
+	 * How far (in °C) the battery must cool below the threshold before another high-temperature
+	 * alert can fire. Hysteresis prevents repeated alerts during a single hot spell.
 	 */
-	private static final int DEFAULT_TEMPERATURE_THRESHOLD_C = 45;
 	private static final int TEMPERATURE_HYSTERESIS_C = 3;
 
 	/**
@@ -117,15 +117,18 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 			return;
 		}
 
-		final int thresholdC = sharedPref.getInt(context.getString(R.string._pref_key_high_temperature_threshold), DEFAULT_TEMPERATURE_THRESHOLD_C);
+		// The threshold is stored canonically in Celsius; the battery reading is also Celsius
+		// (tenths), so a chilly 45 °F (~7 °C) never trips a 45 °C threshold. See TemperatureUtils.
+		final int thresholdCelsius = sharedPref.getInt(
+				context.getString(R.string._pref_key_high_temperature_threshold),
+				TemperatureUtils.DEFAULT_HIGH_TEMP_THRESHOLD_C);
 		final int rawTenthsC = batteryDO.getTemperature();
-		final float tempC = rawTenthsC / 10f;
 
 		synchronized (LOCK) {
-			if (tempC >= thresholdC && !temperatureAlertSent) {
+			if (TemperatureUtils.isAtOrAboveThreshold(rawTenthsC, thresholdCelsius) && !temperatureAlertSent) {
 				NotificationService.sendTemperatureNotification(context, rawTenthsC);
 				temperatureAlertSent = true;
-			} else if (tempC <= thresholdC - TEMPERATURE_HYSTERESIS_C) {
+			} else if (TemperatureUtils.isBelowResetThreshold(rawTenthsC, thresholdCelsius, TEMPERATURE_HYSTERESIS_C)) {
 				temperatureAlertSent = false;
 			}
 		}
