@@ -45,14 +45,21 @@ public class BatteryDOTest {
 	}
 
 	/**
-	 * CRITICAL EDGE CASE: Division by zero
-	 * This tests actual error condition that could happen with malformed battery data
+	 * CRITICAL EDGE CASE: Division by zero / invalid scale
+	 * A zero (or negative) scale is malformed battery data. It must be guarded so it never
+	 * produces Infinity/NaN, which would become Integer.MAX_VALUE when cast to int downstream.
 	 */
 	@Test
-	public void getBatteryPercentage_scaleZero_returnsInfinity() {
+	public void getBatteryPercentage_scaleZero_returnsZero() {
 		battery.setLevel(50).setScale(0);
 		final float result = battery.getBatteryPercentage();
-		assertTrue("Division by zero should produce infinity", Float.isInfinite(result));
+		assertEquals("Invalid scale must be guarded, not produce Infinity", 0.0f, result, 0.01f);
+	}
+
+	@Test
+	public void getBatteryPercentage_negativeScale_returnsZero() {
+		battery.setLevel(50).setScale(-1);
+		assertEquals("Negative scale must be guarded", 0.0f, battery.getBatteryPercentage(), 0.01f);
 	}
 
 	/**

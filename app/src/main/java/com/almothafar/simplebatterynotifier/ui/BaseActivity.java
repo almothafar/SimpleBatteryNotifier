@@ -1,8 +1,12 @@
 package com.almothafar.simplebatterynotifier.ui;
 
 import android.os.Bundle;
+import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 /**
  * Base activity providing common functionality for all activities
@@ -69,5 +73,26 @@ public abstract class BaseActivity extends AppCompatActivity {
 			getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 			getSupportActionBar().setDisplayShowHomeEnabled(true);
 		}
+	}
+
+	/**
+	 * Pad the bottom of a scrolling container by the system navigation-bar inset so its content
+	 * is not hidden behind the navigation bar. Android 15+ (targetSdk 35+) enforces edge-to-edge,
+	 * so without this a long list draws underneath the nav bar.
+	 * <p>
+	 * Any padding already set on the view is preserved (the inset is added on top of it).
+	 *
+	 * @param view The scrolling container to inset (no-op if null)
+	 */
+	protected void applyBottomSystemBarInset(final View view) {
+		if (view == null) {
+			return;
+		}
+		final int initialBottom = view.getPaddingBottom();
+		ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+			final Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+			v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), initialBottom + bars.bottom);
+			return insets;
+		});
 	}
 }
