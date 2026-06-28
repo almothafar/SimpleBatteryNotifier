@@ -253,6 +253,28 @@ public final class SystemService {
 	}
 
 	/**
+	 * Read the OS-reported charge cycle count, where available.
+	 * <p>
+	 * Exposed to apps via the public {@link BatteryManager#EXTRA_CYCLE_COUNT} extra on
+	 * {@code ACTION_BATTERY_CHANGED} (Android 14 / API 34+, populated on devices whose battery
+	 * fuel gauge reports it). Returns -1 when unavailable, so callers can fall back to the
+	 * app's own estimate. Note: the per-app battery State-of-Health <em>percentage</em> is a
+	 * privileged/system API and is not available here.
+	 *
+	 * @param context The application context
+	 *
+	 * @return Charge cycle count, or -1 if the device doesn't report it
+	 */
+	public static int getChargeCycleCount(final Context context) {
+		final Intent batteryStatus = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+		if (isNull(batteryStatus)) {
+			return -1;
+		}
+		final int cycles = batteryStatus.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1);
+		return cycles > 0 ? cycles : -1;
+	}
+
+	/**
 	 * Vibrate the phone with a predefined pattern
 	 *
 	 * @param context The application context

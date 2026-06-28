@@ -58,7 +58,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 		// Get health metrics
 		final int healthPercentage = BatteryHealthTracker.getEstimatedHealthPercentage(this);
 		final String healthStatus = BatteryHealthTracker.getHealthStatus(this);
-		final int chargeCycles = BatteryHealthTracker.getChargeCycles(this);
+		final int chargeCycles = BatteryHealthTracker.getEffectiveCycleCount(this);
 		final int daysInUse = BatteryHealthTracker.getDaysSinceFirstUse(this);
 		final String healthDescription = BatteryHealthTracker.getHealthDescription(this);
 

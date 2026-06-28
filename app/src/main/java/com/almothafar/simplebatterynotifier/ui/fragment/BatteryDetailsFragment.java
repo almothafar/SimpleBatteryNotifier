@@ -218,7 +218,7 @@ public class BatteryDetailsFragment extends Fragment {
 		valuesMap.put(getResources().getString(R.string.capacity), capacityText);
 
 		// Add charge cycles from the battery health tracker - positioned right after capacity
-		final int chargeCycles = BatteryHealthTracker.getChargeCycles(view.getContext());
+		final int chargeCycles = BatteryHealthTracker.getEffectiveCycleCount(view.getContext());
 		valuesMap.put(getResources().getString(R.string.charge_cycles), String.valueOf(chargeCycles));
 
 		valuesMap.put(getResources().getString(R.string.voltage), batteryDO.getVoltage() + " mV");
