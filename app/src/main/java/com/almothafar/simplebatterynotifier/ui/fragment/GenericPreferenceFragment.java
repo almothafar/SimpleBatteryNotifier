@@ -24,6 +24,7 @@ import androidx.preference.PreferenceScreen;
 import androidx.preference.SeekBarPreference;
 
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference;
 import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreference;
 import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreferenceDialogFragmentCompat;
@@ -198,6 +199,12 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 		// Update summary when preference changes
 		final Preference pref = findPreference(key);
 		updatePreferencesSummary(sharedPreferences, pref);
+
+		// The Vibrate toggle changes channel settings, which Android caches; recreate the alert
+		// channels so the new setting takes effect.
+		if (nonNull(key) && key.equals(getString(R.string._pref_key_notifications_vibrate))) {
+			NotificationService.refreshAlertChannels(requireContext());
+		}
 	}
 
 	/**

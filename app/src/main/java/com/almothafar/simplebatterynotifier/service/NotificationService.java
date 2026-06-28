@@ -215,7 +215,8 @@ public final class NotificationService {
 		final String sound = prefs.getString(
 				context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
 				context.getString(R.string._default_notification_sound_uri));
-		playAlarm(context, sound, isWithinNotificationWindow(context, prefs), shouldIgnoreSilentMode(context, prefs));
+		playAlarm(context, sound, isWithinNotificationWindow(context, prefs), shouldIgnoreSilentMode(context, prefs),
+				isVibrationEnabled(context, prefs));
 	}
 
 	/**
@@ -357,12 +358,15 @@ public final class NotificationService {
 			return;
 		}
 
-		createChannelIfNotExists(manager, CHANNEL_ID_CRITICAL, "Battery Critical Alerts", "Critical battery level alerts", Color.RED);
-		createChannelIfNotExists(manager, CHANNEL_ID_WARNING, "Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00));
-		createChannelIfNotExists(manager, CHANNEL_ID_FULL, "Battery Full", "Battery fully charged notifications", Color.GREEN);
+		final boolean vibrate = PreferenceManager.getDefaultSharedPreferences(context)
+		                                          .getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
+
+		createChannelIfNotExists(manager, CHANNEL_ID_CRITICAL, "Battery Critical Alerts", "Critical battery level alerts", Color.RED, vibrate);
+		createChannelIfNotExists(manager, CHANNEL_ID_WARNING, "Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00), vibrate);
+		createChannelIfNotExists(manager, CHANNEL_ID_FULL, "Battery Full", "Battery fully charged notifications", Color.GREEN, vibrate);
 		createChannelIfNotExists(manager, CHANNEL_ID_TEMPERATURE,
 				context.getString(R.string.notification_temperature_channel_name),
-				context.getString(R.string.notification_temperature_channel_description), Color.RED);
+				context.getString(R.string.notification_temperature_channel_description), Color.RED, vibrate);
 		createStatusChannelIfNotExists(manager,
 				context.getString(R.string.notification_status_channel_name),
 				context.getString(R.string.notification_status_channel_description));
@@ -401,9 +405,10 @@ public final class NotificationService {
 	 * @param name      The channel name
 	 * @param description The channel description
 	 * @param ledColor  The LED color for notifications
+	 * @param vibrate   Whether the channel should vibrate (from the user's Vibrate preference)
 	 */
 	private static void createChannelIfNotExists(final NotificationManager manager, final String channelId, final String name,
-	                                             final String description, final int ledColor) {
+	                                             final String description, final int ledColor, final boolean vibrate) {
 		if (nonNull(manager.getNotificationChannel(channelId))) {
 			return;
 		}
@@ -412,9 +417,31 @@ public final class NotificationService {
 		channel.setDescription(description);
 		channel.enableLights(true);
 		channel.setLightColor(ledColor);
-		channel.enableVibration(true);
-		channel.setVibrationPattern(VIBRATION_PATTERN);
+		channel.enableVibration(vibrate);
+		if (vibrate) {
+			channel.setVibrationPattern(VIBRATION_PATTERN);
+		}
 		manager.createNotificationChannel(channel);
+	}
+
+	/**
+	 * Re-create the alert channels so a changed "Vibrate" preference takes effect.
+	 * <p>
+	 * Android caches a channel's settings after first creation, so the channels must be deleted
+	 * and recreated for a new vibration setting to apply. The silent status channel is untouched.
+	 *
+	 * @param context The application context
+	 */
+	public static void refreshAlertChannels(final Context context) {
+		final NotificationManager manager = getNotificationManager(context);
+		if (isNull(manager)) {
+			return;
+		}
+		manager.deleteNotificationChannel(CHANNEL_ID_CRITICAL);
+		manager.deleteNotificationChannel(CHANNEL_ID_WARNING);
+		manager.deleteNotificationChannel(CHANNEL_ID_FULL);
+		manager.deleteNotificationChannel(CHANNEL_ID_TEMPERATURE);
+		createNotificationChannels(context);
 	}
 
 	/**
@@ -489,20 +516,21 @@ public final class NotificationService {
 	 * @param config  The notification configuration
 	 */
 	private static void playSoundIfNeeded(final Context context, final NotificationConfig config) {
-		playAlarm(context, config.alarmSound, config.withinTime, config.ignoreSilent);
+		playAlarm(context, config.alarmSound, config.withinTime, config.ignoreSilent, config.vibrate);
 	}
 
 	/**
-	 * Play the alert sound (and vibrate) when the phone is silenced but the user opted to
-	 * override silent mode. In normal ringer mode the notification channel plays its own sound.
+	 * Play the alert sound (and optionally vibrate) when the phone is silenced but the user opted
+	 * to override silent mode. In normal ringer mode the notification channel plays its own sound.
 	 *
 	 * @param context      The application context
 	 * @param soundUriStr  The alarm sound URI string
 	 * @param withinTime   Whether the current time is inside the allowed notification window
 	 * @param ignoreSilent Whether the user opted to override silent/DND mode
+	 * @param vibrate      Whether the user enabled vibration
 	 */
 	private static void playAlarm(final Context context, final String soundUriStr,
-	                              final boolean withinTime, final boolean ignoreSilent) {
+	                              final boolean withinTime, final boolean ignoreSilent, final boolean vibrate) {
 		if (!withinTime) {
 			return;
 		}
@@ -518,9 +546,22 @@ public final class NotificationService {
 		if (ignoreSilent && isNotNormalRingerMode) {
 			soundExecutor.execute(() -> {
 				SystemService.playSound(context, soundUri);
-				SystemService.vibratePhone(context);
+				if (vibrate) {
+					SystemService.vibratePhone(context);
+				}
 			});
 		}
+	}
+
+	/**
+	 * Read the user's "Vibrate" preference (defaults to enabled).
+	 *
+	 * @param context The application context
+	 * @param prefs   SharedPreferences containing user settings
+	 * @return true if vibration is enabled
+	 */
+	private static boolean isVibrationEnabled(final Context context, final SharedPreferences prefs) {
+		return prefs.getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
 	}
 
 	/**
@@ -734,6 +775,7 @@ public final class NotificationService {
 		final String alarmSound;
 		final boolean withinTime;
 		final boolean ignoreSilent;
+		final boolean vibrate;
 		final boolean stickyNotification;
 
 		/**
@@ -753,6 +795,7 @@ public final class NotificationService {
 			this.stickyNotification = prefs.getBoolean(context.getString(R.string._pref_key_notifications_sticky), false);
 			this.withinTime = isWithinNotificationWindow(context, prefs);
 			this.ignoreSilent = shouldIgnoreSilentMode(context, prefs);
+			this.vibrate = isVibrationEnabled(context, prefs);
 
 			final String defaultSound = context.getString(R.string._default_notification_sound_uri);
 
