@@ -1,6 +1,7 @@
 package com.almothafar.simplebatterynotifier.ui;
 
 import android.app.AlertDialog;
+import android.content.pm.ApplicationInfo;
 import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -99,6 +100,12 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * DEBUG feature for testing battery health tracking.
 	 */
 	private void setupDebugMenu() {
+		// Debug tools (inject/reset cycles) must not be reachable in release builds, where a
+		// long-press could let a user silently corrupt their tracked health data.
+		final boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+		if (!debuggable) {
+			return;
+		}
 		healthPercentageText.setOnLongClickListener(v -> {
 			showDebugMenu();
 			return true;
