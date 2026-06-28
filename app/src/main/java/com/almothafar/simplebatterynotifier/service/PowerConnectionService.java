@@ -1,14 +1,18 @@
 package com.almothafar.simplebatterynotifier.service;
 
+import android.app.Notification;
 import android.app.Service;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ServiceInfo;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.os.IBinder;
+import androidx.core.app.ServiceCompat;
+import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.receiver.BatteryLevelReceiver;
 import com.almothafar.simplebatterynotifier.receiver.PowerConnectionReceiver;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 /**
@@ -27,6 +31,9 @@ public class PowerConnectionService extends Service {
 
 	@Override
 	public void onCreate() {
+		super.onCreate();
+		// Promote to foreground first so the OS keeps the process (and our receivers) alive on Android 8+.
+		startForegroundWithStatus();
 		registerPowerConnectionReceiver();
 	}
 
@@ -38,7 +45,28 @@ public class PowerConnectionService extends Service {
 
 	@Override
 	public int onStartCommand(final Intent intent, final int flags, final int startId) {
+		// Re-assert the foreground notification (e.g. after a START_STICKY restart delivers a null intent).
+		startForegroundWithStatus();
 		return START_STICKY;
+	}
+
+	/**
+	 * Promote this service to the foreground with the persistent battery-status notification.
+	 * <p>
+	 * Required on Android 8+: a plain background service (and its runtime-registered battery
+	 * receivers) is reaped shortly after the app leaves the foreground. The ongoing notification
+	 * keeps monitoring alive so alerts are delivered while the app is closed.
+	 */
+	private void startForegroundWithStatus() {
+		final BatteryDO batteryDO = SystemService.getBatteryInfo(this);
+		final Notification notification = NotificationService.buildOngoingNotification(this, batteryDO);
+
+		// The specialUse FGS type only exists from Android 14 (API 34); pass 0 on older versions.
+		final int serviceType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+		                        ? ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+		                        : 0;
+
+		ServiceCompat.startForeground(this, NotificationService.getOngoingNotificationId(), notification, serviceType);
 	}
 
 	/**

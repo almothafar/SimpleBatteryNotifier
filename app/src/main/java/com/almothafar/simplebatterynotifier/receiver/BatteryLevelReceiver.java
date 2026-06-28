@@ -56,6 +56,9 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		final BatteryDO batteryDO = SystemService.getBatteryInfo(context);
 		final int percentage = batteryDO == null ? 100 : (int) batteryDO.getBatteryPercentage();
 
+		// Keep the persistent foreground-service status notification live with the latest reading
+		NotificationService.updateOngoingNotification(context, batteryDO);
+
 		// Track battery health and charge cycles
 		BatteryHealthTracker.recordBatteryState(context, percentage, status);
 

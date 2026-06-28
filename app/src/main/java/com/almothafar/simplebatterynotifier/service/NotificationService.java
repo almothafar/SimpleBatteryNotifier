@@ -14,12 +14,14 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.ui.MainActivity;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 
@@ -59,10 +61,13 @@ public final class NotificationService {
 	private static final String CHANNEL_ID_CRITICAL = "battery_critical";
 	private static final String CHANNEL_ID_WARNING = "battery_warning";
 	private static final String CHANNEL_ID_FULL = "battery_full";
+	private static final String CHANNEL_ID_STATUS = "battery_status";
 
 	// Notification settings
 	private static final long[] VIBRATION_PATTERN = {0, 500, 250, 500, 250};
 	private static final int NOTIFICATION_ID = 1641987;
+	// Separate ID for the persistent foreground-service status notification
+	private static final int ONGOING_NOTIFICATION_ID = 1641988;
 
 	// Do Not Disturb mode constants
 	private static final String ZEN_MODE = "zen_mode";
@@ -179,6 +184,60 @@ public final class NotificationService {
 	}
 
 	/**
+	 * ID of the persistent status notification (used by the foreground service).
+	 *
+	 * @return The ongoing notification ID
+	 */
+	public static int getOngoingNotificationId() {
+		return ONGOING_NOTIFICATION_ID;
+	}
+
+	/**
+	 * Build the persistent (ongoing) battery-status notification shown by the foreground service.
+	 * <p>
+	 * This is a low-importance, silent, non-dismissible notification that displays the live
+	 * battery percentage, charging state and temperature (AccuBattery-style). It keeps the
+	 * monitoring service alive so alerts are delivered even when the app is closed.
+	 *
+	 * @param context   The application context
+	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 * @return The built ongoing notification
+	 */
+	public static Notification buildOngoingNotification(final Context context, final BatteryDO batteryDO) {
+		createNotificationChannels(context);
+
+		return new Notification.Builder(context, CHANNEL_ID_STATUS)
+				.setSmallIcon(ongoingIconRes(batteryDO))
+				.setContentTitle(context.getString(R.string.app_name))
+				.setContentText(statusText(context, batteryDO))
+				.setContentIntent(createMainActivityIntent(context))
+				.setOnlyAlertOnce(true)
+				.setOngoing(true)
+				.setVisibility(Notification.VISIBILITY_PUBLIC)
+				.setCategory(Notification.CATEGORY_STATUS)
+				.build();
+	}
+
+	/**
+	 * Refresh the persistent status notification with the latest battery data.
+	 * <p>
+	 * Called whenever the battery state changes so the ongoing notification stays live.
+	 * Uses the same notification ID as the foreground service, so it updates in place.
+	 *
+	 * @param context   The application context
+	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 */
+	public static void updateOngoingNotification(final Context context, final BatteryDO batteryDO) {
+		if (lacksNotificationPermission(context)) {
+			return;
+		}
+		final NotificationManager manager = getNotificationManager(context);
+		if (nonNull(manager)) {
+			manager.notify(ONGOING_NOTIFICATION_ID, buildOngoingNotification(context, batteryDO));
+		}
+	}
+
+	/**
 	 * Set healthy charge mode
 	 * <p>
 	 * Thread-safe setter for the healthy charge state flag.
@@ -254,6 +313,34 @@ public final class NotificationService {
 		createChannelIfNotExists(manager, CHANNEL_ID_CRITICAL, "Battery Critical Alerts", "Critical battery level alerts", Color.RED);
 		createChannelIfNotExists(manager, CHANNEL_ID_WARNING, "Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00));
 		createChannelIfNotExists(manager, CHANNEL_ID_FULL, "Battery Full", "Battery fully charged notifications", Color.GREEN);
+		createStatusChannelIfNotExists(manager,
+				context.getString(R.string.notification_status_channel_name),
+				context.getString(R.string.notification_status_channel_description));
+	}
+
+	/**
+	 * Create the low-importance channel used by the persistent status notification.
+	 * <p>
+	 * Unlike the alert channels, this channel is silent (no sound, vibration, lights or badge)
+	 * so the ongoing battery-status notification stays unobtrusive.
+	 *
+	 * @param manager     The NotificationManager
+	 * @param name        The channel name
+	 * @param description The channel description
+	 */
+	private static void createStatusChannelIfNotExists(final NotificationManager manager, final String name,
+	                                                   final String description) {
+		if (nonNull(manager.getNotificationChannel(CHANNEL_ID_STATUS))) {
+			return;
+		}
+
+		final NotificationChannel channel = new NotificationChannel(CHANNEL_ID_STATUS, name, NotificationManager.IMPORTANCE_LOW);
+		channel.setDescription(description);
+		channel.enableLights(false);
+		channel.enableVibration(false);
+		channel.setSound(null, null);
+		channel.setShowBadge(false);
+		manager.createNotificationChannel(channel);
 	}
 
 	/**
@@ -352,11 +439,25 @@ public final class NotificationService {
 	 * @param config  The notification configuration
 	 */
 	private static void playSoundIfNeeded(final Context context, final NotificationConfig config) {
-		if (!config.withinTime) {
+		playAlarm(context, config.alarmSound, config.withinTime, config.ignoreSilent);
+	}
+
+	/**
+	 * Play the alert sound (and vibrate) when the phone is silenced but the user opted to
+	 * override silent mode. In normal ringer mode the notification channel plays its own sound.
+	 *
+	 * @param context      The application context
+	 * @param soundUriStr  The alarm sound URI string
+	 * @param withinTime   Whether the current time is inside the allowed notification window
+	 * @param ignoreSilent Whether the user opted to override silent/DND mode
+	 */
+	private static void playAlarm(final Context context, final String soundUriStr,
+	                              final boolean withinTime, final boolean ignoreSilent) {
+		if (!withinTime) {
 			return;
 		}
 
-		final Uri soundUri = Uri.parse(config.alarmSound);
+		final Uri soundUri = Uri.parse(soundUriStr);
 		final AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 		if (isNull(audioManager)) {
 			return;
@@ -364,12 +465,42 @@ public final class NotificationService {
 
 		final boolean isNotNormalRingerMode = audioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL || isInDoNotDisturbMode(context);
 
-		if (config.ignoreSilent && isNotNormalRingerMode) {
+		if (ignoreSilent && isNotNormalRingerMode) {
 			soundExecutor.execute(() -> {
 				SystemService.playSound(context, soundUri);
 				SystemService.vibratePhone(context);
 			});
 		}
+	}
+
+	/**
+	 * Whether the current time falls inside the user's allowed notification window
+	 * (always true when the time-range limit is disabled).
+	 *
+	 * @param context The application context
+	 * @param prefs   SharedPreferences containing user settings
+	 * @return true if alerts are allowed at the current time
+	 */
+	private static boolean isWithinNotificationWindow(final Context context, final SharedPreferences prefs) {
+		final boolean limitedTime = prefs.getBoolean(context.getString(R.string._pref_key_notifications_time_range), false);
+		final String startTime = prefs.getString(
+				context.getString(R.string._pref_key_notifications_time_range_start),
+				context.getString(R.string._pref_value_notifications_time_range_start));
+		final String endTime = prefs.getString(
+				context.getString(R.string._pref_key_notifications_time_range_end),
+				context.getString(R.string._pref_value_notifications_time_range_end));
+		return isWithinTime(startTime, endTime) || !limitedTime;
+	}
+
+	/**
+	 * Whether the user opted to override silent/DND mode for alerts.
+	 *
+	 * @param context The application context
+	 * @param prefs   SharedPreferences containing user settings
+	 * @return true if silent mode should be overridden
+	 */
+	private static boolean shouldIgnoreSilentMode(final Context context, final SharedPreferences prefs) {
+		return !prefs.getBoolean(context.getString(R.string._pref_key_notifications_apply_silent_mode), false);
 	}
 
 	/**
@@ -465,6 +596,78 @@ public final class NotificationService {
 	}
 
 	/**
+	 * Build the content line of the ongoing status notification, e.g. "85% · Discharging · 32.0 °C".
+	 *
+	 * @param context   The application context
+	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 * @return Formatted status text
+	 */
+	private static String statusText(final Context context, final BatteryDO batteryDO) {
+		final int percentage = isNull(batteryDO) ? 0 : Math.round(batteryDO.getBatteryPercentage());
+		final String statusLabel = statusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
+		final String temperature = isNull(batteryDO) ? "" : formatTemperature(context, batteryDO.getTemperature());
+		return context.getString(R.string.notification_status_content, percentage, statusLabel, temperature);
+	}
+
+	/**
+	 * Map a BatteryManager status constant to a localized label.
+	 *
+	 * @param context The application context
+	 * @param status  BatteryManager status constant
+	 * @return Localized status label
+	 */
+	private static String statusLabel(final Context context, final int status) {
+		return switch (status) {
+			case BatteryManager.BATTERY_STATUS_FULL -> context.getString(R.string.charged);
+			case BatteryManager.BATTERY_STATUS_CHARGING -> context.getString(R.string.charging);
+			case BatteryManager.BATTERY_STATUS_NOT_CHARGING -> context.getString(R.string.not_charging);
+			case BatteryManager.BATTERY_STATUS_DISCHARGING -> context.getString(R.string.discharging);
+			default -> context.getString(R.string.unknown);
+		};
+	}
+
+	/**
+	 * Format the battery temperature respecting the user's unit preference (°C/°F).
+	 *
+	 * @param context     The application context
+	 * @param rawTenthsC  Temperature in tenths of a degree Celsius (as reported by BatteryManager)
+	 * @return Formatted temperature with unit suffix
+	 */
+	private static String formatTemperature(final Context context, final int rawTenthsC) {
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final String unit = prefs.getString(
+				context.getString(R.string._pref_key_temperatures_unit),
+				context.getString(R.string._pref_value_temperatures_unit_c));
+
+		float temperature = rawTenthsC / 10f;
+		String suffix = context.getString(R.string.celsius_short);
+		if (unit.equalsIgnoreCase(context.getString(R.string._pref_value_temperatures_unit_f))) {
+			temperature = GeneralHelper.fromCtoF(temperature);
+			suffix = context.getString(R.string.fahrenheit_short);
+		}
+		return temperature + " " + suffix;
+	}
+
+	/**
+	 * Choose a small icon for the ongoing notification based on charging state and level.
+	 *
+	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 * @return Drawable resource id
+	 */
+	private static int ongoingIconRes(final BatteryDO batteryDO) {
+		if (isNull(batteryDO)) {
+			return R.drawable.ic_stat_device_battery_charging_50;
+		}
+		final int status = batteryDO.getStatus();
+		if (status == BatteryManager.BATTERY_STATUS_FULL || status == BatteryManager.BATTERY_STATUS_CHARGING) {
+			return R.drawable.ic_stat_device_battery_charging_full;
+		}
+		return Math.round(batteryDO.getBatteryPercentage()) <= 50
+		       ? R.drawable.ic_stat_device_battery_charging_20
+		       : R.drawable.ic_stat_device_battery_charging_50;
+	}
+
+	/**
 	 * Configuration object for notification creation (reduces parameter count)
 	 * <p>
 	 * This class encapsulates all configuration needed to build a notification,
@@ -496,19 +699,10 @@ public final class NotificationService {
 			// Load common preferences
 			final int warningLevel = prefs.getInt(context.getString(R.string._pref_key_warn_battery_level), 40);
 			final int criticalLevel = prefs.getInt(context.getString(R.string._pref_key_critical_battery_level), 20);
-			final boolean limitedTime = prefs.getBoolean(context.getString(R.string._pref_key_notifications_time_range), false);
-			final String startTime = prefs.getString(
-					context.getString(R.string._pref_key_notifications_time_range_start),
-					context.getString(R.string._pref_value_notifications_time_range_start)
-			);
-			final String endTime = prefs.getString(
-					context.getString(R.string._pref_key_notifications_time_range_end),
-					context.getString(R.string._pref_value_notifications_time_range_end)
-			);
 
 			this.stickyNotification = prefs.getBoolean(context.getString(R.string._pref_key_notifications_sticky), false);
-			this.withinTime = isWithinTime(startTime, endTime) || !limitedTime;
-			this.ignoreSilent = !prefs.getBoolean(context.getString(R.string._pref_key_notifications_apply_silent_mode), false);
+			this.withinTime = isWithinNotificationWindow(context, prefs);
+			this.ignoreSilent = shouldIgnoreSilentMode(context, prefs);
 
 			final String defaultSound = context.getString(R.string._default_notification_sound_uri);
 
