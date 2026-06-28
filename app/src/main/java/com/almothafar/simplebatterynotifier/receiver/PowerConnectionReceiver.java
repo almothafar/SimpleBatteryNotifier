@@ -144,31 +144,18 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	 */
 	private ChargerInfo detectChargerType(final int pluggedState, final Resources resources) {
 		return switch (pluggedState) {
-			case BatteryManager.BATTERY_PLUGGED_USB -> new ChargerInfo(
-					resources.getString(R.string.charger_connected_usb),
-					resources.getString(R.string.charger_usb)
-			);
-			case BatteryManager.BATTERY_PLUGGED_AC -> new ChargerInfo(
-					resources.getString(R.string.charger_connected_ac),
-					resources.getString(R.string.charger_ac)
-			);
-			case BatteryManager.BATTERY_PLUGGED_WIRELESS -> new ChargerInfo(
-					resources.getString(R.string.charger_connected_wireless),
-					resources.getString(R.string.charger_wireless)
-			);
-			default -> new ChargerInfo(
-					resources.getString(R.string.charger_connected),
-					resources.getString(R.string.charger)
-			);
+			case BatteryManager.BATTERY_PLUGGED_USB -> new ChargerInfo(resources.getString(R.string.charger_usb));
+			case BatteryManager.BATTERY_PLUGGED_AC -> new ChargerInfo(resources.getString(R.string.charger_ac));
+			case BatteryManager.BATTERY_PLUGGED_WIRELESS -> new ChargerInfo(resources.getString(R.string.charger_wireless));
+			default -> new ChargerInfo(resources.getString(R.string.charger));
 		};
 	}
 
 	/**
 	 * Simple data class to hold charger information
 	 *
-	 * @param connectedMessage User-friendly message for charger connection
-	 * @param source           Short description of charger type
+	 * @param source Short description of charger type
 	 */
-	private record ChargerInfo(String connectedMessage, String source) {
+	private record ChargerInfo(String source) {
 	}
 }

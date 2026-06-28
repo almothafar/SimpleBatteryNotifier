@@ -55,45 +55,43 @@ public class BatteryHealthTracker {
 		}
 
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final SharedPreferences.Editor editor = prefs.edit();
+		boolean dirty = false;
 
 		// Initialize first use date if not set
 		if (prefs.getLong(PREF_FIRST_USE_DATE, 0) == 0) {
-			prefs.edit()
-			     .putLong(PREF_FIRST_USE_DATE, System.currentTimeMillis())
-			     .apply();
+			editor.putLong(PREF_FIRST_USE_DATE, System.currentTimeMillis());
+			dirty = true;
 			Log.d(TAG, "First use date initialized");
 		}
 
-		// Track charge cycle progress
+		// Track charge cycle progress (the three branches below are mutually exclusive)
 		final boolean cycleInProgress = prefs.getBoolean(PREF_CYCLE_IN_PROGRESS, false);
 		final boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING
 				|| status == BatteryManager.BATTERY_STATUS_FULL;
 
-		// Start a charge cycle when battery is low
 		if (batteryLevel <= LOW_BATTERY_THRESHOLD && !cycleInProgress) {
-			prefs.edit()
-			     .putBoolean(PREF_CYCLE_IN_PROGRESS, true)
-			     .putLong(PREF_LAST_LOW_BATTERY, System.currentTimeMillis())
-			     .apply();
+			// Start a charge cycle when battery is low
+			editor.putBoolean(PREF_CYCLE_IN_PROGRESS, true)
+			      .putLong(PREF_LAST_LOW_BATTERY, System.currentTimeMillis());
+			dirty = true;
 			Log.d(TAG, "Charge cycle started at " + batteryLevel + "%");
-		}
-
-		// Complete a charge cycle when battery reaches full while charging
-		if (cycleInProgress && isCharging && batteryLevel >= FULL_BATTERY_THRESHOLD) {
+		} else if (cycleInProgress && isCharging && batteryLevel >= FULL_BATTERY_THRESHOLD) {
+			// Complete a charge cycle when battery reaches full while charging
 			final int currentCycles = prefs.getInt(PREF_CHARGE_CYCLES, 0);
-			prefs.edit()
-			     .putInt(PREF_CHARGE_CYCLES, currentCycles + 1)
-			     .putBoolean(PREF_CYCLE_IN_PROGRESS, false)
-			     .apply();
+			editor.putInt(PREF_CHARGE_CYCLES, currentCycles + 1)
+			      .putBoolean(PREF_CYCLE_IN_PROGRESS, false);
+			dirty = true;
 			Log.i(TAG, "Charge cycle completed! Total cycles: " + (currentCycles + 1));
+		} else if (cycleInProgress && !isCharging && batteryLevel > FULL_BATTERY_THRESHOLD) {
+			// Reset cycle tracking if battery goes back to high without charging
+			editor.putBoolean(PREF_CYCLE_IN_PROGRESS, false);
+			dirty = true;
+			Log.d(TAG, "Charge cycle reset - battery was not charged to full");
 		}
 
-		// Reset cycle tracking if battery goes back to high without charging
-		if (cycleInProgress && !isCharging && batteryLevel > FULL_BATTERY_THRESHOLD) {
-			prefs.edit()
-			     .putBoolean(PREF_CYCLE_IN_PROGRESS, false)
-			     .apply();
-			Log.d(TAG, "Charge cycle reset - battery was not charged to full");
+		if (dirty) {
+			editor.apply();
 		}
 	}
 
