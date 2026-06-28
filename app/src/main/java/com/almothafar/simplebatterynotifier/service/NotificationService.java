@@ -26,7 +26,7 @@ import com.almothafar.simplebatterynotifier.ui.MainActivity;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 
 import java.lang.ref.WeakReference;
-import java.util.Calendar;
+import java.time.LocalTime;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -615,8 +615,8 @@ public final class NotificationService {
 	 * @return true if current time is within range
 	 */
 	private static boolean isWithinTime(final String startTime, final String endTime) {
-		final Calendar now = Calendar.getInstance();
-		final int nowMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
+		final LocalTime now = LocalTime.now();
+		final int nowMinutes = now.getHour() * 60 + now.getMinute();
 		final int startMinutes = GeneralHelper.getHour(startTime) * 60 + GeneralHelper.getMinute(startTime);
 		final int endMinutes = GeneralHelper.getHour(endTime) * 60 + GeneralHelper.getMinute(endTime);
 		return isWithinTimeRange(nowMinutes, startMinutes, endMinutes);
