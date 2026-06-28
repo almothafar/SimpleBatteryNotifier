@@ -26,8 +26,7 @@ import com.almothafar.simplebatterynotifier.ui.MainActivity;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 
 import java.lang.ref.WeakReference;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.LocalTime;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -616,29 +615,38 @@ public final class NotificationService {
 	 * @return true if current time is within range
 	 */
 	private static boolean isWithinTime(final String startTime, final String endTime) {
-		final int startHour = GeneralHelper.getHour(startTime);
-		final int startMinute = GeneralHelper.getMinute(startTime);
-		final int endHour = GeneralHelper.getHour(endTime);
-		final int endMinute = GeneralHelper.getMinute(endTime);
+		final LocalTime now = LocalTime.now();
+		final int nowMinutes = now.getHour() * 60 + now.getMinute();
+		final int startMinutes = GeneralHelper.getHour(startTime) * 60 + GeneralHelper.getMinute(startTime);
+		final int endMinutes = GeneralHelper.getHour(endTime) * 60 + GeneralHelper.getMinute(endTime);
+		return isWithinTimeRange(nowMinutes, startMinutes, endMinutes);
+	}
 
-		final Date currentTime = new Date();
-
-		final Calendar startCal = Calendar.getInstance();
-		startCal.setTime(currentTime);
-		startCal.set(Calendar.HOUR_OF_DAY, startHour);
-		startCal.set(Calendar.MINUTE, startMinute);
-
-		final Calendar endCal = Calendar.getInstance();
-		endCal.setTime(currentTime);
-		endCal.set(Calendar.HOUR_OF_DAY, endHour);
-		endCal.set(Calendar.MINUTE, endMinute);
-
-		// Handle overnight time ranges (e.g., 8:00 PM to 6:00 AM)
-		if (endHour <= startHour) {
-			endCal.add(Calendar.DATE, 1);
+	/**
+	 * Pure minute-of-day range check. Handles same-day, overnight and equal-times windows
+	 * (the previous implementation ignored minutes and mishandled overnight ranges that shared
+	 * the same hour bucket).
+	 * <ul>
+	 *   <li>start &lt; end: inside when {@code start <= now < end} (e.g. 08:00–23:00).</li>
+	 *   <li>start &gt; end: overnight window, inside when {@code now >= start || now < end} (e.g. 22:00–06:00).</li>
+	 *   <li>start == end: treated as a 24-hour window (always inside).</li>
+	 * </ul>
+	 * Start is inclusive, end is exclusive.
+	 *
+	 * @param nowMinutes   Current time as minutes since midnight
+	 * @param startMinutes Window start as minutes since midnight
+	 * @param endMinutes   Window end as minutes since midnight
+	 * @return true if now falls inside the window
+	 */
+	static boolean isWithinTimeRange(final int nowMinutes, final int startMinutes, final int endMinutes) {
+		if (startMinutes == endMinutes) {
+			return true; // Whole day
 		}
-
-		return currentTime.after(startCal.getTime()) && currentTime.before(endCal.getTime());
+		if (startMinutes < endMinutes) {
+			return nowMinutes >= startMinutes && nowMinutes < endMinutes;
+		}
+		// Overnight window wraps past midnight
+		return nowMinutes >= startMinutes || nowMinutes < endMinutes;
 	}
 
 	/**
