@@ -62,10 +62,16 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		final boolean isFull = status == BatteryManager.BATTERY_STATUS_FULL;
 
 		final BatteryDO batteryDO = SystemService.getBatteryInfo(context);
-		final int percentage = batteryDO == null ? 100 : (int) batteryDO.getBatteryPercentage();
 
 		// Keep the persistent foreground-service status notification live with the latest reading
 		NotificationService.updateOngoingNotification(context, batteryDO);
+
+		if (batteryDO == null) {
+			// Without a real reading, don't assume a level. Previously this defaulted to 100%,
+			// which silently suppressed genuine low/critical alerts on a transient read failure.
+			return;
+		}
+		final int percentage = (int) batteryDO.getBatteryPercentage();
 
 		// Track battery health and charge cycles
 		BatteryHealthTracker.recordBatteryState(context, percentage, status);
@@ -77,9 +83,8 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		final boolean fullNotifyEnabled = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_for_full_level), true);
 		final boolean alertEveryTick = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_every_tick), false);
 
-		final boolean isChanged = prevLevel != percentage;
-
 		synchronized (LOCK) {
+			final boolean isChanged = prevLevel != percentage;
 			if (isChanged && !isCharging) {
 				handleDischarging(context, percentage, criticalLevel, warningLevel, warningEnabled, alertEveryTick);
 			} else {
