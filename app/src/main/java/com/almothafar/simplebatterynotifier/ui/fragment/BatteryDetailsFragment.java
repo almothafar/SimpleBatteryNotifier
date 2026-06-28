@@ -208,7 +208,14 @@ public class BatteryDetailsFragment extends Fragment {
 		valuesMap = new LinkedHashMap<>();
 
 		valuesMap.put(getResources().getString(R.string.technology), batteryDO.getTechnology());
-		valuesMap.put(getResources().getString(R.string.capacity), batteryDO.getCapacity() + " mAh");
+
+		// Capacity is an estimate from BatteryManager; show "Unknown" rather than "0 mAh" when
+		// the device doesn't report the charge counter.
+		final int capacity = batteryDO.getCapacity();
+		final String capacityText = capacity > 0
+		                            ? capacity + " mAh"
+		                            : getResources().getString(R.string.unknown);
+		valuesMap.put(getResources().getString(R.string.capacity), capacityText);
 
 		// Add charge cycles from the battery health tracker - positioned right after capacity
 		final int chargeCycles = BatteryHealthTracker.getChargeCycles(view.getContext());

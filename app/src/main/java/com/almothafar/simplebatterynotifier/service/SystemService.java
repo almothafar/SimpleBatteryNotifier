@@ -23,7 +23,6 @@ import com.almothafar.simplebatterynotifier.model.BatteryHealthStatus;
 import java.io.IOException;
 
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 /**
  * System service utilities for battery monitoring, sound, and vibration
@@ -208,59 +207,49 @@ public final class SystemService {
 	}
 
 	/**
-	 * Get battery capacity using reflection (internal API)
+	 * Estimate the battery's full capacity (mAh) using public {@link BatteryManager} properties.
 	 * <p>
-	 * WARNING: This method accesses internal Android APIs via reflection.
-	 * Android does not provide a public API to retrieve battery capacity (mAh).
-	 * This implementation may not work on all devices or future Android versions.
-	 * <p>
-	 * The method gracefully handles failures and returns 0 if capacity cannot be determined.
-	 * This is acceptable as capacity is informational only and not critical for app functionality.
+	 * Android does not expose the battery's design capacity, so this divides the instantaneous
+	 * remaining charge ({@link BatteryManager#BATTERY_PROPERTY_CHARGE_COUNTER}, in µAh) by the
+	 * remaining percentage ({@link BatteryManager#BATTERY_PROPERTY_CAPACITY}) to estimate the full
+	 * capacity. This replaces a previous approach that reflected into the private
+	 * {@code com.android.internal.os.PowerProfile} class, which is blocked by non-SDK restrictions
+	 * on modern Android and returned 0 on most devices.
 	 *
 	 * @param context The application context
 	 *
-	 * @return Battery capacity in mAh, or 0 if unavailable or unsupported
+	 * @return Estimated full battery capacity in mAh, or 0 if it cannot be determined
 	 */
-	@SuppressLint({"DiscouragedPrivateApi", "PrivateApi"})
-	public static synchronized int getBatteryCapacity(final Context context) {
-		// Power profile class name - internal API, not guaranteed to be available
-		final String POWER_PROFILE_CLASS = "com.android.internal.os.PowerProfile";
-
-		Object powerProfile = null;
-		int batteryCapacity = 0;
-
-		try {
-			// Access internal PowerProfile class via reflection
-			// This is the only way to get battery capacity as Android doesn't provide a public API
-			powerProfile = Class.forName(POWER_PROFILE_CLASS)
-			                    .getConstructor(Context.class)
-			                    .newInstance(context);
-		} catch (Exception e) {
-			// Silently fail - this is expected on some devices or Android versions
-			final String errorMsg = e.getMessage();
-			if (nonNull(errorMsg)) {
-				Log.w(TAG, "Unable to access PowerProfile class: " + errorMsg);
-			}
+	public static int getBatteryCapacity(final Context context) {
+		final BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
+		if (isNull(batteryManager)) {
+			Log.w(TAG, "BatteryManager service unavailable");
+			return 0;
 		}
 
-		if (nonNull(powerProfile)) {
-			try {
-				final Object result = Class.forName(POWER_PROFILE_CLASS)
-				                           .getMethod("getAveragePower", java.lang.String.class)
-				                           .invoke(powerProfile, "battery.capacity");
-				if (result instanceof Double) {
-					batteryCapacity = ((Double) result).intValue();
-				}
-			} catch (Exception e) {
-				// Silently fail - graceful degradation
-				final String errorMsg = e.getMessage();
-				if (nonNull(errorMsg)) {
-					Log.w(TAG, "Unable to retrieve battery capacity: " + errorMsg);
-				}
-			}
-		}
+		final int chargeCounterUah = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
+		final int capacityPercent = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+		return estimateFullCapacityMah(chargeCounterUah, capacityPercent);
+	}
 
-		return batteryCapacity;
+	/**
+	 * Estimate the full battery capacity (mAh) from the remaining charge and remaining percentage.
+	 * <p>
+	 * Pure helper with no Android dependencies, so it is unit-testable. {@code getIntProperty}
+	 * returns {@link Integer#MIN_VALUE} for unsupported properties; any non-positive or
+	 * out-of-range input yields 0 ("unknown").
+	 *
+	 * @param chargeCounterUah remaining charge in microampere-hours (µAh)
+	 * @param capacityPercent  remaining charge as a percentage (1-100)
+	 *
+	 * @return estimated full capacity in mAh, or 0 when the inputs are unusable
+	 */
+	static int estimateFullCapacityMah(final int chargeCounterUah, final int capacityPercent) {
+		if (chargeCounterUah <= 0 || capacityPercent <= 0 || capacityPercent > 100) {
+			return 0; // Unknown / unsupported on this device
+		}
+		// full µAh = chargeCounter / (percent / 100); mAh = full / 1000  ==>  chargeCounter / (percent * 10)
+		return Math.round(chargeCounterUah / (capacityPercent * 10f));
 	}
 
 	/**
