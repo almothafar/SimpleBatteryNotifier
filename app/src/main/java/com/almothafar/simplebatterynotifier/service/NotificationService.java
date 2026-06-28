@@ -62,12 +62,15 @@ public final class NotificationService {
 	private static final String CHANNEL_ID_WARNING = "battery_warning";
 	private static final String CHANNEL_ID_FULL = "battery_full";
 	private static final String CHANNEL_ID_STATUS = "battery_status";
+	private static final String CHANNEL_ID_TEMPERATURE = "battery_temperature";
 
 	// Notification settings
 	private static final long[] VIBRATION_PATTERN = {0, 500, 250, 500, 250};
 	private static final int NOTIFICATION_ID = 1641987;
 	// Separate ID for the persistent foreground-service status notification
 	private static final int ONGOING_NOTIFICATION_ID = 1641988;
+	// Separate ID so a temperature alert doesn't replace a battery-level alert
+	private static final int TEMPERATURE_NOTIFICATION_ID = 1641989;
 
 	// Do Not Disturb mode constants
 	private static final String ZEN_MODE = "zen_mode";
@@ -169,6 +172,50 @@ public final class NotificationService {
 				.setStyle(new Notification.BigTextStyle().bigText(content));
 
 		sendNotificationToSystem(context, builder.build());
+	}
+
+	/**
+	 * Send a high-temperature safety alert.
+	 * <p>
+	 * Uses a dedicated channel and notification ID so it does not replace battery-level alerts.
+	 * Honors the same quiet-hours and silent-mode preferences as the other alerts, reusing the
+	 * critical alert sound.
+	 *
+	 * @param context    The application context
+	 * @param rawTenthsC Battery temperature in tenths of a degree Celsius (as reported by BatteryManager)
+	 */
+	public static void sendTemperatureNotification(final Context context, final int rawTenthsC) {
+		if (lacksNotificationPermission(context)) {
+			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, temperature alert not sent");
+			return;
+		}
+
+		createNotificationChannels(context);
+
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final String temperature = formatTemperature(context, rawTenthsC);
+
+		final Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID_TEMPERATURE)
+				.setSmallIcon(R.drawable.ic_stat_device_battery_charging_20)
+				.setTicker(context.getString(R.string.notification_temperature_ticker))
+				.setContentTitle(context.getString(R.string.notification_temperature_title))
+				.setContentText(context.getString(R.string.notification_temperature_content, temperature))
+				.setWhen(System.currentTimeMillis())
+				.setLargeIcon(getLauncherIcon(context))
+				.setContentIntent(createMainActivityIntent(context))
+				.setVisibility(Notification.VISIBILITY_PUBLIC)
+				.setStyle(new Notification.BigTextStyle()
+						          .bigText(context.getString(R.string.notification_temperature_content_big, temperature)));
+
+		final NotificationManager manager = getNotificationManager(context);
+		if (nonNull(manager)) {
+			manager.notify(TEMPERATURE_NOTIFICATION_ID, builder.build());
+		}
+
+		final String sound = prefs.getString(
+				context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
+				context.getString(R.string._default_notification_sound_uri));
+		playAlarm(context, sound, isWithinNotificationWindow(context, prefs), shouldIgnoreSilentMode(context, prefs));
 	}
 
 	/**
@@ -313,6 +360,9 @@ public final class NotificationService {
 		createChannelIfNotExists(manager, CHANNEL_ID_CRITICAL, "Battery Critical Alerts", "Critical battery level alerts", Color.RED);
 		createChannelIfNotExists(manager, CHANNEL_ID_WARNING, "Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00));
 		createChannelIfNotExists(manager, CHANNEL_ID_FULL, "Battery Full", "Battery fully charged notifications", Color.GREEN);
+		createChannelIfNotExists(manager, CHANNEL_ID_TEMPERATURE,
+				context.getString(R.string.notification_temperature_channel_name),
+				context.getString(R.string.notification_temperature_channel_description), Color.RED);
 		createStatusChannelIfNotExists(manager,
 				context.getString(R.string.notification_status_channel_name),
 				context.getString(R.string.notification_status_channel_description));

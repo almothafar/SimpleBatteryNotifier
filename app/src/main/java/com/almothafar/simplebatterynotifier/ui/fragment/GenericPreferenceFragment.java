@@ -250,8 +250,13 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	 */
 	private void updateSeekBarPreferenceSummary(final SeekBarPreference seekBarPref) {
 		final String key = seekBarPref.getKey();
-		if (nonNull(key) && isBatteryLevelPreference(key)) {
+		if (isNull(key)) {
+			return;
+		}
+		if (isBatteryLevelPreference(key)) {
 			seekBarPref.setSummary(seekBarPref.getValue() + "%");
+		} else if (key.equals(getString(R.string._pref_key_high_temperature_threshold))) {
+			seekBarPref.setSummary(seekBarPref.getValue() + " °C");
 		}
 	}
 

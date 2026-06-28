@@ -76,6 +76,34 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:title="Temperature"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/_pref_key_notify_high_temperature"
+            android:summaryOff="@string/notify_high_temperature_summary_off"
+            android:summaryOn="@string/notify_high_temperature_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/notify_high_temperature"
+            app:iconSpaceReserved="false" />
+
+        <SeekBarPreference
+            android:defaultValue="45"
+            android:dependency="@string/_pref_key_notify_high_temperature"
+            android:key="@string/_pref_key_high_temperature_threshold"
+            android:min="40"
+            android:max="60"
+            android:title="@string/high_temperature_threshold"
+            style="@style/PreferenceSeekBar"
+            app:showSeekBarValue="true"
+            app:adjustable="true"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         android:title="Critical Battery Level"
         app:iconSpaceReserved="false">
 

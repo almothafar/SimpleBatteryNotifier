@@ -26,11 +26,19 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	private static final Object LOCK = new Object();
 
 	/**
+	 * Default high-temperature threshold in °C, and how far the battery must cool below it
+	 * before another alert can fire (hysteresis prevents repeated alerts during one hot spell).
+	 */
+	private static final int DEFAULT_TEMPERATURE_THRESHOLD_C = 45;
+	private static final int TEMPERATURE_HYSTERESIS_C = 3;
+
+	/**
 	 * Thread-safe static fields to track battery notification state
 	 */
 	private static volatile int prevLevel = 0;
 	private static volatile int prevType = 0;
 	private static volatile boolean fullNotificationCalled = false;
+	private static volatile boolean temperatureAlertSent = false;
 
 	/**
 	 * Reset notification state when charger is disconnected
@@ -78,6 +86,43 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 				handleChargingOrFull(context, percentage, warningLevel, isFull, fullNotifyEnabled);
 			}
 			prevLevel = percentage;
+		}
+
+		handleTemperature(context, batteryDO, sharedPref);
+	}
+
+	/**
+	 * Send a high-temperature safety alert when the battery exceeds the configured threshold.
+	 * <p>
+	 * Uses hysteresis so a single hot spell triggers one alert; another alert can only fire once
+	 * the battery has cooled at least {@link #TEMPERATURE_HYSTERESIS_C}°C below the threshold.
+	 *
+	 * @param context    The application context
+	 * @param batteryDO  Current battery snapshot (may be null)
+	 * @param sharedPref The shared preferences
+	 */
+	private void handleTemperature(final Context context, final BatteryDO batteryDO, final SharedPreferences sharedPref) {
+		if (batteryDO == null) {
+			return; // No reading available
+		}
+
+		final boolean enabled = sharedPref.getBoolean(context.getString(R.string._pref_key_notify_high_temperature), true);
+		if (!enabled) {
+			temperatureAlertSent = false; // Re-arm for when it's turned back on
+			return;
+		}
+
+		final int thresholdC = sharedPref.getInt(context.getString(R.string._pref_key_high_temperature_threshold), DEFAULT_TEMPERATURE_THRESHOLD_C);
+		final int rawTenthsC = batteryDO.getTemperature();
+		final float tempC = rawTenthsC / 10f;
+
+		synchronized (LOCK) {
+			if (tempC >= thresholdC && !temperatureAlertSent) {
+				NotificationService.sendTemperatureNotification(context, rawTenthsC);
+				temperatureAlertSent = true;
+			} else if (tempC <= thresholdC - TEMPERATURE_HYSTERESIS_C) {
+				temperatureAlertSent = false;
+			}
 		}
 	}
 
