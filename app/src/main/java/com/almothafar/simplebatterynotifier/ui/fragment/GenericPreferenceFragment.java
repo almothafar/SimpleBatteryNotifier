@@ -8,6 +8,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -45,6 +46,8 @@ import static java.util.Objects.nonNull;
  */
 public class GenericPreferenceFragment extends PreferenceFragmentCompat
 		implements SharedPreferences.OnSharedPreferenceChangeListener {
+
+	private static final String TAG = "GenericPreferenceFrag";
 
 	// Default battery level values (from pref_general.xml)
 	private static final int DEFAULT_WARNING_BATTERY_LEVEL = 40;
@@ -358,8 +361,10 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 				if (nonNull(ringtone)) {
 					ringtonePref.setSummary(ringtone.getTitle(ringtonePref.getContext()));
 				}
-			} catch (Exception e) {
-				// If ringtone not found, just show URI
+			} catch (RuntimeException e) {
+				// Resolving the ringtone can fail (e.g. SecurityException on a revoked media URI):
+				// fall back to showing the raw URI, but don't swallow it silently.
+				Log.w(TAG, "Could not resolve ringtone title for " + uri + "; showing URI", e);
 				ringtonePref.setSummary(uri);
 			}
 		}
