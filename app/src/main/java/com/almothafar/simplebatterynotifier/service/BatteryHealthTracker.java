@@ -6,6 +6,8 @@ import android.os.BatteryManager;
 import android.util.Log;
 import androidx.preference.PreferenceManager;
 
+import com.almothafar.simplebatterynotifier.model.BatteryHealthGrade;
+
 import static java.util.Objects.isNull;
 
 /**
@@ -31,6 +33,7 @@ public class BatteryHealthTracker {
 	private static final String PREF_FIRST_USE_DATE = "_battery_health_first_use_date";
 	private static final String PREF_LAST_LOW_BATTERY = "_battery_health_last_low_battery";
 	private static final String PREF_CYCLE_IN_PROGRESS = "_battery_health_cycle_in_progress";
+	private static final String PREF_DESIGN_CAPACITY = "key_battery_design_capacity";
 	// Debug-only cycle offset kept separate from real tracking so it can be cleared without
 	// destroying genuine data (see the debug menu in BatteryInsightsActivity).
 	private static final String PREF_DEBUG_CHARGE_CYCLES = "_battery_health_debug_charge_cycles";
@@ -39,10 +42,19 @@ public class BatteryHealthTracker {
 	private static final int LOW_BATTERY_THRESHOLD = 20;
 	private static final int FULL_BATTERY_THRESHOLD = 95;
 
-	// Health estimation thresholds
+	// Health estimation thresholds (cycle-based)
 	private static final int EXCELLENT_THRESHOLD = 300;
 	private static final int GOOD_THRESHOLD = 500;
 	private static final int FAIR_THRESHOLD = 800;
+
+	// Accepted range for a user-entered design (rated) capacity, in mAh
+	public static final int MIN_DESIGN_CAPACITY_MAH = 500;
+	public static final int MAX_DESIGN_CAPACITY_MAH = 15000;
+
+	// Health-percentage thresholds for the measured (design-capacity-based) health figure
+	private static final int EXCELLENT_HEALTH_PERCENT = 90;
+	private static final int GOOD_HEALTH_PERCENT = 80;
+	private static final int FAIR_HEALTH_PERCENT = 70;
 
 	/**
 	 * Records battery state and updates charge cycle count if appropriate.
@@ -151,6 +163,123 @@ public class BatteryHealthTracker {
 	}
 
 	/**
+	 * Gets the user-entered battery design (rated) capacity in mAh.
+	 * <p>
+	 * Android exposes no public API for the design capacity, so the user supplies it (from the
+	 * manufacturer's specs) to enable a measured health figure. See {@link #getMeasuredHealthPercentage}.
+	 *
+	 * @param context Application context
+	 *
+	 * @return Design capacity in mAh, or 0 when unset
+	 */
+	public static int getDesignCapacity(final Context context) {
+		if (isNull(context)) {
+			return 0;
+		}
+		return PreferenceManager.getDefaultSharedPreferences(context).getInt(PREF_DESIGN_CAPACITY, 0);
+	}
+
+	/**
+	 * Whether a design capacity has been set.
+	 *
+	 * @param context Application context
+	 *
+	 * @return true when the user has entered a design capacity
+	 */
+	public static boolean hasDesignCapacity(final Context context) {
+		return getDesignCapacity(context) > 0;
+	}
+
+	/**
+	 * Whether the given value is a plausible battery design capacity (within {@link #MIN_DESIGN_CAPACITY_MAH}
+	 * to {@link #MAX_DESIGN_CAPACITY_MAH}).
+	 *
+	 * @param mAh Candidate capacity in mAh
+	 *
+	 * @return true when the value is within the accepted range
+	 */
+	public static boolean isValidDesignCapacity(final int mAh) {
+		return mAh >= MIN_DESIGN_CAPACITY_MAH && mAh <= MAX_DESIGN_CAPACITY_MAH;
+	}
+
+	/**
+	 * Stores (or clears) the user-entered design capacity.
+	 * <p>
+	 * A non-positive value clears the preference and reverts to the cycle-based health estimate.
+	 *
+	 * @param context Application context
+	 * @param mAh     Design capacity in mAh, or {@code <= 0} to clear
+	 */
+	public static void setDesignCapacity(final Context context, final int mAh) {
+		if (isNull(context)) {
+			return;
+		}
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		if (mAh <= 0) {
+			prefs.edit().remove(PREF_DESIGN_CAPACITY).apply();
+			Log.i(TAG, "Design capacity cleared");
+		} else {
+			prefs.edit().putInt(PREF_DESIGN_CAPACITY, mAh).apply();
+			Log.i(TAG, "Design capacity set to " + mAh + " mAh");
+		}
+	}
+
+	/**
+	 * Computes a measured battery-health percentage from the measured current full capacity and the
+	 * user-entered design capacity.
+	 * <p>
+	 * {@code health % = current full capacity (measured) / design capacity (user-entered) * 100}.
+	 * This is the accurate figure requested in #32; it only applies when the user has entered a
+	 * design capacity <em>and</em> the device reports the live charge counter used to estimate the
+	 * current full capacity.
+	 *
+	 * @param context Application context
+	 *
+	 * @return Measured health percentage (1-100), or -1 when it cannot be determined
+	 */
+	public static int getMeasuredHealthPercentage(final Context context) {
+		if (isNull(context)) {
+			return -1;
+		}
+		return computeMeasuredHealth(SystemService.getBatteryCapacity(context), getDesignCapacity(context));
+	}
+
+	/**
+	 * Pure helper for the measured health percentage, unit-testable with no Android dependencies.
+	 *
+	 * @param currentFullMah measured current full capacity in mAh (0 when unknown)
+	 * @param designMah      user-entered design capacity in mAh (0 when unset)
+	 *
+	 * @return health percentage clamped to 1-100, or -1 when either input is unusable
+	 */
+	static int computeMeasuredHealth(final int currentFullMah, final int designMah) {
+		if (currentFullMah <= 0 || designMah <= 0) {
+			return -1;
+		}
+		final int percent = Math.round(currentFullMah * 100f / designMah);
+		return Math.max(1, Math.min(100, percent));
+	}
+
+	/**
+	 * Maps a health percentage to a wear grade, consistent with the cycle-based buckets.
+	 *
+	 * @param healthPercentage Health percentage (0-100)
+	 *
+	 * @return the matching {@link BatteryHealthGrade}
+	 */
+	public static BatteryHealthGrade gradeForPercentage(final int healthPercentage) {
+		if (healthPercentage >= EXCELLENT_HEALTH_PERCENT) {
+			return BatteryHealthGrade.EXCELLENT;
+		} else if (healthPercentage >= GOOD_HEALTH_PERCENT) {
+			return BatteryHealthGrade.GOOD;
+		} else if (healthPercentage >= FAIR_HEALTH_PERCENT) {
+			return BatteryHealthGrade.FAIR;
+		} else {
+			return BatteryHealthGrade.POOR;
+		}
+	}
+
+	/**
 	 * Gets the date when health tracking was first initialized.
 	 *
 	 * @param context Application context
@@ -222,45 +351,53 @@ public class BatteryHealthTracker {
 	}
 
 	/**
-	 * Gets a human-readable health status description.
+	 * Gets the cycle-based battery wear grade.
 	 *
 	 * @param context Application context
 	 *
-	 * @return Health status: "Excellent", "Good", "Fair", or "Poor"
+	 * @return the matching {@link BatteryHealthGrade}
 	 */
-	public static String getHealthStatus(final Context context) {
+	public static BatteryHealthGrade getHealthGrade(final Context context) {
 		final int cycles = getEffectiveCycleCount(context);
 
 		if (cycles < EXCELLENT_THRESHOLD) {
-			return "Excellent";
+			return BatteryHealthGrade.EXCELLENT;
 		} else if (cycles < GOOD_THRESHOLD) {
-			return "Good";
+			return BatteryHealthGrade.GOOD;
 		} else if (cycles < FAIR_THRESHOLD) {
-			return "Fair";
+			return BatteryHealthGrade.FAIR;
 		} else {
-			return "Poor";
+			return BatteryHealthGrade.POOR;
 		}
 	}
 
 	/**
-	 * Gets a detailed health description with recommendations.
+	 * Gets a detailed health description with recommendations for the cycle-based grade.
 	 *
 	 * @param context Application context
 	 *
 	 * @return Detailed health description
 	 */
 	public static String getHealthDescription(final Context context) {
-		final int cycles = getEffectiveCycleCount(context);
+		return describeHealthGrade(getHealthGrade(context));
+	}
 
-		if (cycles < EXCELLENT_THRESHOLD) {
-			return "Your battery is in excellent condition. Continue with normal usage patterns.";
-		} else if (cycles < GOOD_THRESHOLD) {
-			return "Your battery is in good condition with minimal degradation. Normal usage expected.";
-		} else if (cycles < FAIR_THRESHOLD) {
-			return "Your battery shows moderate wear. You may notice slightly reduced battery life.";
-		} else {
-			return "Your battery has significant wear. Consider battery replacement if experiencing poor performance.";
-		}
+	/**
+	 * Gets a detailed health description for a wear grade.
+	 * <p>
+	 * Shared by the cycle-based and measured health paths so the wording stays consistent.
+	 *
+	 * @param grade the battery wear grade
+	 *
+	 * @return Detailed health description
+	 */
+	public static String describeHealthGrade(final BatteryHealthGrade grade) {
+		return switch (grade) {
+			case EXCELLENT -> "Your battery is in excellent condition. Continue with normal usage patterns.";
+			case GOOD -> "Your battery is in good condition with minimal degradation. Normal usage expected.";
+			case FAIR -> "Your battery shows moderate wear. You may notice slightly reduced battery life.";
+			case POOR -> "Your battery has significant wear. Consider battery replacement if experiencing poor performance.";
+		};
 	}
 
 	/**

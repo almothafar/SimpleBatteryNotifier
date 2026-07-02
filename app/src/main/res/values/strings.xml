@@ -127,6 +127,19 @@
     <string name="days_in_use">Days in Use</string>
     <string name="about_battery_health">About Your Battery</string>
     <string name="battery_health_description_placeholder">Your battery health information will appear here.</string>
+    <string name="design_capacity">Design Capacity</string>
+    <string name="design_capacity_value">%1$d mAh</string>
+    <string name="set_design_capacity_action">Set rated capacity for accurate health</string>
+    <string name="design_capacity_dialog_title">Battery design capacity</string>
+    <string name="design_capacity_dialog_message">Enter your battery\'s rated capacity in mAh from the manufacturer\'s specs. We\'ve prefilled a measured estimate — confirm or correct it for an accurate health figure.</string>
+    <string name="design_capacity_hint">Capacity (mAh)</string>
+    <string name="look_up_my_model">Look up my model</string>
+    <string name="no_browser_found">No browser available to open the search</string>
+    <string name="save">Save</string>
+    <string name="clear">Clear</string>
+    <string name="error_design_capacity_range">Enter a capacity between %1$d and %2$d mAh</string>
+    <string name="health_basis_measured">Measured from rated capacity</string>
+    <string name="health_basis_estimated">Estimated from charge cycles</string>
     <string name="how_it_works">How It Works</string>
     <string name="how_battery_health_works" formatted="false" tools:ignore="TypographyDashes">Battery health is estimated based on charge cycles. A charge cycle counts when your battery charges from 20% or below to 95% or above. This tracking starts when you first use this app.\n\nHealth estimates:\n• 0–300 cycles: Excellent (95–100%)\n• 300-500 cycles: Good (85-95%)\n• 500-800 cycles: Fair (70-85%)\n• 800+ cycles: Poor (&lt;70%)</string>
     <string name="developed_by">Developed by</string>
