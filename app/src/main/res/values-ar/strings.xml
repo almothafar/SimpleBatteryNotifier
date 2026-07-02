@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">منبه البطارية البسيط</string>
     <string name="action_settings">الإعدادات</string>
     <string name="title_activity_settings">الإعدادات</string>
@@ -107,4 +107,64 @@
     <!-- Accessibility -->
     <string name="battery_progress_description">البطارية عند %1$d بالمئة</string>
     <string name="battery_details_separator">:</string>
+
+    <!-- ==== Added for localization pass #42 (drafted by Claude — pending maintainer review) ==== -->
+
+    <!-- Persistent foreground-service status notification -->
+    <string name="notification_status_channel_name">حالة البطارية</string>
+    <string name="notification_status_channel_description">حالة البطارية المستمرة أثناء تفعيل المراقبة</string>
+    <string name="notification_status_content">%1$d%% · %2$s · %3$s</string>
+
+    <!-- High temperature alert -->
+    <string name="notify_high_temperature">تنبيه ارتفاع الحرارة</string>
+    <string name="notify_high_temperature_summary_on">ينبهك عندما ترتفع حرارة البطارية كثيراً (استخدام مكثف، شحن، بيئة حارة)</string>
+    <string name="notify_high_temperature_summary_off">تنبيهات ارتفاع الحرارة معطلة</string>
+    <string name="high_temperature_threshold">التنبيه عند تجاوز الحرارة</string>
+    <string name="notification_temperature_channel_name">حرارة البطارية</string>
+    <string name="notification_temperature_channel_description">تنبيهات عندما تصبح حرارة البطارية غير آمنة</string>
+    <string name="notification_temperature_ticker">البطارية حارة</string>
+    <string name="notification_temperature_title">حرارة البطارية مرتفعة</string>
+    <string name="notification_temperature_content">حرارة البطارية %1$s. قلّل الاستخدام ودعها تبرد.</string>
+    <string name="notification_temperature_content_big">حرارة بطاريتك %1$s، وهي أعلى من النطاق الآمن. الحرارة العالية تسرّع تلف البطارية وقد تكون خطرة. أوقف الشحن أو الاستخدام المكثف (الألعاب، الملاحة، الكاميرا) ودع الهاتف يبرد.</string>
+
+    <!-- Battery Insights screen -->
+    <string name="battery_insights_title">تحليلات البطارية</string>
+    <string name="battery_insights_menu">تحليلات البطارية</string>
+    <string name="view_battery_insights">عرض تحليلات البطارية</string>
+    <string name="battery_health">صحة البطارية</string>
+    <string name="charge_cycles">دورات الشحن</string>
+    <string name="days_in_use">أيام الاستخدام</string>
+    <string name="about_battery_health">عن بطاريتك</string>
+    <string name="battery_health_description_placeholder">ستظهر معلومات صحة بطاريتك هنا.</string>
+    <string name="design_capacity">السعة التصميمية</string>
+    <string name="design_capacity_value">%1$d mAh</string>
+    <string name="set_design_capacity_action">أدخل السعة المقدّرة لحساب صحة أدق</string>
+    <string name="design_capacity_dialog_title">السعة التصميمية للبطارية</string>
+    <string name="design_capacity_dialog_message">أدخل السعة المقدّرة لبطاريتك بوحدة mAh من مواصفات الشركة المصنّعة. لقد عبّأنا تقديراً مقاساً — أكّده أو صحّحه للحصول على قيمة صحة دقيقة.</string>
+    <string name="design_capacity_hint">السعة (mAh)</string>
+    <string name="look_up_my_model">ابحث عن طرازي</string>
+    <string name="no_browser_found">لا يوجد متصفح لفتح البحث</string>
+    <string name="save">حفظ</string>
+    <string name="clear">مسح</string>
+    <string name="error_design_capacity_range">أدخل سعة بين %1$d و %2$d mAh</string>
+    <string name="health_basis_measured">مقاسة من السعة المقدّرة</string>
+    <string name="health_basis_estimated">مقدّرة من دورات الشحن</string>
+    <string name="how_it_works">كيف يعمل</string>
+    <string name="how_battery_health_works" formatted="false" tools:ignore="TypographyDashes">تُقدَّر صحة البطارية بناءً على دورات الشحن. تُحتسب دورة شحن عندما تُشحن بطاريتك من 20% أو أقل إلى 95% أو أكثر. يبدأ هذا التتبع عند أول استخدام لهذا التطبيق.\n\nتقديرات الصحة:\n• 0–300 دورة: ممتازة (95–100%)\n• 300-500 دورة: جيدة (85-95%)\n• 500-800 دورة: مقبولة (70-85%)\n• 800+ دورة: ضعيفة (&lt;70%)</string>
+    <string name="developed_by">طوّره</string>
+    <!-- Proper name — transliteration; maintainer to confirm or keep Latin -->
+    <string name="developer_name">المظفّر الحسن</string>
+
+    <!-- Battery health wear grades and their descriptions -->
+    <string name="battery_health_grade_excellent">ممتازة</string>
+    <string name="battery_health_grade_good">جيدة</string>
+    <string name="battery_health_grade_fair">مقبولة</string>
+    <string name="battery_health_grade_poor">ضعيفة</string>
+    <string name="battery_health_desc_excellent">بطاريتك في حالة ممتازة. تابع استخدامك الطبيعي.</string>
+    <string name="battery_health_desc_good">بطاريتك في حالة جيدة مع تدهور طفيف. الاستخدام الطبيعي متوقع.</string>
+    <string name="battery_health_desc_fair">تُظهر بطاريتك تآكلاً متوسطاً. قد تلاحظ انخفاضاً طفيفاً في عمر البطارية.</string>
+    <string name="battery_health_desc_poor">بطاريتك متآكلة بشكل كبير. فكّر في استبدال البطارية إذا لاحظت أداءً ضعيفاً.</string>
+
+    <!-- Notification permission granted -->
+    <string name="notifications_enabled_toast">شكراً! تم تفعيل التنبيهات الآن.</string>
 </resources>

@@ -121,7 +121,7 @@ public class BatteryHealthTrackerStateTest {
 		// A brand-new battery (0 cycles) grades Excellent with the matching description
 		final BatteryHealthGrade grade = BatteryHealthTracker.getHealthGrade(context);
 		assertEquals(BatteryHealthGrade.EXCELLENT, grade);
-		assertEquals(BatteryHealthTracker.describeHealthGrade(grade),
+		assertEquals(BatteryHealthTracker.describeHealthGrade(context, grade),
 				BatteryHealthTracker.getHealthDescription(context));
 	}
 }

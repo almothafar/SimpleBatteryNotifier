@@ -140,47 +140,62 @@
     <string name="error_design_capacity_range">Enter a capacity between %1$d and %2$d mAh</string>
     <string name="health_basis_measured">Measured from rated capacity</string>
     <string name="health_basis_estimated">Estimated from charge cycles</string>
+
+    <!-- Battery health wear grades (shown as the health status) and their descriptions -->
+    <string name="battery_health_grade_excellent">Excellent</string>
+    <string name="battery_health_grade_good">Good</string>
+    <string name="battery_health_grade_fair">Fair</string>
+    <string name="battery_health_grade_poor">Poor</string>
+    <string name="battery_health_desc_excellent">Your battery is in excellent condition. Continue with normal usage patterns.</string>
+    <string name="battery_health_desc_good">Your battery is in good condition with minimal degradation. Normal usage expected.</string>
+    <string name="battery_health_desc_fair">Your battery shows moderate wear. You may notice slightly reduced battery life.</string>
+    <string name="battery_health_desc_poor">Your battery has significant wear. Consider battery replacement if experiencing poor performance.</string>
     <string name="how_it_works">How It Works</string>
     <string name="how_battery_health_works" formatted="false" tools:ignore="TypographyDashes">Battery health is estimated based on charge cycles. A charge cycle counts when your battery charges from 20% or below to 95% or above. This tracking starts when you first use this app.\n\nHealth estimates:\n• 0–300 cycles: Excellent (95–100%)\n• 300-500 cycles: Good (85-95%)\n• 500-800 cycles: Fair (70-85%)\n• 800+ cycles: Poor (&lt;70%)</string>
     <string name="developed_by">Developed by</string>
     <string name="developer_name">Al-Mothafar Al-Hasan</string>
-    <string name="developer_link">github.com/almothafar</string>
+    <string name="developer_link" translatable="false">github.com/almothafar</string>
 
-    <!-- Below this line to the end of file is for coding not for labeling -->
-    <string name="extra_category">category</string>
-    <string name="pref_category_general">pref_category_general</string>
-    <string name="pref_category_notifications">pref_category_notifications</string>
-    <string name="pref_category_time_settings">pref_category_time_settings</string>
+    <!-- Shown after the user grants the notification permission -->
+    <string name="notifications_enabled_toast">Thank you! Notifications are now enabled.</string>
 
-    <string name="_pref_key_warn_battery_level">key_warn_battery_level</string>
-    <string name="_pref_key_critical_battery_level">key_critical_battery_level</string>
-    <string name="_pref_key_notifications_sticky">key_notifications_sticky</string>
-    <string name="_pref_key_temperatures_unit">key_temperatures_unit</string>
-    <string name="_pref_key_notifications_vibrate">key_notifications_vibrate</string>
-    <string name="_pref_key_notifications_alert_sound_ringtone">key_notifications_alert_sound_ringtone</string>
-    <string name="_pref_key_notify_for_full_level">key_notify_for_full_level</string>
-    <string name="_pref_key_notifications_full_sound_ringtone">key_notifications_full_sound_ringtone</string>
-    <string name="_pref_key_notify_for_warning_level">key_notify_for_warning_level</string>
-    <string name="_pref_key_notifications_warning_sound_ringtone">key_notifications_warning_sound_ringtone</string>
-    <string name="_pref_key_notifications_time_range">key_notifications_time_range</string>
-    <string name="_pref_key_notifications_time_range_start">key_notifications_time_range_start</string>
-    <string name="_pref_key_notifications_time_range_end">key_notifications_time_range_end</string>
-    <string name="_pref_key_notifications_apply_silent_mode">key_notifications_apply_silent_mode</string>
-    <string name="_pref_key_notify_every_tick">key_notify_every_tick</string>
-    <string name="_pref_key_notify_high_temperature">key_notify_high_temperature</string>
-    <string name="_pref_key_high_temperature_threshold">key_high_temperature_threshold</string>
+    <!-- Below this line to the end of file is for coding not for labeling.
+         These are internal identifiers/defaults, not user copy: marked translatable="false"
+         so the MissingTranslation lint gate does not expect them in values-ar. -->
+    <string name="extra_category" translatable="false">category</string>
+    <string name="pref_category_general" translatable="false">pref_category_general</string>
+    <string name="pref_category_notifications" translatable="false">pref_category_notifications</string>
+    <string name="pref_category_time_settings" translatable="false">pref_category_time_settings</string>
 
-    <string name="_pref_value_temperatures_unit_c">celsius</string>
-    <string name="_pref_value_temperatures_unit_f">fahrenheit</string>
-    <string name="_pref_value_notifications_time_range_end">23:00</string>
-    <string name="_pref_value_notifications_time_range_start">08:00</string>
+    <string name="_pref_key_warn_battery_level" translatable="false">key_warn_battery_level</string>
+    <string name="_pref_key_critical_battery_level" translatable="false">key_critical_battery_level</string>
+    <string name="_pref_key_notifications_sticky" translatable="false">key_notifications_sticky</string>
+    <string name="_pref_key_temperatures_unit" translatable="false">key_temperatures_unit</string>
+    <string name="_pref_key_notifications_vibrate" translatable="false">key_notifications_vibrate</string>
+    <string name="_pref_key_notifications_alert_sound_ringtone" translatable="false">key_notifications_alert_sound_ringtone</string>
+    <string name="_pref_key_notify_for_full_level" translatable="false">key_notify_for_full_level</string>
+    <string name="_pref_key_notifications_full_sound_ringtone" translatable="false">key_notifications_full_sound_ringtone</string>
+    <string name="_pref_key_notify_for_warning_level" translatable="false">key_notify_for_warning_level</string>
+    <string name="_pref_key_notifications_warning_sound_ringtone" translatable="false">key_notifications_warning_sound_ringtone</string>
+    <string name="_pref_key_notifications_time_range" translatable="false">key_notifications_time_range</string>
+    <string name="_pref_key_notifications_time_range_start" translatable="false">key_notifications_time_range_start</string>
+    <string name="_pref_key_notifications_time_range_end" translatable="false">key_notifications_time_range_end</string>
+    <string name="_pref_key_notifications_apply_silent_mode" translatable="false">key_notifications_apply_silent_mode</string>
+    <string name="_pref_key_notify_every_tick" translatable="false">key_notify_every_tick</string>
+    <string name="_pref_key_notify_high_temperature" translatable="false">key_notify_high_temperature</string>
+    <string name="_pref_key_high_temperature_threshold" translatable="false">key_high_temperature_threshold</string>
+
+    <string name="_pref_value_temperatures_unit_c" translatable="false">celsius</string>
+    <string name="_pref_value_temperatures_unit_f" translatable="false">fahrenheit</string>
+    <string name="_pref_value_notifications_time_range_end" translatable="false">23:00</string>
+    <string name="_pref_value_notifications_time_range_start" translatable="false">08:00</string>
 
     <!-- Validation error messages -->
     <string name="error_warning_level_too_low">Warning level must be higher than critical level (%d%%)</string>
     <string name="error_critical_level_too_high">Critical level must be lower than warning level (%d%%)</string>
 
     <!-- Notification service -->
-    <string name="_default_notification_sound_uri">content://settings/system/notification_sound</string>
+    <string name="_default_notification_sound_uri" translatable="false">content://settings/system/notification_sound</string>
 
     <!-- Accessibility -->
     <string name="battery_progress_description">Battery at %1$d percent</string>

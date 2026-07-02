@@ -89,7 +89,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 		final BatteryHealthGrade grade = measured
 		                                 ? BatteryHealthTracker.gradeForPercentage(measuredHealth)
 		                                 : BatteryHealthTracker.getHealthGrade(this);
-		final String healthDescription = BatteryHealthTracker.describeHealthGrade(grade);
+		final String healthDescription = BatteryHealthTracker.describeHealthGrade(this, grade);
 		final int chargeCycles = BatteryHealthTracker.getEffectiveCycleCount(this);
 		final int daysInUse = BatteryHealthTracker.getDaysSinceFirstUse(this);
 
@@ -98,7 +98,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 		healthPercentageText.setTextColor(getHealthColor(grade));
 
 		// Update health status text
-		healthStatusText.setText(grade.getLabel());
+		healthStatusText.setText(BatteryHealthTracker.labelResId(grade));
 		healthStatusText.setTextColor(getHealthColor(grade));
 
 		// Tell the user whether the figure is measured (honest) or a cycle-based estimate

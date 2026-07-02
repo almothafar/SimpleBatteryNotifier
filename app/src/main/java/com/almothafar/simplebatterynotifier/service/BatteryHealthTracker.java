@@ -4,8 +4,10 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
 import android.util.Log;
+import androidx.annotation.StringRes;
 import androidx.preference.PreferenceManager;
 
+import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryHealthGrade;
 
 import static java.util.Objects.isNull;
@@ -400,25 +402,46 @@ public class BatteryHealthTracker {
 	 * @return Detailed health description
 	 */
 	public static String getHealthDescription(final Context context) {
-		return describeHealthGrade(getHealthGrade(context));
+		return describeHealthGrade(context, getHealthGrade(context));
 	}
 
 	/**
-	 * Gets a detailed health description for a wear grade.
+	 * Resolves the localized label for a wear grade (e.g. "Excellent").
 	 * <p>
-	 * Shared by the cycle-based and measured health paths so the wording stays consistent.
+	 * Kept as a resource id (not on the enum) so the model stays free of Android/resource coupling,
+	 * mirroring {@code SystemService.getHealthString}. Callers pass it to {@code setText}/{@code getString}.
 	 *
 	 * @param grade the battery wear grade
 	 *
-	 * @return Detailed health description
+	 * @return the string resource id for the grade's label
 	 */
-	public static String describeHealthGrade(final BatteryHealthGrade grade) {
+	@StringRes
+	public static int labelResId(final BatteryHealthGrade grade) {
 		return switch (grade) {
-			case EXCELLENT -> "Your battery is in excellent condition. Continue with normal usage patterns.";
-			case GOOD -> "Your battery is in good condition with minimal degradation. Normal usage expected.";
-			case FAIR -> "Your battery shows moderate wear. You may notice slightly reduced battery life.";
-			case POOR -> "Your battery has significant wear. Consider battery replacement if experiencing poor performance.";
+			case EXCELLENT -> R.string.battery_health_grade_excellent;
+			case GOOD -> R.string.battery_health_grade_good;
+			case FAIR -> R.string.battery_health_grade_fair;
+			case POOR -> R.string.battery_health_grade_poor;
 		};
+	}
+
+	/**
+	 * Gets a localized, detailed health description for a wear grade.
+	 * <p>
+	 * Shared by the cycle-based and measured health paths so the wording stays consistent.
+	 *
+	 * @param context Application context (for resource resolution)
+	 * @param grade   the battery wear grade
+	 *
+	 * @return Detailed, localized health description
+	 */
+	public static String describeHealthGrade(final Context context, final BatteryHealthGrade grade) {
+		return context.getString(switch (grade) {
+			case EXCELLENT -> R.string.battery_health_desc_excellent;
+			case GOOD -> R.string.battery_health_desc_good;
+			case FAIR -> R.string.battery_health_desc_fair;
+			case POOR -> R.string.battery_health_desc_poor;
+		});
 	}
 
 	/**

@@ -8,23 +8,14 @@ package com.almothafar.simplebatterynotifier.model;
  * cycle-count- or capacity-derived quality bucket shown on the Battery Insights screen. Using an
  * enum (instead of the previous "Excellent"/"Good"/... strings) keeps producers and consumers in
  * sync via exhaustive switches and removes the risk of a silent typo falling through to a default.
+ * <p>
+ * The user-facing label and description are localized string resources resolved in the
+ * presentation layer (see {@code BatteryHealthTracker.labelResId} / {@code describeHealthGrade}),
+ * so this model carries no display copy.
  */
 public enum BatteryHealthGrade {
-	EXCELLENT("Excellent"),
-	GOOD("Good"),
-	FAIR("Fair"),
-	POOR("Poor");
-
-	private final String label;
-
-	BatteryHealthGrade(final String label) {
-		this.label = label;
-	}
-
-	/**
-	 * @return the human-readable label shown to the user
-	 */
-	public String getLabel() {
-		return label;
-	}
+	EXCELLENT,
+	GOOD,
+	FAIR,
+	POOR
 }

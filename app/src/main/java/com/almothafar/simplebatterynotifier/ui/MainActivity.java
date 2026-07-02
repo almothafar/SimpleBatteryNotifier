@@ -122,7 +122,7 @@ public class MainActivity extends BaseActivity {
 				isGranted -> {
 					if (isGranted) {
 						Log.d(TAG, "Notification permission granted");
-						Toast.makeText(this, "Thank you! Notifications are now enabled.", Toast.LENGTH_SHORT).show();
+						Toast.makeText(this, R.string.notifications_enabled_toast, Toast.LENGTH_SHORT).show();
 					} else {
 						Log.w(TAG, "Notification permission denied");
 						showPermissionDeniedSnackbar();
