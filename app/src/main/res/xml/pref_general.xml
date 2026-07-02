@@ -2,7 +2,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory
-        android:title="Display"
+        android:title="@string/pref_language_category"
+        app:iconSpaceReserved="false">
+
+        <ListPreference
+            android:key="@string/_pref_key_language"
+            android:persistent="false"
+            android:entries="@array/language_entries"
+            android:entryValues="@array/language_values"
+            android:title="@string/pref_title_language"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/pref_cat_title_display"
         app:iconSpaceReserved="false">
 
         <ListPreference
@@ -17,7 +32,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Battery Level Thresholds"
+        android:title="@string/pref_cat_title_thresholds"
         app:iconSpaceReserved="false">
 
         <SeekBarPreference
@@ -45,7 +60,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Other Settings"
+        android:title="@string/pref_cat_title_other"
         app:iconSpaceReserved="false">
 
         <SwitchPreference
