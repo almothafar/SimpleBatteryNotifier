@@ -6,6 +6,8 @@ import android.os.BatteryManager;
 import android.util.Log;
 import androidx.preference.PreferenceManager;
 
+import com.almothafar.simplebatterynotifier.model.BatteryHealthGrade;
+
 import static java.util.Objects.isNull;
 
 /**
@@ -237,21 +239,21 @@ public class BatteryHealthTracker {
 	}
 
 	/**
-	 * Maps a health percentage to a status label consistent with the cycle-based buckets.
+	 * Maps a health percentage to a wear grade, consistent with the cycle-based buckets.
 	 *
 	 * @param healthPercentage Health percentage (0-100)
 	 *
-	 * @return Health status: "Excellent", "Good", "Fair", or "Poor"
+	 * @return the matching {@link BatteryHealthGrade}
 	 */
-	public static String statusForPercentage(final int healthPercentage) {
+	public static BatteryHealthGrade gradeForPercentage(final int healthPercentage) {
 		if (healthPercentage >= EXCELLENT_HEALTH_PERCENT) {
-			return "Excellent";
+			return BatteryHealthGrade.EXCELLENT;
 		} else if (healthPercentage >= GOOD_HEALTH_PERCENT) {
-			return "Good";
+			return BatteryHealthGrade.GOOD;
 		} else if (healthPercentage >= FAIR_HEALTH_PERCENT) {
-			return "Fair";
+			return BatteryHealthGrade.FAIR;
 		} else {
-			return "Poor";
+			return BatteryHealthGrade.POOR;
 		}
 	}
 
@@ -327,52 +329,52 @@ public class BatteryHealthTracker {
 	}
 
 	/**
-	 * Gets a human-readable health status description.
+	 * Gets the cycle-based battery wear grade.
 	 *
 	 * @param context Application context
 	 *
-	 * @return Health status: "Excellent", "Good", "Fair", or "Poor"
+	 * @return the matching {@link BatteryHealthGrade}
 	 */
-	public static String getHealthStatus(final Context context) {
+	public static BatteryHealthGrade getHealthGrade(final Context context) {
 		final int cycles = getEffectiveCycleCount(context);
 
 		if (cycles < EXCELLENT_THRESHOLD) {
-			return "Excellent";
+			return BatteryHealthGrade.EXCELLENT;
 		} else if (cycles < GOOD_THRESHOLD) {
-			return "Good";
+			return BatteryHealthGrade.GOOD;
 		} else if (cycles < FAIR_THRESHOLD) {
-			return "Fair";
+			return BatteryHealthGrade.FAIR;
 		} else {
-			return "Poor";
+			return BatteryHealthGrade.POOR;
 		}
 	}
 
 	/**
-	 * Gets a detailed health description with recommendations.
+	 * Gets a detailed health description with recommendations for the cycle-based grade.
 	 *
 	 * @param context Application context
 	 *
 	 * @return Detailed health description
 	 */
 	public static String getHealthDescription(final Context context) {
-		return describeHealthStatus(getHealthStatus(context));
+		return describeHealthGrade(getHealthGrade(context));
 	}
 
 	/**
-	 * Gets a detailed health description for a status label.
+	 * Gets a detailed health description for a wear grade.
 	 * <p>
 	 * Shared by the cycle-based and measured health paths so the wording stays consistent.
 	 *
-	 * @param status Health status ("Excellent", "Good", "Fair", or "Poor")
+	 * @param grade the battery wear grade
 	 *
 	 * @return Detailed health description
 	 */
-	public static String describeHealthStatus(final String status) {
-		return switch (status) {
-			case "Excellent" -> "Your battery is in excellent condition. Continue with normal usage patterns.";
-			case "Good" -> "Your battery is in good condition with minimal degradation. Normal usage expected.";
-			case "Fair" -> "Your battery shows moderate wear. You may notice slightly reduced battery life.";
-			default -> "Your battery has significant wear. Consider battery replacement if experiencing poor performance.";
+	public static String describeHealthGrade(final BatteryHealthGrade grade) {
+		return switch (grade) {
+			case EXCELLENT -> "Your battery is in excellent condition. Continue with normal usage patterns.";
+			case GOOD -> "Your battery is in good condition with minimal degradation. Normal usage expected.";
+			case FAIR -> "Your battery shows moderate wear. You may notice slightly reduced battery life.";
+			case POOR -> "Your battery has significant wear. Consider battery replacement if experiencing poor performance.";
 		};
 	}
 

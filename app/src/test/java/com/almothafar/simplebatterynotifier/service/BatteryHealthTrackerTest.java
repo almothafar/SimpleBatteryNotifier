@@ -1,5 +1,7 @@
 package com.almothafar.simplebatterynotifier.service;
 
+import com.almothafar.simplebatterynotifier.model.BatteryHealthGrade;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -48,14 +50,14 @@ public class BatteryHealthTrackerTest {
 	}
 
 	@Test
-	public void statusForPercentage_bucketsMatchLabels() {
-		assertEquals("Excellent", BatteryHealthTracker.statusForPercentage(100));
-		assertEquals("Excellent", BatteryHealthTracker.statusForPercentage(90));
-		assertEquals("Good", BatteryHealthTracker.statusForPercentage(89));
-		assertEquals("Good", BatteryHealthTracker.statusForPercentage(80));
-		assertEquals("Fair", BatteryHealthTracker.statusForPercentage(79));
-		assertEquals("Fair", BatteryHealthTracker.statusForPercentage(70));
-		assertEquals("Poor", BatteryHealthTracker.statusForPercentage(69));
-		assertEquals("Poor", BatteryHealthTracker.statusForPercentage(0));
+	public void gradeForPercentage_bucketsMatchGrades() {
+		assertEquals(BatteryHealthGrade.EXCELLENT, BatteryHealthTracker.gradeForPercentage(100));
+		assertEquals(BatteryHealthGrade.EXCELLENT, BatteryHealthTracker.gradeForPercentage(90));
+		assertEquals(BatteryHealthGrade.GOOD, BatteryHealthTracker.gradeForPercentage(89));
+		assertEquals(BatteryHealthGrade.GOOD, BatteryHealthTracker.gradeForPercentage(80));
+		assertEquals(BatteryHealthGrade.FAIR, BatteryHealthTracker.gradeForPercentage(79));
+		assertEquals(BatteryHealthGrade.FAIR, BatteryHealthTracker.gradeForPercentage(70));
+		assertEquals(BatteryHealthGrade.POOR, BatteryHealthTracker.gradeForPercentage(69));
+		assertEquals(BatteryHealthGrade.POOR, BatteryHealthTracker.gradeForPercentage(0));
 	}
 }

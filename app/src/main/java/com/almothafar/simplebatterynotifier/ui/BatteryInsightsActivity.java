@@ -16,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.widget.Toolbar;
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.model.BatteryHealthGrade;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 
@@ -80,22 +81,20 @@ public class BatteryInsightsActivity extends BaseActivity {
 		final int healthPercentage = measured
 		                             ? measuredHealth
 		                             : BatteryHealthTracker.getEstimatedHealthPercentage(this);
-		final String healthStatus = measured
-		                            ? BatteryHealthTracker.statusForPercentage(measuredHealth)
-		                            : BatteryHealthTracker.getHealthStatus(this);
-		final String healthDescription = measured
-		                                 ? BatteryHealthTracker.describeHealthStatus(healthStatus)
-		                                 : BatteryHealthTracker.getHealthDescription(this);
+		final BatteryHealthGrade grade = measured
+		                                 ? BatteryHealthTracker.gradeForPercentage(measuredHealth)
+		                                 : BatteryHealthTracker.getHealthGrade(this);
+		final String healthDescription = BatteryHealthTracker.describeHealthGrade(grade);
 		final int chargeCycles = BatteryHealthTracker.getEffectiveCycleCount(this);
 		final int daysInUse = BatteryHealthTracker.getDaysSinceFirstUse(this);
 
-		// Update health percentage and color it based on status
+		// Update health percentage and color it based on grade
 		healthPercentageText.setText(healthPercentage + "%");
-		healthPercentageText.setTextColor(getHealthColor(healthStatus));
+		healthPercentageText.setTextColor(getHealthColor(grade));
 
 		// Update health status text
-		healthStatusText.setText(healthStatus);
-		healthStatusText.setTextColor(getHealthColor(healthStatus));
+		healthStatusText.setText(grade.getLabel());
+		healthStatusText.setTextColor(getHealthColor(grade));
 
 		// Tell the user whether the figure is measured (honest) or a cycle-based estimate
 		healthBasisText.setText(measured ? R.string.health_basis_measured : R.string.health_basis_estimated);
@@ -115,19 +114,18 @@ public class BatteryInsightsActivity extends BaseActivity {
 	}
 
 	/**
-	 * Gets the appropriate color for the health status.
+	 * Gets the appropriate color for a battery wear grade.
 	 *
-	 * @param healthStatus The health status string (Excellent, Good, Fair, Poor)
+	 * @param grade The battery wear grade
 	 *
-	 * @return Color integer for the status
+	 * @return Color integer for the grade
 	 */
-	private int getHealthColor(final String healthStatus) {
-		return switch (healthStatus) {
-			case "Excellent" -> getColor(R.color.top_background_color); // Green
-			case "Good" -> getColor(R.color.title_bar_background_color); // Blue
-			case "Fair" -> getColor(R.color.circular_progress_default_progress_warning); // Orange
-			case "Poor" -> getColor(R.color.circular_progress_default_progress_alert); // Red
-			default -> getColor(R.color.default_text_color); // Default
+	private int getHealthColor(final BatteryHealthGrade grade) {
+		return switch (grade) {
+			case EXCELLENT -> getColor(R.color.top_background_color); // Green
+			case GOOD -> getColor(R.color.title_bar_background_color); // Blue
+			case FAIR -> getColor(R.color.circular_progress_default_progress_warning); // Orange
+			case POOR -> getColor(R.color.circular_progress_default_progress_alert); // Red
 		};
 	}
 
