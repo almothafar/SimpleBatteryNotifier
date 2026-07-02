@@ -1,12 +1,14 @@
 # SimpleBatteryNotifier Development Guidelines
 
+> **Audience:** this is the machine-facing rulebook for the AI code-review agent. The human-facing companion is [`../CODE_REVIEW_GUIDELINES.md`](../CODE_REVIEW_GUIDELINES.md); keep the two in sync when a standard changes.
+
 ## Project Overview
 SimpleBatteryNotifier is an Android application that monitors battery status and provides notifications for power events. The app displays battery information with a circular progress bar and supports customizable alerts.
 
 ## Code Style
 
 ### Java Language Features
-- **Use Java 21+ features** where appropriate
+- **Use modern Java (JDK 25) features** where appropriate
   - Switch expressions with `yield` keyword
   - Pattern matching (when available)
   - Records for simple data carriers
@@ -45,16 +47,18 @@ SimpleBatteryNotifier is an Android application that monitors battery status and
 
 ### Error Handling
 - Check for null before accessing system services or intent extras
-- Use graceful degradation for non-critical features (e.g., battery capacity via reflection)
+- Use graceful degradation for non-critical features (e.g., battery-capacity estimate returning 0 when unsupported)
 - Log warnings (not errors) for expected failures
 - Add clear comments explaining why certain failures are acceptable
+- **Never swallow exceptions silently and never `catch (Exception)` broadly.** A catch must take real recovery action or log. Catch the narrowest type.
+- **Don't use exceptions for expected validation.** Unchecked exceptions like `NumberFormatException` can be avoided by validating first (e.g. `s.matches("\\d{1,5}")`) and then parsing without a `try`. A catch that shows the user feedback (e.g. `ActivityNotFoundException` → Toast) is fine.
 
 ## Android Specifics
 
 ### API Level Support
 - **Minimum SDK**: API 26 (Android 8.0 Oreo)
-- **Target SDK**: API 35 (Android 15)
-- **Compile SDK**: API 35
+- **Target SDK**: API 36
+- **Compile SDK**: API 36
 - Use modern APIs with fallbacks for older versions when needed
 
 ### API Version Handling
@@ -80,35 +84,9 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 - **Document workarounds**: If using deprecated API, explain the necessity in code comments
 
 ### Reflection Usage
-- **Avoid reflection** except when absolutely necessary (e.g., accessing internal Android APIs)
-- **Always document reflection usage**:
-  - Add `@SuppressLint("DiscouragedPrivateApi")` annotation
-  - Add comprehensive JavaDoc explaining:
-    - Why reflection is necessary
-    - What could go wrong
-    - How failures are handled gracefully
-    - That it's acceptable for the feature to fail
-
-Example:
-```java
-/**
- * Get battery capacity using reflection (internal API)
- * <p>
- * WARNING: This method accesses internal Android APIs via reflection.
- * Android does not provide a public API to retrieve battery capacity (mAh).
- * This implementation may not work on all devices or future Android versions.
- * <p>
- * The method gracefully handles failures and returns 0 if capacity cannot be determined.
- * This is acceptable as capacity is informational only and not critical for app functionality.
- *
- * @param context The application context
- * @return Battery capacity in mAh, or 0 if unavailable or unsupported
- */
-@SuppressLint("DiscouragedPrivateApi")
-public static synchronized int getBatteryCapacity(final Context context) {
-    // Implementation with try-catch for graceful failure
-}
-```
+- **Avoid reflection.** Prefer public APIs; reflection into internal/private Android APIs is blocked by non-SDK restrictions on modern Android and should not be used.
+  - Historical note: battery capacity was once read by reflecting into the internal `PowerProfile`. That was **removed** — `SystemService.getBatteryCapacity` now estimates full capacity from public `BatteryManager` properties (`BATTERY_PROPERTY_CHARGE_COUNTER ÷ BATTERY_PROPERTY_CAPACITY`), returning 0 when unsupported.
+- If reflection is ever truly unavoidable, document it thoroughly (why it's needed, what can fail, how failure degrades gracefully) and keep the pure/computational part unit-testable.
 
 ### UI Components
 - **Edge-to-Edge Display**: Enabled via `WindowCompat.setDecorFitsSystemWindows(getWindow(), false)`
@@ -151,22 +129,21 @@ public static synchronized int getBatteryCapacity(final Context context) {
 - **API Level notes**: Document API compatibility decisions
   - Example: `// BATTERY_PLUGGED_WIRELESS added in API 17`
 
-## Testing Strategy (Future)
+## Testing Strategy
 
-### Unit Tests
-- Test all business logic in service classes
-- Test data transformations and calculations
-- Mock Android framework dependencies
+The project uses **JUnit 4** for pure logic, with **Robolectric** and **Mockito** available for framework-dependent tests. `build.gradle` sets `testOptions.unitTests.includeAndroidResources = true` so Robolectric can resolve app resources.
 
-### Integration Tests
-- Test fragment lifecycle
-- Test service interactions
-- Test preference persistence
+### Unit Tests (JUnit) — prefer these
+- Extract pure, Android-free helpers and test them directly (e.g. `SystemService.estimateFullCapacityMah`, `NotificationService.isWithinTimeRange`, `TemperatureUtils`, `BatteryDO.getBatteryPercentage`).
+- Cover edge cases: division by zero, boundaries, unsupported/`MIN_VALUE` readings.
 
-### UI Tests
-- Test critical user flows
-- Test settings changes
-- Test battery status updates
+### Framework Tests (Robolectric + Mockito)
+- Use `@RunWith(RobolectricTestRunner.class) @Config(sdk = 34)` — targetSdk 36 is beyond Robolectric's supported range.
+- SharedPreferences-backed state (cycle tracker, design capacity) via a real `ApplicationProvider` context.
+- Receivers: drive `onReceive` with a sticky `ACTION_BATTERY_CHANGED` intent and `mockStatic(NotificationService.class)` to assert which alert is chosen; reset static de-dup state between tests.
+
+### Add tests with new logic
+- New business logic (thresholds, state machines, parsing) should ship with tests that would fail on regression.
 
 ## Code Quality
 
@@ -246,12 +223,17 @@ public static synchronized int getBatteryCapacity(final Context context) {
 ## Internationalization
 
 ### String Resources
-- All user-facing text must be in string resources
-- Use format strings for dynamic content
-- Example: `<string name="battery_percentage">%d%%</string>`
+- **All user-facing text must be in string resources — never a hardcoded Java literal** (no `setText("Excellent")`, no `Toast` string literals). Map values/enums to a `@StringRes` in a UI/service layer.
+- Use positional format args for dynamic content: `<string name="notification_status_content">%1$d%% · %2$s · %3$s</string>`.
+
+### Arabic (`values-ar/`) Parity
+- The app ships an Arabic translation. Every new user-facing string in `values/strings.xml` needs a matching entry in `values-ar/strings.xml`.
+- Quick check: diff the `<string name=…>` lists of the two files.
+- Consider the `MissingTranslation` lint check as a build gate.
+- Arabic wording is drafted by the AI agent and reviewed by the maintainer (native speaker) before merge.
 
 ### Resource Naming
-- Prefix internal keys with underscore: `_pref_key_*`
+- Prefix internal keys with underscore: `_pref_key_*`. Internal identifiers (`_pref_key_*`, `_pref_value_*`, `pref_category_*`, `extra_category`, URIs) are **not** translated — leave them out of `values-ar/`.
 - Use descriptive names: `battery_health_good`, not `bh_g`
 
 ## Common Patterns in This Codebase
