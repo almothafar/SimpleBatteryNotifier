@@ -79,6 +79,53 @@
                             android:textStyle="bold"
                             android:textColor="@color/title_bar_background_color"/>
 
+                    <TextView
+                            android:id="@+id/healthBasisText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/health_basis_estimated"
+                            android:textSize="12sp"
+                            android:textColor="@color/battery_details_label_color"
+                            android:layout_marginTop="4dp"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Design Capacity Card (tap to set/edit the rated capacity) -->
+            <androidx.cardview.widget.CardView
+                    android:id="@+id/designCapacityCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="4dp"
+                    app:contentPadding="16dp">
+
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                    <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/design_capacity"
+                            android:textSize="14sp"
+                            android:textColor="@color/battery_details_label_color"
+                            android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                            android:id="@+id/designCapacityText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/set_design_capacity_action"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/battery_details_value_color"/>
+
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 

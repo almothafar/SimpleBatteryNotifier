@@ -2,6 +2,8 @@
 
 These are the coding standards and best practices for the SimpleBatteryNotifier Android project.
 
+> **Audience:** this is the human-facing standard for contributors and reviewers. The AI code-review agent has a machine-facing companion at [`.claude/guidelines.md`](.claude/guidelines.md); keep the two in sync when a standard changes.
+
 ---
 
 ## 📋 Table of Contents
@@ -9,9 +11,11 @@ These are the coding standards and best practices for the SimpleBatteryNotifier 
 - [Build Configuration](#build-configuration)
 - [Code Style](#code-style)
 - [Null Safety](#null-safety)
+- [Exception Handling](#exception-handling)
 - [Variables](#variables)
 - [Code Organization](#code-organization)
 - [Android Best Practices](#android-best-practices)
+- [Localization](#localization)
 - [Performance](#performance)
 - [Comments & Documentation](#comments--documentation)
 
@@ -165,6 +169,60 @@ if(nonNull(bitmap)) {
 	imageView.setImageBitmap(bitmap);
 }
 ```
+
+---
+
+## 🧯 Exception Handling
+
+### 1. Never Swallow Exceptions Silently
+
+**A `catch` block must either take real recovery action or log — never both empty and silent.**
+
+```java
+// ❌ BAD - swallowed, no log, and overly broad
+try {
+	value = Integer.parseInt(input);
+} catch (Exception e) {
+	value = -1;
+}
+
+// ✅ GOOD - if a catch is unavoidable, catch the narrowest type and log it
+try {
+	return Settings.Global.getInt(resolver, ZEN_MODE) == ZEN_MODE_IMPORTANT_INTERRUPTIONS;
+} catch (Settings.SettingNotFoundException e) {
+	return false; // setting genuinely absent on this device — expected default
+}
+```
+
+**Why?** An empty/sentinel catch with no log hides real bugs and conflates unexpected failures with expected ones.
+
+### 2. Don't Use Exceptions for Expected Validation
+
+**If something is "normal to fail" (user/persisted input), handle it with an ordinary branch — not `try/catch`.**
+
+`NumberFormatException` and friends are *unchecked*, so you can validate first and skip the catch entirely:
+
+```java
+// ❌ BAD - exception as the validation path
+try {
+	value = Integer.parseInt(trimmed);
+} catch (NumberFormatException e) {
+	value = -1; // "invalid" signalled via exception
+}
+
+// ✅ GOOD - validate, then parse (provably can't throw)
+if (!trimmed.matches("\\d{1,5}")) {
+	showRangeError();
+	return false;
+}
+final int value = Integer.parseInt(trimmed); // safe: matched \d{1,5}
+```
+
+### 3. Catch the Narrowest Type
+
+- Prefer `ActivityNotFoundException` over `Exception` around `startActivity`.
+- A catch that gives the user feedback (e.g. a Toast) is fine and is **not** "silent".
+- Accepted idioms (document why): `unregisterReceiver` throwing `IllegalArgumentException` when already unregistered; `Settings.SettingNotFoundException` → default.
 
 ---
 
@@ -360,6 +418,42 @@ new Thread(() ->{
 private static final ExecutorService executor = Executors.newSingleThreadExecutor();
 executor.execute(() -> doBackgroundWork());
 ```
+
+---
+
+## 🌍 Localization
+
+**The app ships an Arabic translation (`res/values-ar/`), so every user-facing string must be localizable.**
+
+### 1. No Hardcoded User-Facing Strings
+
+```java
+// ❌ BAD - hardcoded English, can never be translated
+healthStatusText.setText("Excellent");
+Toast.makeText(this, "Health data reset", Toast.LENGTH_SHORT).show();
+
+// ✅ GOOD - string resource
+healthStatusText.setText(R.string.health_grade_excellent);
+```
+
+Keep the mapping from a value/enum to its string resource in a UI/service layer (mirroring `SystemService.getHealthString`), not as inline literals.
+
+### 2. Keep `values-ar/` in Parity
+
+- Every new user-facing string in `values/strings.xml` needs a matching entry in `values-ar/strings.xml`.
+- Quick check: diff the `<string name=…>` lists of the two files.
+- Consider enabling the `MissingTranslation` lint check as a build gate.
+
+### 3. Don't Translate Internal Keys
+
+Identifiers are **not** copy — leave them out of `values-ar/`:
+
+- `_pref_key_*`, `_pref_value_*`, `pref_category_*`, `extra_category`, URIs, and URLs.
+
+### 4. Format Strings & RTL
+
+- Use positional format args for dynamic content: `<string name="notification_status_content">%1$d%% · %2$s · %3$s</string>`.
+- Use `start`/`end` (not `left`/`right`) in layouts and test with an RTL language.
 
 ---
 
@@ -559,6 +653,8 @@ When reviewing code, check:
 - [ ] No code duplication (DRY)
 - [ ] Methods ≤ 50 lines
 - [ ] All null checks in place
+- [ ] No silent/broad `catch`; expected failures validated, not caught
+- [ ] No hardcoded user-facing strings; `values-ar/` kept in parity
 - [ ] Permissions checked (Android 13+)
 - [ ] Modern APIs used (no deprecated)
 - [ ] Thread-safe for static fields
@@ -589,4 +685,4 @@ When reviewing code, check:
 
 ---
 
-*Last updated: 2025-12-07*
+*Last updated: 2026-07-02*

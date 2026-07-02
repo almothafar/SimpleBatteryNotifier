@@ -25,6 +25,7 @@ No surprises. No clutter. Just simple battery notifications.
 - 🔋 **Battery Alerts**
     - Get notified at *Critical* and *Warning* levels
     - Receive an alert when charging is complete
+    - **High-temperature safety alert** when the battery gets too hot
 
 - ⏰ **Customizable Notifications**
     - Choose *when* to get notified (e.g., no alerts while you’re sleeping)
@@ -34,7 +35,8 @@ No surprises. No clutter. Just simple battery notifications.
     - Helpful if you charge your phone in **Airplane Mode** for faster charging — you’ll get reminded not to forget it there
 
 - 📊 **Battery Insights**
-    - Extra details like **temperature**, **health**, and more
+    - Estimated **battery health %**, **charge cycles**, temperature, voltage, and more
+    - Enter your battery’s **design capacity** for a measured health estimate
 
 - 📌 **Persistent & Repeated Alerts**
     - Keep a permanent battery status notification if you tend to forget things
@@ -50,7 +52,7 @@ No surprises. No clutter. Just simple battery notifications.
 ---
 
 ## 📥 Installation
-(Add installation instructions here, e.g., link to Google Play or APK download)
+A packaged release (Google Play / F-Droid / APK) is not published yet. For now, build it yourself — see [Building from Source](#building-from-source) below.
 
 ---
 
@@ -79,11 +81,11 @@ cd SimpleBatteryNotifier
 - **Gradle 9.2+**
 
 ### Testing
-The project includes **11 focused unit tests** covering critical business logic:
-- **BatteryDO calculation logic** - Percentage calculation with edge cases
-- **Division by zero handling** - Tests defensive programming
-- **Negative values and boundary conditions** - Real-world edge cases
-- **Builder pattern validation** - Method chaining correctness
+The project has a focused unit-test suite (JUnit; Robolectric and Mockito are available for framework-dependent tests) covering the logic most likely to regress:
+- **Battery math** — percentage calculation, division-by-zero and boundary handling (`BatteryDO`)
+- **Quiet-hours window** — inclusive/exclusive and overnight ranges (`NotificationService`)
+- **Temperature** — °C/°F conversion and threshold/hysteresis (`TemperatureUtils`)
+- **Capacity estimate** — full-capacity math from public `BatteryManager` readings (`SystemService`)
 
 Run tests with:
 ```bash
@@ -111,9 +113,11 @@ Pull requests and suggestions are welcome!
 
 Before submitting:
 1. Ensure all tests pass: `./gradlew test`
-2. Follow the coding guidelines in `.claude/guidelines.md`
+2. Follow the coding standards in [`CODE_REVIEW_GUIDELINES.md`](CODE_REVIEW_GUIDELINES.md)
 3. Add tests for new features
 4. Update documentation as needed
+
+> The repo keeps two guideline docs: [`CODE_REVIEW_GUIDELINES.md`](CODE_REVIEW_GUIDELINES.md) is the human-facing standard for contributors; [`.claude/guidelines.md`](.claude/guidelines.md) is the machine-facing rulebook for the AI code-review agent. Keep them in sync when standards change.
 
 ---
 
@@ -124,7 +128,7 @@ Licensed under the Apache License, Version 2.0 - see the [LICENSE](LICENSE) file
 
 ## 🏆 Code Quality
 
-- ✅ **Focused unit tests** (11 tests, 100% pass rate)
+- ✅ **Focused unit-test suite** (JUnit + Robolectric, 100% pass rate)
 - ✅ **Zero critical bugs**
 - ✅ **Full accessibility support** (TalkBack compatible)
 - ✅ **Modern Java 25** features (switch expressions, pattern matching, records)

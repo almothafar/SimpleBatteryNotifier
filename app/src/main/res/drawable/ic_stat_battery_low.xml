@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Battery outline with a low fill, for <=50% while discharging (white-on-transparent). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Outline: outer silhouette with the body hollowed out (even-odd) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M10,4 L14,4 L14,6 L17,6 L17,22 L7,22 L7,6 L10,6 Z M8.5,7.5 L15.5,7.5 L15.5,20.5 L8.5,20.5 Z" />
+    <!-- Low charge: bottom quarter filled -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M8.5,16 L15.5,16 L15.5,20.5 L8.5,20.5 Z" />
+</vector>

@@ -196,7 +196,7 @@ public final class NotificationService {
 		final String temperature = TemperatureUtils.format(context, rawTenthsC);
 
 		final Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID_TEMPERATURE)
-				.setSmallIcon(R.drawable.ic_stat_device_battery_charging_20)
+				.setSmallIcon(R.drawable.ic_stat_temperature_hot)
 				.setTicker(context.getString(R.string.notification_temperature_ticker))
 				.setContentTitle(context.getString(R.string.notification_temperature_title))
 				.setContentText(context.getString(R.string.notification_temperature_content, temperature))
@@ -727,22 +727,23 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Choose a small icon for the ongoing notification based on charging state and level.
+	 * Choose a small icon for the ongoing notification that reflects the actual battery state: a
+	 * charging bolt only while actively charging, otherwise a plain battery whose fill matches the
+	 * level. (A charged-but-still-plugged battery reads as full, without a bolt.)
 	 *
 	 * @param batteryDO Current battery snapshot, or null if unavailable
 	 * @return Drawable resource id
 	 */
 	private static int ongoingIconRes(final BatteryDO batteryDO) {
 		if (isNull(batteryDO)) {
-			return R.drawable.ic_stat_device_battery_charging_50;
+			return R.drawable.ic_stat_battery_full;
 		}
-		final int status = batteryDO.getStatus();
-		if (status == BatteryManager.BATTERY_STATUS_FULL || status == BatteryManager.BATTERY_STATUS_CHARGING) {
-			return R.drawable.ic_stat_device_battery_charging_full;
+		if (batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING) {
+			return R.drawable.ic_stat_battery_charging;
 		}
 		return Math.round(batteryDO.getBatteryPercentage()) <= 50
-		       ? R.drawable.ic_stat_device_battery_charging_20
-		       : R.drawable.ic_stat_device_battery_charging_50;
+		       ? R.drawable.ic_stat_battery_low
+		       : R.drawable.ic_stat_battery_full;
 	}
 
 	/**
