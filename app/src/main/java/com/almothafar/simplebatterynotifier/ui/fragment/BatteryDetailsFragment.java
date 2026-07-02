@@ -217,6 +217,13 @@ public class BatteryDetailsFragment extends Fragment {
 		                            : getResources().getString(R.string.unknown);
 		valuesMap.put(getResources().getString(R.string.capacity), capacityText);
 
+		// Show the user-entered design (rated) capacity when set (issue #32)
+		final int designCapacity = BatteryHealthTracker.getDesignCapacity(view.getContext());
+		if (designCapacity > 0) {
+			valuesMap.put(getResources().getString(R.string.design_capacity),
+					getResources().getString(R.string.design_capacity_value, designCapacity));
+		}
+
 		// Add charge cycles from the battery health tracker - positioned right after capacity
 		final int chargeCycles = BatteryHealthTracker.getEffectiveCycleCount(view.getContext());
 		valuesMap.put(getResources().getString(R.string.charge_cycles), String.valueOf(chargeCycles));
