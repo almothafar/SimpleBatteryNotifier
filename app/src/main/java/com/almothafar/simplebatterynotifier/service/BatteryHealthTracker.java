@@ -56,6 +56,12 @@ public class BatteryHealthTracker {
 	private static final int GOOD_HEALTH_PERCENT = 80;
 	private static final int FAIR_HEALTH_PERCENT = 70;
 
+	// Minimum battery level (%) at which the measured health figure is trustworthy. The current
+	// full-capacity estimate is charge-counter (µAh) ÷ CAPACITY (integer %), so at low charge the
+	// integer rounding of CAPACITY dominates and the figure becomes jumpy. Below this level we
+	// withhold the measured figure and fall back to the cycle-based estimate. See issue #37.
+	static final int MEASURED_HEALTH_MIN_BATTERY_LEVEL = 80;
+
 	/**
 	 * Records battery state and updates charge cycle count if appropriate.
 	 *
@@ -230,30 +236,45 @@ public class BatteryHealthTracker {
 	 * <p>
 	 * {@code health % = current full capacity (measured) / design capacity (user-entered) * 100}.
 	 * This is the accurate figure requested in #32; it only applies when the user has entered a
-	 * design capacity <em>and</em> the device reports the live charge counter used to estimate the
-	 * current full capacity.
+	 * design capacity, the device reports the live charge counter used to estimate the current full
+	 * capacity, <em>and</em> the battery is charged to at least {@link #MEASURED_HEALTH_MIN_BATTERY_LEVEL}%
+	 * (below which the estimate is too noisy — see issue #37).
 	 *
 	 * @param context Application context
 	 *
-	 * @return Measured health percentage (1-100), or -1 when it cannot be determined
+	 * @return Measured health percentage (1-100), or -1 when it cannot be determined or the battery is
+	 * too low for a stable reading
 	 */
 	public static int getMeasuredHealthPercentage(final Context context) {
 		if (isNull(context)) {
 			return -1;
 		}
-		return computeMeasuredHealth(SystemService.getBatteryCapacity(context), getDesignCapacity(context));
+		return computeMeasuredHealth(
+				SystemService.getBatteryCapacity(context),
+				getDesignCapacity(context),
+				SystemService.getBatteryLevelPercent(context));
 	}
 
 	/**
 	 * Pure helper for the measured health percentage, unit-testable with no Android dependencies.
+	 * <p>
+	 * The measured figure is withheld (returns -1) below {@link #MEASURED_HEALTH_MIN_BATTERY_LEVEL}%
+	 * charge, where the charge-counter estimate is dominated by the integer CAPACITY rounding and
+	 * would otherwise show a jumpy value (issue #37). Callers then fall back to the cycle-based estimate.
 	 *
-	 * @param currentFullMah measured current full capacity in mAh (0 when unknown)
-	 * @param designMah      user-entered design capacity in mAh (0 when unset)
+	 * @param currentFullMah     measured current full capacity in mAh (0 when unknown)
+	 * @param designMah          user-entered design capacity in mAh (0 when unset)
+	 * @param batteryLevelPercent current battery level 1-100 (-1 when unknown)
 	 *
-	 * @return health percentage clamped to 1-100, or -1 when either input is unusable
+	 * @return health percentage clamped to 1-100, or -1 when any input is unusable or the battery is
+	 * below the near-full threshold
 	 */
-	static int computeMeasuredHealth(final int currentFullMah, final int designMah) {
+	static int computeMeasuredHealth(final int currentFullMah, final int designMah, final int batteryLevelPercent) {
 		if (currentFullMah <= 0 || designMah <= 0) {
+			return -1;
+		}
+		// Too low (or unknown) to trust the charge-counter estimate: defer to the cycle-based figure.
+		if (batteryLevelPercent < MEASURED_HEALTH_MIN_BATTERY_LEVEL) {
 			return -1;
 		}
 		final int percent = Math.round(currentFullMah * 100f / designMah);
