@@ -136,15 +136,12 @@ public class BatteryInsightsActivity extends BaseActivity {
 
 	/**
 	 * Sets up the hidden debug menu (long-press on health percentage).
-	 * DEBUG feature for testing battery health tracking.
+	 * <p>
+	 * The long-press entry point is always registered: in release builds it surfaces only the
+	 * read-only "Show Debug Info" dump (harmless, useful for diagnosing user reports), while the
+	 * data-mutating actions are gated to debuggable builds by {@link #showDebugMenu}.
 	 */
 	private void setupDebugMenu() {
-		// Debug tools (inject/reset cycles) must not be reachable in release builds, where a
-		// long-press could let a user silently corrupt their tracked health data.
-		final boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-		if (!debuggable) {
-			return;
-		}
 		healthPercentageText.setOnLongClickListener(v -> {
 			showDebugMenu();
 			return true;
@@ -152,9 +149,19 @@ public class BatteryInsightsActivity extends BaseActivity {
 	}
 
 	/**
-	 * Shows debug menu with options to test battery health tracking.
+	 * Shows the debug menu. Read-only "Show Debug Info" is always available; the data-mutating
+	 * actions (inject/reset cycles) are only offered in debuggable builds, where a long-press can't
+	 * let a normal user silently corrupt their tracked health data.
 	 */
 	private void showDebugMenu() {
+		final boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+
+		if (!debuggable) {
+			// Release: read-only tracking dump only
+			showDebugInfo();
+			return;
+		}
+
 		final String[] options = {
 				"Show Debug Info",
 				"Add 50 Test Cycles",
