@@ -7,6 +7,7 @@ import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -24,6 +25,10 @@ import com.almothafar.simplebatterynotifier.service.SystemService;
  * Activity displaying battery health insights including charge cycles and estimated health.
  */
 public class BatteryInsightsActivity extends BaseActivity {
+
+	// Digit cap for the design-capacity field; MAX_DESIGN_CAPACITY_MAH (15000) is 5 digits, so this
+	// bounds the input and guarantees Integer.parseInt can't overflow.
+	private static final int MAX_DESIGN_CAPACITY_DIGITS = 5;
 
 	private TextView healthPercentageText;
 	private TextView healthStatusText;
@@ -205,6 +210,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 	private void showDesignCapacityDialog() {
 		final EditText input = new EditText(this);
 		input.setInputType(InputType.TYPE_CLASS_NUMBER);
+		// Max valid capacity is 15000 (5 digits); cap the length so the field can't overflow an int.
+		input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_DESIGN_CAPACITY_DIGITS)});
 		input.setHint(R.string.design_capacity_hint);
 
 		final int stored = BatteryHealthTracker.getDesignCapacity(this);
@@ -262,23 +269,31 @@ public class BatteryInsightsActivity extends BaseActivity {
 			return true;
 		}
 
-		int value;
-		try {
-			value = Integer.parseInt(trimmed);
-		} catch (NumberFormatException e) {
-			value = -1;
+		// Reject non-numeric / oversized input as a normal validation branch. Bounding it to 1–5
+		// digits here means the parse below provably can't overflow, so no exception handling needed.
+		if (!trimmed.matches("\\d{1," + MAX_DESIGN_CAPACITY_DIGITS + "}")) {
+			showCapacityRangeError();
+			return false;
 		}
 
+		final int value = Integer.parseInt(trimmed); // safe: matched \d{1,5}, fits in an int
 		if (!BatteryHealthTracker.isValidDesignCapacity(value)) {
-			Toast.makeText(this, getString(R.string.error_design_capacity_range,
-					BatteryHealthTracker.MIN_DESIGN_CAPACITY_MAH,
-					BatteryHealthTracker.MAX_DESIGN_CAPACITY_MAH), Toast.LENGTH_LONG).show();
+			showCapacityRangeError();
 			return false;
 		}
 
 		BatteryHealthTracker.setDesignCapacity(this, value);
 		updateHealthData();
 		return true;
+	}
+
+	/**
+	 * Shows the accepted design-capacity range as a Toast.
+	 */
+	private void showCapacityRangeError() {
+		Toast.makeText(this, getString(R.string.error_design_capacity_range,
+				BatteryHealthTracker.MIN_DESIGN_CAPACITY_MAH,
+				BatteryHealthTracker.MAX_DESIGN_CAPACITY_MAH), Toast.LENGTH_LONG).show();
 	}
 
 	/**
