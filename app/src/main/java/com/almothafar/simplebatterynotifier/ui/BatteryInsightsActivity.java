@@ -121,7 +121,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 				"Add 50 Test Cycles",
 				"Add 300 Test Cycles",
 				"Add 600 Test Cycles",
-				"Reset All Data"
+				"Reset debug data",
+				"Reset ALL (incl. real data)"
 		};
 
 		new AlertDialog.Builder(this)
@@ -132,7 +133,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 						case 1 -> addTestCycles(50);
 						case 2 -> addTestCycles(300);
 						case 3 -> addTestCycles(600);
-						case 4 -> resetHealthData();
+						case 4 -> resetDebugData();
+						case 5 -> resetHealthData();
 					}
 				})
 				.setNegativeButton("Cancel", null)
@@ -161,16 +163,26 @@ public class BatteryInsightsActivity extends BaseActivity {
 	}
 
 	/**
-	 * Resets all health tracking data.
+	 * Clears only the debug-injected cycles, leaving the first-use date and real cycles intact.
+	 */
+	private void resetDebugData() {
+		BatteryHealthTracker.resetDebugData(this);
+		updateHealthData();
+		Toast.makeText(this, "Debug data cleared", Toast.LENGTH_SHORT).show();
+	}
+
+	/**
+	 * Resets all health tracking data, including the first-use date and real charge cycles.
 	 */
 	private void resetHealthData() {
 		new AlertDialog.Builder(this)
-				.setTitle("Reset Health Data?")
-				.setMessage("This will delete all tracked battery health data. Are you sure?")
+				.setTitle("Reset ALL health data?")
+				.setMessage("This deletes ALL tracked battery health data, including the first-use date "
+						+ "and real charge cycles. Are you sure?")
 				.setPositiveButton("Reset", (dialog, which) -> {
 					BatteryHealthTracker.resetHealthData(this);
 					updateHealthData();
-					Toast.makeText(this, "Health data reset", Toast.LENGTH_SHORT).show();
+					Toast.makeText(this, "All health data reset", Toast.LENGTH_SHORT).show();
 				})
 				.setNegativeButton("Cancel", null)
 				.show();

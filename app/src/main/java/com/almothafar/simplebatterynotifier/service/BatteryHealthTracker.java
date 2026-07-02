@@ -31,6 +31,9 @@ public class BatteryHealthTracker {
 	private static final String PREF_FIRST_USE_DATE = "_battery_health_first_use_date";
 	private static final String PREF_LAST_LOW_BATTERY = "_battery_health_last_low_battery";
 	private static final String PREF_CYCLE_IN_PROGRESS = "_battery_health_cycle_in_progress";
+	// Debug-only cycle offset kept separate from real tracking so it can be cleared without
+	// destroying genuine data (see the debug menu in BatteryInsightsActivity).
+	private static final String PREF_DEBUG_CHARGE_CYCLES = "_battery_health_debug_charge_cycles";
 
 	// Battery thresholds for cycle tracking
 	private static final int LOW_BATTERY_THRESHOLD = 20;
@@ -112,20 +115,39 @@ public class BatteryHealthTracker {
 
 	/**
 	 * Gets the best-available charge cycle count: the OS-reported value where the device exposes it
-	 * (Android 14+ {@code EXTRA_CYCLE_COUNT}), otherwise this app's own tracked estimate.
+	 * (Android 14+ {@code EXTRA_CYCLE_COUNT}), otherwise this app's own tracked estimate. Any
+	 * debug-injected cycles are added on top so the debug menu still visibly affects the display and
+	 * health estimate (even on devices that report an OS cycle count).
 	 * <p>
 	 * Used for both the displayed cycle count and the health estimate so the two stay consistent.
 	 *
 	 * @param context Application context
 	 *
-	 * @return Charge cycle count (OS-reported if available, else the tracked estimate)
+	 * @return Charge cycle count (OS-reported if available, else the tracked estimate) plus any
+	 * debug-injected cycles
 	 */
 	public static int getEffectiveCycleCount(final Context context) {
 		if (isNull(context)) {
 			return 0;
 		}
 		final int osCycleCount = SystemService.getChargeCycleCount(context);
-		return osCycleCount > 0 ? osCycleCount : getChargeCycles(context);
+		final int base = osCycleCount > 0 ? osCycleCount : getChargeCycles(context);
+		return base + getDebugChargeCycles(context);
+	}
+
+	/**
+	 * Gets the number of debug-injected charge cycles (0 in normal use). Tracked separately from real
+	 * cycles so {@link #resetDebugData} can clear them without touching genuine tracking.
+	 *
+	 * @param context Application context
+	 *
+	 * @return Debug-injected cycle count
+	 */
+	public static int getDebugChargeCycles(final Context context) {
+		if (isNull(context)) {
+			return 0;
+		}
+		return PreferenceManager.getDefaultSharedPreferences(context).getInt(PREF_DEBUG_CHARGE_CYCLES, 0);
 	}
 
 	/**
@@ -242,7 +264,8 @@ public class BatteryHealthTracker {
 	}
 
 	/**
-	 * Resets all health tracking data. Use with caution!
+	 * Resets <em>all</em> health tracking data, including the first-use date and real charge cycles.
+	 * Use with caution — for undoing only debug-injected cycles, prefer {@link #resetDebugData}.
 	 *
 	 * @param context Application context
 	 */
@@ -256,12 +279,31 @@ public class BatteryHealthTracker {
 		     .remove(PREF_FIRST_USE_DATE)
 		     .remove(PREF_LAST_LOW_BATTERY)
 		     .remove(PREF_CYCLE_IN_PROGRESS)
+		     .remove(PREF_DEBUG_CHARGE_CYCLES)
 		     .apply();
 		Log.i(TAG, "Battery health data reset");
 	}
 
 	/**
-	 * Adds test charge cycles for debugging/testing purposes.
+	 * Clears only the debug-injected charge cycles, leaving the first-use date and real tracked
+	 * cycles intact. This is the reset a tester wants after injecting dummy cycles.
+	 *
+	 * @param context Application context
+	 */
+	public static void resetDebugData(final Context context) {
+		if (isNull(context)) {
+			return;
+		}
+		PreferenceManager.getDefaultSharedPreferences(context)
+		                 .edit()
+		                 .remove(PREF_DEBUG_CHARGE_CYCLES)
+		                 .apply();
+		Log.i(TAG, "Debug-injected charge cycles cleared");
+	}
+
+	/**
+	 * Adds debug-injected test charge cycles, tracked separately from real cycles so they can be
+	 * cleared via {@link #resetDebugData} without destroying genuine tracking.
 	 * DEBUG/TEST METHOD - Do not use in production!
 	 *
 	 * @param context Application context
@@ -272,11 +314,11 @@ public class BatteryHealthTracker {
 			return;
 		}
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-		final int currentCycles = prefs.getInt(PREF_CHARGE_CYCLES, 0);
+		final int currentDebugCycles = prefs.getInt(PREF_DEBUG_CHARGE_CYCLES, 0);
 		prefs.edit()
-		     .putInt(PREF_CHARGE_CYCLES, currentCycles + cyclesToAdd)
+		     .putInt(PREF_DEBUG_CHARGE_CYCLES, currentDebugCycles + cyclesToAdd)
 		     .apply();
-		Log.i(TAG, "Added " + cyclesToAdd + " test charge cycles. Total: " + (currentCycles + cyclesToAdd));
+		Log.i(TAG, "Added " + cyclesToAdd + " debug charge cycles. Debug total: " + (currentDebugCycles + cyclesToAdd));
 	}
 
 	/**
@@ -292,13 +334,16 @@ public class BatteryHealthTracker {
 		}
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final int cycles = prefs.getInt(PREF_CHARGE_CYCLES, 0);
+		final int debugCycles = prefs.getInt(PREF_DEBUG_CHARGE_CYCLES, 0);
 		final long firstUse = prefs.getLong(PREF_FIRST_USE_DATE, 0);
 		final boolean cycleInProgress = prefs.getBoolean(PREF_CYCLE_IN_PROGRESS, false);
 		final long lastLowBattery = prefs.getLong(PREF_LAST_LOW_BATTERY, 0);
 
 		return "Tracking Status:\n" +
 				"- First Use: " + (firstUse == 0 ? "Not initialized" : new java.util.Date(firstUse)) + "\n" +
-				"- Charge Cycles: " + cycles + "\n" +
+				"- Charge Cycles (real): " + cycles + "\n" +
+				"- Charge Cycles (debug-injected): " + debugCycles + "\n" +
+				"- Effective Cycle Count: " + getEffectiveCycleCount(context) + "\n" +
 				"- Cycle in Progress: " + cycleInProgress + "\n" +
 				"- Last Low Battery: " + (lastLowBattery == 0 ? "Never" : new java.util.Date(lastLowBattery)) + "\n" +
 				"- Days Since First Use: " + getDaysSinceFirstUse(context);
