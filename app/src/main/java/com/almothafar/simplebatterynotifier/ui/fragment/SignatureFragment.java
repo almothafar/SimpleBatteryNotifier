@@ -1,5 +1,6 @@
 package com.almothafar.simplebatterynotifier.ui.fragment;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -55,8 +56,9 @@ public class SignatureFragment extends Fragment {
 			}
 			final Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(link));
 			startActivity(browserIntent);
-		} catch (final Exception e) {
-			Log.e(TAG, "Error opening developer link", e);
+		} catch (final ActivityNotFoundException e) {
+			// The only expected failure: no app can handle the link (e.g. no browser installed).
+			Log.e(TAG, "No app available to open the developer link", e);
 		}
 	}
 }

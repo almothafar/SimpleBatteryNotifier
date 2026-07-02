@@ -198,11 +198,9 @@ public class RingtonePreference extends Preference {
 					setSummary(ringtone.getTitle(getContext()));
 					return;
 				}
-			} catch (Exception e) {
-				final String errorMsg = e.getMessage();
-				if (nonNull(errorMsg)) {
-					Log.e(TAG, "Error loading ringtone: " + errorMsg);
-				}
+			} catch (RuntimeException e) {
+				// Resolving the ringtone can fail (e.g. SecurityException on a revoked media URI).
+				Log.e(TAG, "Error loading ringtone for " + currentRingtoneUri, e);
 			}
 		}
 		// Empty or null URI means no ringtone selected (silent/none)
