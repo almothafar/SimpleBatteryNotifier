@@ -21,6 +21,14 @@ public class TemperatureUtilsTest {
 	}
 
 	@Test
+	public void celsiusToFahrenheit_float_roundsToNearestTenth() {
+		assertEquals(89.6f, TemperatureUtils.celsiusToFahrenheit(32.0f), 0.001f);
+		assertEquals(98.6f, TemperatureUtils.celsiusToFahrenheit(37.0f), 0.001f);
+		// 20.02 °C -> 68.036 °F: rounds DOWN to 68.0 (the old Math.ceil path returned 68.1).
+		assertEquals(68.0f, TemperatureUtils.celsiusToFahrenheit(20.02f), 0.001f);
+	}
+
+	@Test
 	public void fahrenheitToCelsius_knownValues() {
 		assertEquals(0, TemperatureUtils.fahrenheitToCelsius(32));
 		assertEquals(40, TemperatureUtils.fahrenheitToCelsius(104));
