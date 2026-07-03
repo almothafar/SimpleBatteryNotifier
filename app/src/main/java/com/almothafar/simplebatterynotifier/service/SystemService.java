@@ -42,7 +42,21 @@ public final class SystemService {
 	 * @return BatteryDO object containing battery information, or null if battery status is unavailable
 	 */
 	public static BatteryDO getBatteryInfo(final Context context) {
-		final Intent batteryStatus = getBatteryStatusIntent(context);
+		return getBatteryInfo(context, getBatteryStatusIntent(context));
+	}
+
+	/**
+	 * Build battery information from an already-obtained {@code ACTION_BATTERY_CHANGED} intent.
+	 * <p>
+	 * Lets a caller that already holds the sticky battery intent (e.g. a receiver that just read it)
+	 * reuse it instead of triggering a second sticky-broadcast read.
+	 *
+	 * @param context       The application context
+	 * @param batteryStatus A sticky {@code ACTION_BATTERY_CHANGED} intent, or null if unavailable
+	 *
+	 * @return BatteryDO built from the intent, or null when {@code batteryStatus} is null
+	 */
+	public static BatteryDO getBatteryInfo(final Context context, final Intent batteryStatus) {
 		if (isNull(batteryStatus)) {
 			return null;
 		}
