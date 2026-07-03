@@ -195,22 +195,8 @@ public class MainActivity extends BaseActivity {
 			return;
 		}
 
-		final int status = batteryDO.getStatus();
 		batteryPercentage = (int) batteryDO.getBatteryPercentage();
-
-		// Map battery status to appropriate string resource
-		if (status == BatteryManager.BATTERY_STATUS_FULL) {
-			subTitle = getResources().getString(R.string.charged);
-		} else if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
-			subTitle = getResources().getString(R.string.charging);
-		} else if (status == BatteryManager.BATTERY_STATUS_NOT_CHARGING) {
-			subTitle = getResources().getString(R.string.not_charging);
-		} else if (status == BatteryManager.BATTERY_STATUS_DISCHARGING) {
-			subTitle = getResources().getString(R.string.discharging);
-		} else {
-			// BATTERY_STATUS_UNKNOWN or any other status
-			subTitle = getResources().getString(R.string.unknown);
-		}
+		subTitle = SystemService.getStatusLabel(this, batteryDO.getStatus());
 	}
 
 	/**

@@ -704,26 +704,9 @@ public final class NotificationService {
 	 */
 	private static String statusText(final Context context, final BatteryDO batteryDO) {
 		final int percentage = isNull(batteryDO) ? 0 : Math.round(batteryDO.getBatteryPercentage());
-		final String statusLabel = statusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
+		final String statusLabel = SystemService.getStatusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
 		final String temperature = isNull(batteryDO) ? "" : TemperatureUtils.format(context, batteryDO.getTemperature());
 		return context.getString(R.string.notification_status_content, percentage, statusLabel, temperature);
-	}
-
-	/**
-	 * Map a BatteryManager status constant to a localized label.
-	 *
-	 * @param context The application context
-	 * @param status  BatteryManager status constant
-	 * @return Localized status label
-	 */
-	private static String statusLabel(final Context context, final int status) {
-		return switch (status) {
-			case BatteryManager.BATTERY_STATUS_FULL -> context.getString(R.string.charged);
-			case BatteryManager.BATTERY_STATUS_CHARGING -> context.getString(R.string.charging);
-			case BatteryManager.BATTERY_STATUS_NOT_CHARGING -> context.getString(R.string.not_charging);
-			case BatteryManager.BATTERY_STATUS_DISCHARGING -> context.getString(R.string.discharging);
-			default -> context.getString(R.string.unknown);
-		};
 	}
 
 	/**
