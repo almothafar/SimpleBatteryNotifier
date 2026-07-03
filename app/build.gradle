@@ -67,6 +67,13 @@ android {
             includeAndroidResources = true
         }
     }
+
+    lint {
+        // Fail the build if any user-facing string is missing an Arabic translation, so future
+        // localization gaps are caught at build time rather than shipping English fallbacks.
+        // Internal identifiers/defaults are marked translatable="false" so they're exempt.
+        error 'MissingTranslation'
+    }
 }
 
 dependencies {

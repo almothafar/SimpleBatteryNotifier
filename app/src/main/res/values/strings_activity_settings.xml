@@ -1,5 +1,6 @@
 <resources>
-    <string name="preference_title_temperature">@string/temperature_unit</string>
+    <!-- Alias to an already-translated string; not copy itself -->
+    <string name="preference_title_temperature" translatable="false">@string/temperature_unit</string>
     <string-array name="preference_list_temperatures">
         <item>@string/celsius</item>
         <item>@string/fahrenheit</item>
