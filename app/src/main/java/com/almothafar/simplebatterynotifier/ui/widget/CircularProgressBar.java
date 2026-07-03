@@ -82,6 +82,13 @@ public class CircularProgressBar extends ProgressBar {
 	private float currentPulseScale = 1.0f;
 	private int currentGlowAlpha = 0;
 
+	// Progress state colors and glow stroke resolved once (in initialize) so onDraw() doesn't hit
+	// resources on every frame during the pulse animation. See issue #55.
+	private int progressDefaultColor;
+	private int progressWarningColor;
+	private int progressAlertColor;
+	private int glowExtraStrokePx;
+
 	/**
 	 * Constructor for programmatic instantiation
 	 *
@@ -361,7 +368,6 @@ public class CircularProgressBar extends ProgressBar {
 	 */
 	@Override
 	protected synchronized void onDraw(@NonNull final Canvas canvas) {
-		final Resources res = getResources();
 		final int progress = getProgress();
 		final float scale = getMax() > 0 ? (float) progress / getMax() * SWEEP_ANGLE : 0;
 
@@ -377,14 +383,14 @@ public class CircularProgressBar extends ProgressBar {
 		// Draw a background track
 		canvas.drawArc(circleBounds, START_ANGLE, SWEEP_ANGLE, false, backgroundColorPaint);
 
-		// Determine progress color based on battery level
+		// Determine progress color based on battery level (colors resolved once in initialize()).
 		final int progressColor;
 		if (progress >= warningLevel) {
-			progressColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress);
+			progressColor = progressDefaultColor;
 		} else if (progress > criticalLevel) {
-			progressColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress_warning);
+			progressColor = progressWarningColor;
 		} else {
-			progressColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress_alert);
+			progressColor = progressAlertColor;
 		}
 		progressColorPaint.setColor(progressColor);
 
@@ -393,7 +399,7 @@ public class CircularProgressBar extends ProgressBar {
 			glowPaint.setColor(progressColor);
 			glowPaint.setAlpha(currentGlowAlpha);
 			glowPaint.setStyle(Paint.Style.STROKE);
-			glowPaint.setStrokeWidth(progressColorPaint.getStrokeWidth() + GeneralHelper.dpToPixel(res, 8));
+			glowPaint.setStrokeWidth(progressColorPaint.getStrokeWidth() + glowExtraStrokePx);
 			glowPaint.setStrokeCap(Paint.Cap.ROUND);
 			glowPaint.setAntiAlias(true);
 			canvas.drawArc(circleBounds, START_ANGLE, scale, false, glowPaint);
@@ -516,6 +522,12 @@ public class CircularProgressBar extends ProgressBar {
 			color = styledAttributes.getColor(R.styleable.CircularProgressBar_cpb_subtitleColor,
 			                                  GeneralHelper.getColor(res, R.color.circular_progress_default_subtitle));
 			subtitlePaint.setColor(color);
+
+			// Resolve the progress-state colors and glow stroke once here rather than per-frame in onDraw().
+			progressDefaultColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress);
+			progressWarningColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress_warning);
+			progressAlertColor = GeneralHelper.getColor(res, R.color.circular_progress_default_progress_alert);
+			glowExtraStrokePx = GeneralHelper.dpToPixel(res, 8);
 
 			final String titleAttr = styledAttributes.getString(R.styleable.CircularProgressBar_cpb_title);
 			if (nonNull(titleAttr)) {
