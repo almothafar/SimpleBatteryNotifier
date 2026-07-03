@@ -45,17 +45,6 @@ public final class GeneralHelper {
 	}
 
 	/**
-	 * Convert temperature from Celsius to Fahrenheit, rounded to one decimal place
-	 *
-	 * @param temperature Temperature in Celsius
-	 * @return Temperature in Fahrenheit
-	 */
-	public static float fromCtoF(final float temperature) {
-		final float fahrenheit = (9.0f / 5.0f) * temperature + 32;
-		return (float) Math.ceil(fahrenheit * 10.0f) / 10.0f;
-	}
-
-	/**
 	 * Extract hour from time string in format "HH:MM"
 	 *
 	 * @param time Time string in format "HH:MM"

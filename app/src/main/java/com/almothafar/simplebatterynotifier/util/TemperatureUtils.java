@@ -54,9 +54,14 @@ public final class TemperatureUtils {
 		return Math.round((fahrenheit - 32) * 5f / 9f);
 	}
 
-	/** Convert degrees Celsius to degrees Fahrenheit (one-decimal precision). */
+	/**
+	 * Convert degrees Celsius to degrees Fahrenheit (one-decimal precision), rounded to the nearest
+	 * tenth. Uses {@code Math.round} so the display path matches the whole-degree overload above
+	 * (the previous implementation rounded up via {@code Math.ceil}, biasing displayed °F upward).
+	 */
 	public static float celsiusToFahrenheit(final float celsius) {
-		return GeneralHelper.fromCtoF(celsius);
+		final float fahrenheit = celsius * 9f / 5f + 32f;
+		return Math.round(fahrenheit * 10f) / 10f;
 	}
 
 	/**
