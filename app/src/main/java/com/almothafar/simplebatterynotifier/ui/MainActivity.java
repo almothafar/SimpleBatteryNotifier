@@ -280,9 +280,9 @@ public class MainActivity extends BaseActivity {
 	private void showPermissionDeniedSnackbar() {
 		Snackbar.make(
 				findViewById(R.id.containerLayout),
-				"Notifications are important for this app to work properly",
+				R.string.notifications_permission_rationale,
 				Snackbar.LENGTH_LONG
-		).setAction("Open Settings", v -> openNotificationSettings()).show();
+		).setAction(R.string.open_settings, v -> openNotificationSettings()).show();
 	}
 
 	/**
