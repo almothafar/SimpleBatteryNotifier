@@ -159,6 +159,10 @@
     <!-- Shown after the user grants the notification permission -->
     <string name="notifications_enabled_toast">Thank you! Notifications are now enabled.</string>
 
+    <!-- Shown when the user denies the notification permission -->
+    <string name="notifications_permission_rationale">Notifications are important for this app to work properly</string>
+    <string name="open_settings">Open Settings</string>
+
     <!-- App language picker -->
     <string name="pref_language_category">Language</string>
     <string name="pref_title_language">App language</string>

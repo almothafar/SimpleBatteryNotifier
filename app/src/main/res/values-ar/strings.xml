@@ -168,6 +168,10 @@
     <!-- Notification permission granted -->
     <string name="notifications_enabled_toast">شكراً! تم تفعيل التنبيهات الآن.</string>
 
+    <!-- Notification permission denied -->
+    <string name="notifications_permission_rationale">التنبيهات مهمة لكي يعمل التطبيق بشكل صحيح</string>
+    <string name="open_settings">فتح الإعدادات</string>
+
     <!-- App language picker -->
     <string name="pref_language_category">اللغة</string>
     <string name="pref_title_language">لغة التطبيق</string>
