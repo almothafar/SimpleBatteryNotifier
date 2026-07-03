@@ -167,4 +167,19 @@
 
     <!-- Notification permission granted -->
     <string name="notifications_enabled_toast">شكراً! تم تفعيل التنبيهات الآن.</string>
+
+    <!-- App language picker -->
+    <string name="pref_language_category">اللغة</string>
+    <string name="pref_title_language">لغة التطبيق</string>
+    <string name="language_system_default">إعدادات النظام</string>
+
+    <!-- Settings category titles -->
+    <string name="pref_cat_title_display">العرض</string>
+    <string name="pref_cat_title_thresholds">حدود مستوى البطارية</string>
+    <string name="pref_cat_title_other">إعدادات أخرى</string>
+    <string name="pref_cat_title_notification">إعدادات التنبيهات</string>
+    <string name="pref_cat_title_full_battery">البطارية الممتلئة</string>
+    <string name="pref_cat_title_warning">مستوى التحذير</string>
+    <string name="pref_cat_title_temperature">الحرارة</string>
+    <string name="pref_cat_title_critical">مستوى البطارية الحرج</string>
 </resources>

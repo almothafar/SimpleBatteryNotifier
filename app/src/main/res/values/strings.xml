@@ -159,6 +159,24 @@
     <!-- Shown after the user grants the notification permission -->
     <string name="notifications_enabled_toast">Thank you! Notifications are now enabled.</string>
 
+    <!-- App language picker -->
+    <string name="pref_language_category">Language</string>
+    <string name="pref_title_language">App language</string>
+    <string name="language_system_default">System default</string>
+    <!-- Language autonyms: shown in the language's own script regardless of UI locale -->
+    <string name="language_arabic" translatable="false">العربية</string>
+    <string name="language_english" translatable="false">English</string>
+
+    <!-- Settings category titles -->
+    <string name="pref_cat_title_display">Display</string>
+    <string name="pref_cat_title_thresholds">Battery Level Thresholds</string>
+    <string name="pref_cat_title_other">Other Settings</string>
+    <string name="pref_cat_title_notification">Notification Settings</string>
+    <string name="pref_cat_title_full_battery">Full Battery</string>
+    <string name="pref_cat_title_warning">Warning Level</string>
+    <string name="pref_cat_title_temperature">Temperature</string>
+    <string name="pref_cat_title_critical">Critical Battery Level</string>
+
     <!-- Below this line to the end of file is for coding not for labeling.
          These are internal identifiers/defaults, not user copy: marked translatable="false"
          so the MissingTranslation lint gate does not expect them in values-ar. -->
@@ -184,6 +202,7 @@
     <string name="_pref_key_notify_every_tick" translatable="false">key_notify_every_tick</string>
     <string name="_pref_key_notify_high_temperature" translatable="false">key_notify_high_temperature</string>
     <string name="_pref_key_high_temperature_threshold" translatable="false">key_high_temperature_threshold</string>
+    <string name="_pref_key_language" translatable="false">key_language</string>
 
     <string name="_pref_value_temperatures_unit_c" translatable="false">celsius</string>
     <string name="_pref_value_temperatures_unit_f" translatable="false">fahrenheit</string>

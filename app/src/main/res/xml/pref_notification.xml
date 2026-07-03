@@ -2,7 +2,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory
-        android:title="Notification Settings"
+        android:title="@string/pref_cat_title_notification"
         app:iconSpaceReserved="false">
 
         <SwitchPreference
@@ -28,7 +28,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Full Battery"
+        android:title="@string/pref_cat_title_full_battery"
         app:iconSpaceReserved="false">
 
         <SwitchPreference
@@ -52,7 +52,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Warning Level"
+        android:title="@string/pref_cat_title_warning"
         app:iconSpaceReserved="false">
 
         <SwitchPreference
@@ -76,7 +76,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Temperature"
+        android:title="@string/pref_cat_title_temperature"
         app:iconSpaceReserved="false">
 
         <SwitchPreference
@@ -104,7 +104,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Critical Battery Level"
+        android:title="@string/pref_cat_title_critical"
         app:iconSpaceReserved="false">
 
         <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference

@@ -8,12 +8,15 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.os.LocaleListCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
@@ -122,6 +125,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 			if (nonNull(category)) {
 				if (category.equals(getString(R.string.pref_category_general))) {
 					setPreferencesFromResource(R.xml.pref_general, rootKey);
+					configureLanguagePreference();
 				} else if (category.equals(getString(R.string.pref_category_notifications))) {
 					setPreferencesFromResource(R.xml.pref_notification, rootKey);
 					configureTemperatureThreshold();
@@ -130,6 +134,36 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 				}
 			}
 		}
+	}
+
+	/**
+	 * Wire up the app-language picker (System / Arabic / English).
+	 * <p>
+	 * The choice is applied and persisted by AndroidX per-app locales
+	 * ({@link AppCompatDelegate#setApplicationLocales}, stored via the {@code AppLocalesMetadataHolderService}
+	 * declared in the manifest), so the {@link ListPreference} itself is non-persistent — it only
+	 * reflects and triggers the locale. Its value is seeded from the currently applied locale so the
+	 * selection stays in sync when the screen is reopened.
+	 */
+	private void configureLanguagePreference() {
+		final ListPreference pref = findPreference(getString(R.string._pref_key_language));
+		if (isNull(pref)) {
+			return;
+		}
+
+		// Seed the selection from the currently applied app locale ("" = follow the system).
+		final LocaleListCompat current = AppCompatDelegate.getApplicationLocales();
+		pref.setValue(current.isEmpty() ? "" : current.get(0).getLanguage());
+
+		pref.setOnPreferenceChangeListener((preference, newValue) -> {
+			final String tag = (String) newValue;
+			final LocaleListCompat locales = TextUtils.isEmpty(tag)
+					? LocaleListCompat.getEmptyLocaleList()   // follow the system language
+					: LocaleListCompat.forLanguageTags(tag);
+			// Applies immediately (recreates activities); the metadata service persists it across restarts.
+			AppCompatDelegate.setApplicationLocales(locales);
+			return true;
+		});
 	}
 
 	/**
