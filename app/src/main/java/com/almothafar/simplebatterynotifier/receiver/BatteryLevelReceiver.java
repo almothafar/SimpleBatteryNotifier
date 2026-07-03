@@ -61,7 +61,8 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		final boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING;
 		final boolean isFull = status == BatteryManager.BATTERY_STATUS_FULL;
 
-		final BatteryDO batteryDO = SystemService.getBatteryInfo(context);
+		// Reuse the sticky intent we already read above instead of triggering a second read.
+		final BatteryDO batteryDO = SystemService.getBatteryInfo(context, batteryStatus);
 
 		// Keep the persistent foreground-service status notification live with the latest reading
 		NotificationService.updateOngoingNotification(context, batteryDO);
