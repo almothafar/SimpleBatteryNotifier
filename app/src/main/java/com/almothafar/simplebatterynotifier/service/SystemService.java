@@ -339,6 +339,10 @@ public final class SystemService {
 	 */
 	public static void playSound(final Context context, final Uri alert) {
 		final MediaPlayer mediaPlayer = new MediaPlayer();
+		// Release the native player once playback finishes so repeated alerts don't leak
+		// MediaPlayer instances. Paths where nothing plays release in the finally block below.
+		mediaPlayer.setOnCompletionListener(MediaPlayer::release);
+		boolean playbackStarted = false;
 		try {
 			mediaPlayer.setDataSource(context, alert);
 			final AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
@@ -357,11 +361,18 @@ public final class SystemService {
 				mediaPlayer.setAudioAttributes(audioAttributes);
 				mediaPlayer.prepare();
 				mediaPlayer.start();
+				playbackStarted = true; // OnCompletionListener now owns the release
 			}
 		} catch (IOException e) {
 			final String errorMsg = e.getMessage();
 			if (errorMsg != null) {
 				Log.e(TAG, errorMsg);
+			}
+		} finally {
+			// Nothing is playing (alarm silenced, no AudioManager, or setup failed): release now.
+			// When playback started, the OnCompletionListener releases on completion instead.
+			if (!playbackStarted) {
+				mediaPlayer.release();
 			}
 		}
 	}
