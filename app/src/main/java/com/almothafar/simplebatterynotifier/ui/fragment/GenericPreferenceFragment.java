@@ -325,9 +325,15 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 
 	/**
 	 * Update summary for ListPreference
+	 * <p>
+	 * Skipped when a SummaryProvider is set (e.g. useSimpleSummaryProvider): calling
+	 * setSummary() in that case throws IllegalStateException, and the provider already
+	 * keeps the summary in sync with the selected entry.
 	 */
 	private void updateListPreferenceSummary(final ListPreference listPref) {
-		listPref.setSummary(listPref.getEntry());
+		if (isNull(listPref.getSummaryProvider())) {
+			listPref.setSummary(listPref.getEntry());
+		}
 	}
 
 	/**
