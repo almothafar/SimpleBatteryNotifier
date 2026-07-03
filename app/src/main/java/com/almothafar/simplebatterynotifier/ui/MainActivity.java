@@ -30,9 +30,6 @@ import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar;
 
-import java.util.Timer;
-import java.util.TimerTask;
-
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
@@ -47,17 +44,25 @@ public class MainActivity extends BaseActivity {
 
 	// Use Handler(Looper) constructor - Handler() deprecated to prevent null Looper
 	private final Handler handler = new Handler(Looper.getMainLooper());
-	private final Timer timer = new Timer();
 
 	private int batteryPercentage;
 	private String subTitle;
 	private BatteryDO batteryDO;
-	private TimerTask updateTask;
 	private ActivityResultLauncher<Intent> settingsLauncher;
 	private ActivityResultLauncher<String> notificationPermissionLauncher;
 
 	// UI elements
 	private MaterialButton batteryInsightsButton;
+
+	// Self-reposting refresh loop, bound to the foreground lifecycle (started in onPostResume,
+	// stopped in onPause) so it never stacks across resumes or keeps polling in the background.
+	private final Runnable updateTask = new Runnable() {
+		@Override
+		public void run() {
+			refreshBatteryUi();
+			handler.postDelayed(this, UPDATER_PERIOD);
+		}
+	};
 
 	/**
 	 * Create the options menu
@@ -157,12 +162,22 @@ public class MainActivity extends BaseActivity {
 	}
 
 	/**
+	 * Stop the refresh loop while the activity is not in the foreground so it doesn't keep
+	 * polling the battery (and draining it) in the background.
+	 */
+	@Override
+	protected void onPause() {
+		super.onPause();
+		stopUpdateTimer();
+	}
+
+	/**
 	 * Clean up resources when activity is destroyed
 	 */
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		timer.cancel();
+		stopUpdateTimer();
 	}
 
 	/**
@@ -199,36 +214,46 @@ public class MainActivity extends BaseActivity {
 	}
 
 	/**
-	 * Start the timer to periodically update battery information
+	 * Start the periodic battery refresh loop.
+	 * <p>
+	 * Removes any pending run first so repeated resume cycles can't stack multiple loops.
 	 */
 	private void startUpdateTimer() {
-		updateTask = new TimerTask() {
-			@Override
-			public void run() {
-				handler.post(() -> {
-					final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-					fillBatteryInfo();
-					progressBar.setProgress(batteryPercentage);
-					progressBar.setTitle(batteryPercentage + "%");
-					progressBar.setSubTitle(subTitle);
+		handler.removeCallbacks(updateTask);
+		handler.postDelayed(updateTask, UPDATER_DELAY);
+	}
 
-					// Update charging animation based on battery status
-					if (nonNull(batteryDO)) {
-						final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
-						progressBar.setCharging(isCharging);
-					}
+	/**
+	 * Stop the periodic battery refresh loop and drop any pending run.
+	 */
+	private void stopUpdateTimer() {
+		handler.removeCallbacks(updateTask);
+	}
 
-					final FragmentManager fragmentManager = getSupportFragmentManager();
-					final BatteryDetailsFragment batteryDetailsFragment =
-							(BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
+	/**
+	 * Refresh the battery UI (circular gauge + details fragment) with the latest reading.
+	 * Runs on the main thread via {@link #handler}.
+	 */
+	private void refreshBatteryUi() {
+		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
+		fillBatteryInfo();
+		progressBar.setProgress(batteryPercentage);
+		progressBar.setTitle(batteryPercentage + "%");
+		progressBar.setSubTitle(subTitle);
 
-					if (nonNull(batteryDetailsFragment) && nonNull(batteryDO)) {
-						batteryDetailsFragment.updateBatteryDetails(batteryDO);
-					}
-				});
-			}
-		};
-		timer.schedule(updateTask, UPDATER_DELAY, UPDATER_PERIOD);
+		// Update charging animation based on battery status
+		if (nonNull(batteryDO)) {
+			final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
+			progressBar.setCharging(isCharging);
+		}
+
+		final FragmentManager fragmentManager = getSupportFragmentManager();
+		final BatteryDetailsFragment batteryDetailsFragment =
+				(BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
+
+		if (nonNull(batteryDetailsFragment) && nonNull(batteryDO)) {
+			batteryDetailsFragment.updateBatteryDetails(batteryDO);
+		}
 	}
 
 	/**
