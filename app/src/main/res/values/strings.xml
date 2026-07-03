@@ -133,6 +133,8 @@
     <string name="design_capacity_dialog_title">Battery design capacity</string>
     <string name="design_capacity_dialog_message">Enter your battery\'s rated capacity in mAh from the manufacturer\'s specs. We\'ve prefilled a measured estimate — confirm or correct it for an accurate health figure.</string>
     <string name="design_capacity_hint">Capacity (mAh)</string>
+    <!-- Unit symbol (milliamp-hours); shown as the capacity field's suffix -->
+    <string name="capacity_unit_mah">mAh</string>
     <string name="look_up_my_model">Look up my model</string>
     <string name="no_browser_found">No browser available to open the search</string>
     <string name="save">Save</string>

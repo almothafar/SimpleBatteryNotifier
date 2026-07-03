@@ -1,6 +1,5 @@
 package com.almothafar.simplebatterynotifier.ui;
 
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -10,12 +9,14 @@ import android.os.Bundle;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
-import android.view.Gravity;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryHealthGrade;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
@@ -171,7 +172,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 				"Reset ALL (incl. real data)"
 		};
 
-		new AlertDialog.Builder(this)
+		new MaterialAlertDialogBuilder(this)
 				.setTitle("Battery Health Debug")
 				.setItems(options, (dialog, which) -> {
 					switch (which) {
@@ -192,7 +193,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 */
 	private void showDebugInfo() {
 		final String debugInfo = BatteryHealthTracker.getDebugInfo(this);
-		new AlertDialog.Builder(this)
+		new MaterialAlertDialogBuilder(this)
 				.setTitle("Tracking Debug Info")
 				.setMessage(debugInfo)
 				.setPositiveButton("OK", null)
@@ -226,17 +227,22 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * the value and reverts to the cycle-based estimate.
 	 */
 	private void showDesignCapacityDialog() {
-		final EditText input = new EditText(this);
+		final TextInputLayout inputLayout = new TextInputLayout(this);
+		inputLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+		inputLayout.setHint(getString(R.string.design_capacity_hint));
+		inputLayout.setSuffixText(getString(R.string.capacity_unit_mah));
+
+		final TextInputEditText input = new TextInputEditText(inputLayout.getContext());
 		input.setInputType(InputType.TYPE_CLASS_NUMBER);
 		// Max valid capacity is 15000 (5 digits); cap the length so the field can't overflow an int.
 		input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_DESIGN_CAPACITY_DIGITS)});
-		input.setHint(R.string.design_capacity_hint);
+		inputLayout.addView(input);
 
 		final int stored = BatteryHealthTracker.getDesignCapacity(this);
 		final int prefill = stored > 0 ? stored : SystemService.getBatteryCapacity(this);
 		if (prefill > 0) {
 			input.setText(String.valueOf(prefill));
-			input.setSelection(input.getText().length());
+			input.setSelection(String.valueOf(prefill).length());
 		}
 
 		// Indent the field to match the dialog's message padding
@@ -246,10 +252,9 @@ public class BatteryInsightsActivity extends BaseActivity {
 				FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
 		params.leftMargin = padding;
 		params.rightMargin = padding;
-		container.addView(input, params);
-		input.setGravity(Gravity.START);
+		container.addView(inputLayout, params);
 
-		final AlertDialog dialog = new AlertDialog.Builder(this)
+		final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
 				.setTitle(R.string.design_capacity_dialog_title)
 				.setMessage(R.string.design_capacity_dialog_message)
 				.setView(container)
@@ -262,7 +267,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 
 		// Override click handlers so invalid input (Save) and the lookup action (Neutral) don't dismiss.
 		dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-			if (saveDesignCapacity(input.getText().toString())) {
+			final CharSequence text = input.getText();
+			if (saveDesignCapacity(text == null ? "" : text.toString())) {
 				dialog.dismiss();
 			}
 		});
@@ -332,7 +338,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * Resets all health tracking data, including the first-use date and real charge cycles.
 	 */
 	private void resetHealthData() {
-		new AlertDialog.Builder(this)
+		new MaterialAlertDialogBuilder(this)
 				.setTitle("Reset ALL health data?")
 				.setMessage("This deletes ALL tracked battery health data, including the first-use date "
 						+ "and real charge cycles. Are you sure?")
