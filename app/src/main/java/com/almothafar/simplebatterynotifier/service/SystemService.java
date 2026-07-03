@@ -56,6 +56,29 @@ public final class SystemService {
 	}
 
 	/**
+	 * Map a {@link BatteryManager} status constant to its localized label
+	 * (e.g. "Charging", "Discharging", "Charged").
+	 * <p>
+	 * Single source of truth shared by the main screen's subtitle and the ongoing status
+	 * notification, so the two can't drift.
+	 *
+	 * @param context The application context
+	 * @param status  A {@code BatteryManager.BATTERY_STATUS_*} constant
+	 *
+	 * @return The localized status label ("Unknown" for unrecognized values)
+	 */
+	public static String getStatusLabel(final Context context, final int status) {
+		final Resources resources = context.getResources();
+		return switch (status) {
+			case BatteryManager.BATTERY_STATUS_FULL -> resources.getString(R.string.charged);
+			case BatteryManager.BATTERY_STATUS_CHARGING -> resources.getString(R.string.charging);
+			case BatteryManager.BATTERY_STATUS_NOT_CHARGING -> resources.getString(R.string.not_charging);
+			case BatteryManager.BATTERY_STATUS_DISCHARGING -> resources.getString(R.string.discharging);
+			default -> resources.getString(R.string.unknown);
+		};
+	}
+
+	/**
 	 * Get battery status intent from system
 	 *
 	 * @param context The application context
