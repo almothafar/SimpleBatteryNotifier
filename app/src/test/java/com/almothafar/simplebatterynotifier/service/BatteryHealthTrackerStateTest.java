@@ -34,38 +34,41 @@ public class BatteryHealthTrackerStateTest {
 	}
 
 	@Test
-	public void chargeCycle_completesWhenLowThenChargedToFull() {
-		// Drop to the low threshold -> a cycle begins but isn't counted yet
-		BatteryHealthTracker.recordBatteryState(context, 15, BatteryManager.BATTERY_STATUS_DISCHARGING);
+	public void chargeCycle_completesOnFullChargeFromEmpty() {
+		// Establish a starting level (first reading only seeds prevLevel, nothing accrues)
+		BatteryHealthTracker.recordBatteryState(context, 0, BatteryManager.BATTERY_STATUS_DISCHARGING);
 		assertEquals(0, BatteryHealthTracker.getChargeCycles(context));
 
-		// Charge back up past the full threshold -> the cycle completes
-		BatteryHealthTracker.recordBatteryState(context, 96, BatteryManager.BATTERY_STATUS_CHARGING);
+		// A full 0 -> 100 charge delivers 100 percentage-points = exactly one cycle
+		BatteryHealthTracker.recordBatteryState(context, 100, BatteryManager.BATTERY_STATUS_CHARGING);
 		assertEquals(1, BatteryHealthTracker.getChargeCycles(context));
 	}
 
 	@Test
 	public void chargeCycle_accumulatesAcrossPartialCharges() {
-		// A mid-range reading between low and full must not start or complete a cycle
-		BatteryHealthTracker.recordBatteryState(context, 15, BatteryManager.BATTERY_STATUS_DISCHARGING);
-		BatteryHealthTracker.recordBatteryState(context, 50, BatteryManager.BATTERY_STATUS_DISCHARGING);
+		// Two 40 -> 90 partial charges together deliver 100 percentage-points = one cycle.
+		BatteryHealthTracker.recordBatteryState(context, 40, BatteryManager.BATTERY_STATUS_DISCHARGING);
+		BatteryHealthTracker.recordBatteryState(context, 90, BatteryManager.BATTERY_STATUS_CHARGING); // +50 -> carry 50
 		assertEquals(0, BatteryHealthTracker.getChargeCycles(context));
 
-		BatteryHealthTracker.recordBatteryState(context, 96, BatteryManager.BATTERY_STATUS_FULL);
+		BatteryHealthTracker.recordBatteryState(context, 40, BatteryManager.BATTERY_STATUS_DISCHARGING); // drains, no accrual
+		BatteryHealthTracker.recordBatteryState(context, 90, BatteryManager.BATTERY_STATUS_CHARGING); // +50 -> 1 cycle
 		assertEquals(1, BatteryHealthTracker.getChargeCycles(context));
 	}
 
 	@Test
-	public void chargeCycle_notCountedWhenReachingFullWithoutCharging() {
-		BatteryHealthTracker.recordBatteryState(context, 15, BatteryManager.BATTERY_STATUS_DISCHARGING);
-		// Back above full while NOT charging -> tracking resets without counting a cycle
-		BatteryHealthTracker.recordBatteryState(context, 98, BatteryManager.BATTERY_STATUS_DISCHARGING);
+	public void chargeCycle_singlePartialChargeDoesNotComplete() {
+		// A single 20 -> 95 charge (the old "swing" that used to count 1) is only 0.75 of a cycle now.
+		BatteryHealthTracker.recordBatteryState(context, 20, BatteryManager.BATTERY_STATUS_DISCHARGING);
+		BatteryHealthTracker.recordBatteryState(context, 95, BatteryManager.BATTERY_STATUS_CHARGING);
 		assertEquals(0, BatteryHealthTracker.getChargeCycles(context));
+	}
 
-		// And a fresh low->full charge after the reset still counts exactly one cycle
-		BatteryHealthTracker.recordBatteryState(context, 18, BatteryManager.BATTERY_STATUS_DISCHARGING);
-		BatteryHealthTracker.recordBatteryState(context, 97, BatteryManager.BATTERY_STATUS_CHARGING);
-		assertEquals(1, BatteryHealthTracker.getChargeCycles(context));
+	@Test
+	public void chargeCycle_dischargingNeverCounts() {
+		BatteryHealthTracker.recordBatteryState(context, 90, BatteryManager.BATTERY_STATUS_DISCHARGING);
+		BatteryHealthTracker.recordBatteryState(context, 10, BatteryManager.BATTERY_STATUS_DISCHARGING);
+		assertEquals(0, BatteryHealthTracker.getChargeCycles(context));
 	}
 
 	@Test
@@ -79,8 +82,8 @@ public class BatteryHealthTrackerStateTest {
 	@Test
 	public void effectiveCycleCount_fallsBackToTrackedEstimate() {
 		// No OS EXTRA_CYCLE_COUNT is available under test, so the effective count is the tracked one
-		BatteryHealthTracker.recordBatteryState(context, 12, BatteryManager.BATTERY_STATUS_DISCHARGING);
-		BatteryHealthTracker.recordBatteryState(context, 99, BatteryManager.BATTERY_STATUS_CHARGING);
+		BatteryHealthTracker.recordBatteryState(context, 0, BatteryManager.BATTERY_STATUS_DISCHARGING);
+		BatteryHealthTracker.recordBatteryState(context, 100, BatteryManager.BATTERY_STATUS_CHARGING);
 		assertEquals(1, BatteryHealthTracker.getEffectiveCycleCount(context));
 	}
 
@@ -107,8 +110,8 @@ public class BatteryHealthTrackerStateTest {
 
 	@Test
 	public void resetHealthData_clearsCyclesAndFirstUse() {
-		BatteryHealthTracker.recordBatteryState(context, 10, BatteryManager.BATTERY_STATUS_DISCHARGING);
-		BatteryHealthTracker.recordBatteryState(context, 96, BatteryManager.BATTERY_STATUS_CHARGING);
+		BatteryHealthTracker.recordBatteryState(context, 0, BatteryManager.BATTERY_STATUS_DISCHARGING);
+		BatteryHealthTracker.recordBatteryState(context, 100, BatteryManager.BATTERY_STATUS_CHARGING);
 		assertEquals(1, BatteryHealthTracker.getChargeCycles(context));
 
 		BatteryHealthTracker.resetHealthData(context);

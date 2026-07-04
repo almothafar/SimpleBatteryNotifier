@@ -16,8 +16,11 @@ import static java.util.Objects.isNull;
  * Tracks battery health metrics including charge cycles and estimated battery health.
  * <p>
  * Charge Cycle Definition:
- * A full charge cycle is counted when the battery charges from <= 20% to >= 95%.
- * This follows industry standards where partial charges accumulate to form complete cycles.
+ * A charge cycle is one full battery's worth of charge delivered (100 percentage-points). Partial
+ * charges accumulate: e.g. charging 40%->90% twice counts as one cycle. This matches the industry
+ * definition and, unlike a strict single low->high swing, counts real usage where the user tops up
+ * before empty and unplugs before full. This tracked estimate is only the fallback; the OS-reported
+ * count (EXTRA_CYCLE_COUNT, Android 14+) still takes precedence in {@link #getEffectiveCycleCount}.
  * <p>
  * Battery Health Estimation:
  * Based on charge cycles and typical lithium-ion battery degradation patterns:
@@ -33,16 +36,17 @@ public class BatteryHealthTracker {
 	// SharedPreferences keys
 	private static final String PREF_CHARGE_CYCLES = "_battery_health_charge_cycles";
 	private static final String PREF_FIRST_USE_DATE = "_battery_health_first_use_date";
-	private static final String PREF_LAST_LOW_BATTERY = "_battery_health_last_low_battery";
-	private static final String PREF_CYCLE_IN_PROGRESS = "_battery_health_cycle_in_progress";
+	// Last observed battery level, and the fractional charge accrued toward the next whole cycle
+	// (percentage-points, 0-99), persisted so a partial charge survives app/process restarts.
+	private static final String PREF_LAST_LEVEL = "_battery_health_last_level";
+	private static final String PREF_CYCLE_ACCRUAL_POINTS = "_battery_health_cycle_accrual_points";
 	private static final String PREF_DESIGN_CAPACITY = "key_battery_design_capacity";
 	// Debug-only cycle offset kept separate from real tracking so it can be cleared without
 	// destroying genuine data (see the debug menu in BatteryInsightsActivity).
 	private static final String PREF_DEBUG_CHARGE_CYCLES = "_battery_health_debug_charge_cycles";
 
-	// Battery thresholds for cycle tracking
-	private static final int LOW_BATTERY_THRESHOLD = 20;
-	private static final int FULL_BATTERY_THRESHOLD = 95;
+	// One charge cycle = this many percentage-points of charge delivered to the battery.
+	private static final int CYCLE_PERCENT_POINTS = 100;
 
 	// Health estimation thresholds (cycle-based)
 	private static final int EXCELLENT_THRESHOLD = 300;
@@ -88,34 +92,64 @@ public class BatteryHealthTracker {
 			Log.d(TAG, "First use date initialized");
 		}
 
-		// Track charge cycle progress (the three branches below are mutually exclusive)
-		final boolean cycleInProgress = prefs.getBoolean(PREF_CYCLE_IN_PROGRESS, false);
+		// Accrue partial charge cycles from the rise in battery level while charging. Each 100
+		// percentage-points of charge delivered counts as one cycle; the remainder carries over.
 		final boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING
 				|| status == BatteryManager.BATTERY_STATUS_FULL;
+		final int prevLevel = prefs.getInt(PREF_LAST_LEVEL, -1);
+		final int carry = prefs.getInt(PREF_CYCLE_ACCRUAL_POINTS, 0);
+		final CycleAccrual accrual = accruePartialCycles(prevLevel, batteryLevel, isCharging, carry);
 
-		if (batteryLevel <= LOW_BATTERY_THRESHOLD && !cycleInProgress) {
-			// Start a charge cycle when battery is low
-			editor.putBoolean(PREF_CYCLE_IN_PROGRESS, true)
-			      .putLong(PREF_LAST_LOW_BATTERY, System.currentTimeMillis());
+		if (accrual.completedCycles() > 0) {
+			final int total = prefs.getInt(PREF_CHARGE_CYCLES, 0) + accrual.completedCycles();
+			editor.putInt(PREF_CHARGE_CYCLES, total);
 			dirty = true;
-			Log.d(TAG, "Charge cycle started at " + batteryLevel + "%");
-		} else if (cycleInProgress && isCharging && batteryLevel >= FULL_BATTERY_THRESHOLD) {
-			// Complete a charge cycle when battery reaches full while charging
-			final int currentCycles = prefs.getInt(PREF_CHARGE_CYCLES, 0);
-			editor.putInt(PREF_CHARGE_CYCLES, currentCycles + 1)
-			      .putBoolean(PREF_CYCLE_IN_PROGRESS, false);
+			Log.i(TAG, "Charge cycle(s) completed (+" + accrual.completedCycles() + "). Total cycles: " + total);
+		}
+		if (accrual.carryPercentPoints() != carry) {
+			editor.putInt(PREF_CYCLE_ACCRUAL_POINTS, accrual.carryPercentPoints());
 			dirty = true;
-			Log.i(TAG, "Charge cycle completed! Total cycles: " + (currentCycles + 1));
-		} else if (cycleInProgress && !isCharging && batteryLevel > FULL_BATTERY_THRESHOLD) {
-			// Reset cycle tracking if battery goes back to high without charging
-			editor.putBoolean(PREF_CYCLE_IN_PROGRESS, false);
+		}
+		if (batteryLevel != prevLevel) {
+			editor.putInt(PREF_LAST_LEVEL, batteryLevel);
 			dirty = true;
-			Log.d(TAG, "Charge cycle reset - battery was not charged to full");
 		}
 
 		if (dirty) {
 			editor.apply();
 		}
+	}
+
+	/**
+	 * Accrues fractional charge cycles from a rise in battery level.
+	 * <p>
+	 * A charge cycle is {@link #CYCLE_PERCENT_POINTS} percentage-points of charge delivered, so partial
+	 * charges accumulate across sessions instead of requiring a single low-to-full swing. Only positive
+	 * level deltas observed while charging count; discharging, a flat level, or an unknown previous
+	 * level ({@code prevLevel < 0}) contribute nothing and leave the carry untouched. Pure and
+	 * Android-free so it is unit-testable.
+	 *
+	 * @param prevLevel          last recorded battery level (0-100), or -1 when unknown
+	 * @param currentLevel       current battery level (0-100)
+	 * @param charging           whether the battery is currently charging (or full)
+	 * @param carryPercentPoints percentage-points already accrued toward the next cycle (0-99)
+	 *
+	 * @return the whole cycles completed by this step and the new carry remainder
+	 */
+	static CycleAccrual accruePartialCycles(final int prevLevel, final int currentLevel,
+	                                        final boolean charging, final int carryPercentPoints) {
+		if (!charging || prevLevel < 0 || currentLevel <= prevLevel) {
+			return new CycleAccrual(0, carryPercentPoints);
+		}
+		final int total = carryPercentPoints + (currentLevel - prevLevel);
+		return new CycleAccrual(total / CYCLE_PERCENT_POINTS, total % CYCLE_PERCENT_POINTS);
+	}
+
+	/**
+	 * Result of {@link #accruePartialCycles}: the whole cycles completed this step, and the leftover
+	 * percentage-points carried toward the next cycle.
+	 */
+	record CycleAccrual(int completedCycles, int carryPercentPoints) {
 	}
 
 	/**
@@ -458,8 +492,8 @@ public class BatteryHealthTracker {
 		prefs.edit()
 		     .remove(PREF_CHARGE_CYCLES)
 		     .remove(PREF_FIRST_USE_DATE)
-		     .remove(PREF_LAST_LOW_BATTERY)
-		     .remove(PREF_CYCLE_IN_PROGRESS)
+		     .remove(PREF_LAST_LEVEL)
+		     .remove(PREF_CYCLE_ACCRUAL_POINTS)
 		     .remove(PREF_DEBUG_CHARGE_CYCLES)
 		     .apply();
 		Log.i(TAG, "Battery health data reset");
@@ -517,16 +551,16 @@ public class BatteryHealthTracker {
 		final int cycles = prefs.getInt(PREF_CHARGE_CYCLES, 0);
 		final int debugCycles = prefs.getInt(PREF_DEBUG_CHARGE_CYCLES, 0);
 		final long firstUse = prefs.getLong(PREF_FIRST_USE_DATE, 0);
-		final boolean cycleInProgress = prefs.getBoolean(PREF_CYCLE_IN_PROGRESS, false);
-		final long lastLowBattery = prefs.getLong(PREF_LAST_LOW_BATTERY, 0);
+		final int accrualPoints = prefs.getInt(PREF_CYCLE_ACCRUAL_POINTS, 0);
+		final int lastLevel = prefs.getInt(PREF_LAST_LEVEL, -1);
 
 		return "Tracking Status:\n" +
 				"- First Use: " + (firstUse == 0 ? "Not initialized" : new java.util.Date(firstUse)) + "\n" +
 				"- Charge Cycles (real): " + cycles + "\n" +
 				"- Charge Cycles (debug-injected): " + debugCycles + "\n" +
 				"- Effective Cycle Count: " + getEffectiveCycleCount(context) + "\n" +
-				"- Cycle in Progress: " + cycleInProgress + "\n" +
-				"- Last Low Battery: " + (lastLowBattery == 0 ? "Never" : new java.util.Date(lastLowBattery)) + "\n" +
+				"- Cycle accrual (toward next): " + accrualPoints + "/" + CYCLE_PERCENT_POINTS + "\n" +
+				"- Last Level: " + (lastLevel < 0 ? "Unknown" : lastLevel + "%") + "\n" +
 				"- Days Since First Use: " + getDaysSinceFirstUse(context);
 	}
 }

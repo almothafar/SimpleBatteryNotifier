@@ -55,6 +55,34 @@ public class BatteryHealthTrackerTest {
 	}
 
 	@Test
+	public void accruePartialCycles_accumulatesPositiveDeltasWhileCharging() {
+		// +50 (40 -> 90) while charging, no prior carry -> 0 cycles, carry 50
+		final BatteryHealthTracker.CycleAccrual first =
+				BatteryHealthTracker.accruePartialCycles(40, 90, true, 0);
+		assertEquals(0, first.completedCycles());
+		assertEquals(50, first.carryPercentPoints());
+
+		// Another +50 on top of carry 50 -> exactly one cycle, carry resets to 0
+		final BatteryHealthTracker.CycleAccrual second =
+				BatteryHealthTracker.accruePartialCycles(40, 90, true, 50);
+		assertEquals(1, second.completedCycles());
+		assertEquals(0, second.carryPercentPoints());
+	}
+
+	@Test
+	public void accruePartialCycles_ignoresDischargeFlatNotChargingAndUnknownPrev() {
+		// Discharging (current < prev): no accrual, carry unchanged
+		assertEquals(0, BatteryHealthTracker.accruePartialCycles(90, 40, true, 30).completedCycles());
+		assertEquals(30, BatteryHealthTracker.accruePartialCycles(90, 40, true, 30).carryPercentPoints());
+		// Flat level
+		assertEquals(30, BatteryHealthTracker.accruePartialCycles(50, 50, true, 30).carryPercentPoints());
+		// Not charging, even though the level rose
+		assertEquals(30, BatteryHealthTracker.accruePartialCycles(40, 90, false, 30).carryPercentPoints());
+		// Unknown previous level (-1): first observation only, nothing accrues
+		assertEquals(30, BatteryHealthTracker.accruePartialCycles(-1, 90, true, 30).carryPercentPoints());
+	}
+
+	@Test
 	public void isValidDesignCapacity_enforcesRange() {
 		assertTrue(BatteryHealthTracker.isValidDesignCapacity(BatteryHealthTracker.MIN_DESIGN_CAPACITY_MAH));
 		assertTrue(BatteryHealthTracker.isValidDesignCapacity(BatteryHealthTracker.MAX_DESIGN_CAPACITY_MAH));
