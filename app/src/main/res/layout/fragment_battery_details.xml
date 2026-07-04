@@ -4,7 +4,9 @@
     android:layout_height="match_parent"
     tools:context="com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment">
 
+    <!-- Option 2 (#75): id lets the fragment run a one-time "bob" animation hinting the table scrolls. -->
     <ScrollView
+        android:id="@+id/batteryDetailsScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true">

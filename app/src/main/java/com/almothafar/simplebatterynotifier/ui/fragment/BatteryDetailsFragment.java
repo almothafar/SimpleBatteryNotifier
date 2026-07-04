@@ -1,11 +1,19 @@
 package com.almothafar.simplebatterynotifier.ui.fragment;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -66,6 +74,8 @@ public class BatteryDetailsFragment extends Fragment {
 			createDetailsTable(view);
 		}
 
+		maybeShowScrollHint(view);
+
 		return view;
 	}
 
@@ -101,6 +111,59 @@ public class BatteryDetailsFragment extends Fragment {
 		if (nonNull(viewRef) && nonNull(batteryDO)) {
 			this.createDetailsTable(viewRef);
 		}
+	}
+
+	/**
+	 * Option 2 (#75): once on first display, gently bob the details list down and back up when rows
+	 * sit below the fold — a moving cue that the table scrolls. The first touch cancels it so it
+	 * never fights the user, and it is skipped when the system "remove animations" setting is on.
+	 *
+	 * @param root The fragment view containing the scroll view
+	 */
+	@SuppressLint("ClickableViewAccessibility")
+	private void maybeShowScrollHint(final View root) {
+		final ScrollView scroll = root.findViewById(R.id.batteryDetailsScroll);
+		if (isNull(scroll)) {
+			return;
+		}
+		// Respect the accessibility "remove animations" setting.
+		final float animScale = Settings.Global.getFloat(
+				root.getContext().getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE, 1f);
+		if (animScale == 0f) {
+			return;
+		}
+		// Delay so the initial layout/measure (and the first data refresh) have settled.
+		scroll.postDelayed(() -> {
+			final View content = scroll.getChildAt(0);
+			if (isNull(content)) {
+				return;
+			}
+			final int hiddenPx = content.getHeight() - scroll.getHeight();
+			if (hiddenPx <= 0) {
+				return; // nothing below the fold — no hint needed
+			}
+			final int reveal = Math.min(hiddenPx,
+					Math.round(96 * scroll.getResources().getDisplayMetrics().density));
+			final ObjectAnimator down = ObjectAnimator.ofInt(scroll, "scrollY", 0, reveal);
+			final ObjectAnimator up = ObjectAnimator.ofInt(scroll, "scrollY", reveal, 0);
+			final AnimatorSet hint = new AnimatorSet();
+			hint.playSequentially(down, up);
+			hint.setDuration(850);
+			hint.setInterpolator(new AccelerateDecelerateInterpolator());
+
+			// Never fight the user: the first touch cancels the hint and hands scrolling back.
+			scroll.setOnTouchListener((v, event) -> {
+				hint.cancel();
+				return false; // don't consume — let the ScrollView scroll normally
+			});
+			hint.addListener(new AnimatorListenerAdapter() {
+				@Override
+				public void onAnimationEnd(final Animator animation) {
+					scroll.setOnTouchListener(null);
+				}
+			});
+			hint.start();
+		}, 700L);
 	}
 
 	/**
