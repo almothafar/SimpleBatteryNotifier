@@ -28,4 +28,21 @@ public class SystemServiceTest {
 		assertEquals(0, SystemService.estimateFullCapacityMah(2_000_000, -1));
 		assertEquals(0, SystemService.estimateFullCapacityMah(2_000_000, 101));
 	}
+
+	@Test
+	public void estimateFullCapacity_implausibleResult_returnsZero() {
+		// Kirin/HiSilicon device reporting CHARGE_COUNTER in the wrong unit: raw 9000 at 100% -> 9 mAh,
+		// far below any real battery, so it must be rejected as "unknown" (issue #69).
+		assertEquals(0, SystemService.estimateFullCapacityMah(9000, 100));
+		assertEquals(0, SystemService.estimateFullCapacityMah(2000, 50)); // -> 4 mAh
+		// Absurdly large (wrong unit the other way) is rejected too: 200,000,000 µAh at 100% -> 200000 mAh
+		assertEquals(0, SystemService.estimateFullCapacityMah(200_000_000, 100));
+	}
+
+	@Test
+	public void estimateFullCapacity_plausibleBoundaries_areKept() {
+		// A small-but-real 500 mAh battery (lower bound) and a large 15000 mAh (upper bound) are kept.
+		assertEquals(500, SystemService.estimateFullCapacityMah(500_000, 100));
+		assertEquals(15000, SystemService.estimateFullCapacityMah(15_000_000, 100));
+	}
 }

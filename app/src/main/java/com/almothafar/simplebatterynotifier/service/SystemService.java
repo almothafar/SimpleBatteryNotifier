@@ -30,6 +30,12 @@ import static java.util.Objects.isNull;
 public final class SystemService {
 	private static final String TAG = "com.almothafar";
 
+	// A plausible phone-battery full-capacity range (mAh). Some devices (e.g. certain Kirin/HiSilicon)
+	// report BATTERY_PROPERTY_CHARGE_COUNTER in a non-standard unit, yielding absurd single/double-digit
+	// mAh estimates; anything outside this range is treated as "unknown". See issue #69.
+	private static final int MIN_PLAUSIBLE_CAPACITY_MAH = 500;
+	private static final int MAX_PLAUSIBLE_CAPACITY_MAH = 15000;
+
 	private SystemService() {
 		// Utility class - prevent instantiation
 	}
@@ -274,19 +280,26 @@ public final class SystemService {
 	 * <p>
 	 * Pure helper with no Android dependencies, so it is unit-testable. {@code getIntProperty}
 	 * returns {@link Integer#MIN_VALUE} for unsupported properties; any non-positive or
-	 * out-of-range input yields 0 ("unknown").
+	 * out-of-range input, or a result outside a plausible battery range, yields 0 ("unknown").
 	 *
 	 * @param chargeCounterUah remaining charge in microampere-hours (µAh)
 	 * @param capacityPercent  remaining charge as a percentage (1-100)
 	 *
-	 * @return estimated full capacity in mAh, or 0 when the inputs are unusable
+	 * @return estimated full capacity in mAh, or 0 when the inputs are unusable or the result is implausible
 	 */
 	static int estimateFullCapacityMah(final int chargeCounterUah, final int capacityPercent) {
 		if (chargeCounterUah <= 0 || capacityPercent <= 0 || capacityPercent > 100) {
 			return 0; // Unknown / unsupported on this device
 		}
 		// full µAh = chargeCounter / (percent / 100); mAh = full / 1000  ==>  chargeCounter / (percent * 10)
-		return Math.round(chargeCounterUah / (capacityPercent * 10f));
+		final int estimateMah = Math.round(chargeCounterUah / (capacityPercent * 10f));
+		// Some devices report CHARGE_COUNTER in the wrong unit, producing absurd values (e.g. 9 mAh from a
+		// raw counter of 9000). Reject anything outside a plausible battery range so callers show "Unknown"
+		// and fall back to the cycle-based estimate rather than garbage. See issue #69.
+		if (estimateMah < MIN_PLAUSIBLE_CAPACITY_MAH || estimateMah > MAX_PLAUSIBLE_CAPACITY_MAH) {
+			return 0;
+		}
+		return estimateMah;
 	}
 
 	/**
