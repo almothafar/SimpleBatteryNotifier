@@ -165,6 +165,15 @@
     <string name="notifications_permission_rationale">Notifications are important for this app to work properly</string>
     <string name="open_settings">Open Settings</string>
 
+    <!-- Feedback / report an issue -->
+    <string name="action_send_feedback">Send feedback</string>
+    <string name="feedback_dialog_title">Send feedback</string>
+    <string name="feedback_option_github">Report on GitHub</string>
+    <string name="feedback_option_email">Email the developer</string>
+    <!-- %1$s is the app version, e.g. 2.0.71 -->
+    <string name="feedback_email_subject">Simple Battery Notifier feedback (v%1$s)</string>
+    <string name="no_email_app">No email app found</string>
+
     <!-- App language picker -->
     <string name="pref_language_category">Language</string>
     <string name="pref_title_language">App language</string>
@@ -221,6 +230,10 @@
 
     <!-- Notification service -->
     <string name="_default_notification_sound_uri" translatable="false">content://settings/system/notification_sound</string>
+
+    <!-- External endpoints — single source of truth for the links/emails used in code -->
+    <string name="feedback_github_url" translatable="false">https://github.com/almothafar/SimpleBatteryNotifier/issues/new/choose</string>
+    <string name="feedback_support_email" translatable="false">support@almothafar.com</string>
 
     <!-- Accessibility -->
     <string name="battery_progress_description">Battery at %1$d percent</string>
