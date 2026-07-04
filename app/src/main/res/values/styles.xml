@@ -40,6 +40,14 @@
         <item name="android:textColorPrimary">@android:color/white</item>
         <item name="android:textColorSecondary">@android:color/white</item>
         <item name="actionMenuTextColor">@android:color/white</item>
+        <!-- Tint control icons (the overflow three-dots) white to match the white gear -->
+        <item name="colorControlNormal">@android:color/white</item>
+    </style>
+
+    <!-- Slightly smaller toolbar title so the long app name doesn't dominate the bar.
+         Color stays white via the Toolbar's app:titleTextColor. -->
+    <style name="ToolBarStyle.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">18sp</item>
     </style>
 
     <!-- Settings theme without ActionBar (we use Toolbar instead) -->

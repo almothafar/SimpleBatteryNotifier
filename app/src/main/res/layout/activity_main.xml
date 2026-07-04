@@ -19,6 +19,7 @@
             android:theme="@style/ToolBarStyle"
             app:popupTheme="@style/ThemeOverlay.Material3.Light"
             app:title="@string/app_name"
+            app:titleTextAppearance="@style/ToolBarStyle.Title"
             app:titleTextColor="@android:color/white"/>
 
     <LinearLayout
