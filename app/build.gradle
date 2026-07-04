@@ -32,21 +32,21 @@ afterEvaluate {
 }
 
 android {
-    namespace 'com.almothafar.simplebatterynotifier'
+    namespace = 'com.almothafar.simplebatterynotifier'
 
     compileSdk = 36
 
     defaultConfig {
-        applicationId "com.almothafar.simplebatterynotifier"
+        applicationId = "com.almothafar.simplebatterynotifier"
         minSdk = 26
         targetSdk = 36
-        versionCode versionProps['versionCode'].toInteger()
-        versionName "${versionProps['versionPrefix']}.${versionProps['versionCode']}"
+        versionCode = versionProps['versionCode'].toInteger()
+        versionName = "${versionProps['versionPrefix']}.${versionProps['versionCode']}"
     }
 
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
                     'proguard-rules.pro'
         }
@@ -57,8 +57,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_25
-        targetCompatibility JavaVersion.VERSION_25
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
 
     testOptions {
