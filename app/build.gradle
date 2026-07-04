@@ -34,7 +34,7 @@ afterEvaluate {
 android {
     namespace 'com.almothafar.simplebatterynotifier'
 
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId "com.almothafar.simplebatterynotifier"
@@ -57,8 +57,11 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_25
-        targetCompatibility JavaVersion.VERSION_25
+        // Capped at 24 (not 25): AGP 9 registers a built-in Kotlin task even for this Java-only
+        // module, and AGP 9.2.1's bundled Kotlin supports JVM targets only up to 24. The app is
+        // dexed, so 24 vs 25 has no runtime effect. Revisit when AGP bundles Kotlin with 25 support.
+        sourceCompatibility JavaVersion.VERSION_24
+        targetCompatibility JavaVersion.VERSION_24
     }
 
     testOptions {
@@ -80,7 +83,7 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.core:core:1.18.0'                 // held at 1.18.0; core 1.19.0 requires AGP 9.1+ (see #81)
+    implementation 'androidx.core:core:1.19.0'
     implementation 'com.google.android.material:material:1.14.0'
 
     implementation 'androidx.preference:preference:1.2.1'     // AndroidX settings UI
