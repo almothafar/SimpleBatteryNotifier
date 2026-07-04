@@ -8,5 +8,7 @@
 
     <!-- System UI overlap fixes -->
     <dimen name="toolbar_status_bar_padding">24dp</dimen>
-    <dimen name="content_navigation_bar_padding">64dp</dimen>
+    <!-- Small content breathing room at the bottom. On API < 35 the system already insets content
+         above the navigation bar, so a large fixed value here just wastes space (see issue #70). -->
+    <dimen name="content_navigation_bar_padding">16dp</dimen>
 </resources>

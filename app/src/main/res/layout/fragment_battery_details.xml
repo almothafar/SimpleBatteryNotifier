@@ -4,13 +4,18 @@
     android:layout_height="match_parent"
     tools:context="com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment">
 
-    <TableLayout
-        android:id="@+id/batteryDetailsTable"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:stretchColumns="0,1"
-        android:padding="20sp"
-        android:orientation="horizontal">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-    </TableLayout>
+        <TableLayout
+            android:id="@+id/batteryDetailsTable"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stretchColumns="0,1"
+            android:padding="20sp"
+            android:orientation="horizontal" />
+
+    </ScrollView>
 </FrameLayout>
