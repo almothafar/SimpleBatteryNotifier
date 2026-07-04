@@ -114,9 +114,10 @@ public class BatteryDetailsFragment extends Fragment {
 	}
 
 	/**
-	 * Option 2 (#75): once on first display, gently bob the details list down and back up when rows
-	 * sit below the fold — a moving cue that the table scrolls. The first touch cancels it so it
-	 * never fights the user, and it is skipped when the system "remove animations" setting is on.
+	 * #75: on first display, gently bob the details list down and back up when rows sit below the
+	 * fold — a one-time motion cue that (together with the always-on fading edge) shows the table
+	 * scrolls. The first touch cancels it so it never fights the user, and it is skipped when the
+	 * system "remove animations" setting is on. Timing is deliberately unhurried — tune here.
 	 *
 	 * @param root The fragment view containing the scroll view
 	 */
@@ -132,7 +133,7 @@ public class BatteryDetailsFragment extends Fragment {
 		if (animScale == 0f) {
 			return;
 		}
-		// Delay so the initial layout/measure (and the first data refresh) have settled.
+		// Delay so the screen settles first, then the bob reads as intentional (not a load glitch).
 		scroll.postDelayed(() -> {
 			final View content = scroll.getChildAt(0);
 			if (isNull(content)) {
@@ -148,7 +149,7 @@ public class BatteryDetailsFragment extends Fragment {
 			final ObjectAnimator up = ObjectAnimator.ofInt(scroll, "scrollY", reveal, 0);
 			final AnimatorSet hint = new AnimatorSet();
 			hint.playSequentially(down, up);
-			hint.setDuration(850);
+			hint.setDuration(1150); // per leg — a little slower for a gentler bob
 			hint.setInterpolator(new AccelerateDecelerateInterpolator());
 
 			// Never fight the user: the first touch cancels the hint and hands scrolling back.
@@ -163,7 +164,7 @@ public class BatteryDetailsFragment extends Fragment {
 				}
 			});
 			hint.start();
-		}, 700L);
+		}, 1300L); // a bit more delay than the first pass
 	}
 
 	/**

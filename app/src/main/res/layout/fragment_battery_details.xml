@@ -4,12 +4,16 @@
     android:layout_height="match_parent"
     tools:context="com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment">
 
-    <!-- Option 2 (#75): id lets the fragment run a one-time "bob" animation hinting the table scrolls. -->
+    <!-- #75 (fade + bob): a persistent fading edge + scrollbar always signal the list scrolls, and
+         on first open a one-time gentle bob (see BatteryDetailsFragment) reinforces it. Footer stays pinned. -->
     <ScrollView
         android:id="@+id/batteryDetailsScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:scrollbars="vertical"
+        android:requiresFadingEdge="vertical"
+        android:fadingEdgeLength="28dp">
 
         <TableLayout
             android:id="@+id/batteryDetailsTable"
