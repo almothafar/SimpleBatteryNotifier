@@ -57,11 +57,10 @@ android {
     }
 
     compileOptions {
-        // Capped at 24 (not 25): AGP 9 registers a built-in Kotlin task even for this Java-only
-        // module, and AGP 9.2.1's bundled Kotlin supports JVM targets only up to 24. The app is
-        // dexed, so 24 vs 25 has no runtime effect. Revisit when AGP bundles Kotlin with 25 support.
-        sourceCompatibility JavaVersion.VERSION_24
-        targetCompatibility JavaVersion.VERSION_24
+        // Java 25 requires AGP 9's built-in Kotlin task to run Kotlin 2.3+ (JVM target 25 support);
+        // the root build.gradle pins kotlin-gradle-plugin to 2.3.21 for that. See #81.
+        sourceCompatibility JavaVersion.VERSION_25
+        targetCompatibility JavaVersion.VERSION_25
     }
 
     testOptions {
