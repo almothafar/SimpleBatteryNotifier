@@ -1,6 +1,7 @@
 package com.almothafar.simplebatterynotifier.ui;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -17,6 +18,7 @@ import android.view.MenuItem;
 import android.widget.Toast;
 import com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -87,6 +89,10 @@ public class MainActivity extends BaseActivity {
 		final int id = item.getItemId();
 		if (id == R.id.action_settings) {
 			openSettings();
+			return true;
+		}
+		if (id == R.id.action_feedback) {
+			showFeedbackChooser();
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -330,5 +336,73 @@ public class MainActivity extends BaseActivity {
 	private void openBatteryInsights() {
 		final Intent intent = new Intent(this, BatteryInsightsActivity.class);
 		startActivity(intent);
+	}
+
+	/**
+	 * Show the feedback chooser: report on GitHub, or email the developer.
+	 */
+	private void showFeedbackChooser() {
+		final CharSequence[] options = {
+				getString(R.string.feedback_option_github),
+				getString(R.string.feedback_option_email)
+		};
+		new MaterialAlertDialogBuilder(this)
+				.setTitle(R.string.feedback_dialog_title)
+				.setItems(options, (dialog, which) -> {
+					if (which == 0) {
+						openGitHubIssues();
+					} else {
+						emailDeveloper();
+					}
+				})
+				.setNegativeButton(android.R.string.cancel, null)
+				.show();
+	}
+
+	/**
+	 * Open the GitHub issue-template chooser in a browser.
+	 */
+	private void openGitHubIssues() {
+		final Uri uri = Uri.parse("https://github.com/almothafar/SimpleBatteryNotifier/issues/new/choose");
+		try {
+			startActivity(new Intent(Intent.ACTION_VIEW, uri));
+		} catch (ActivityNotFoundException e) {
+			Toast.makeText(this, R.string.no_browser_found, Toast.LENGTH_SHORT).show();
+		}
+	}
+
+	/**
+	 * Open the mail app to the developer with a prefilled subject and a device-info block.
+	 */
+	private void emailDeveloper() {
+		final Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:support@almothafar.com"));
+		intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.feedback_email_subject, appVersionName()));
+		intent.putExtra(Intent.EXTRA_TEXT, deviceInfoBlock());
+		try {
+			startActivity(intent);
+		} catch (ActivityNotFoundException e) {
+			Toast.makeText(this, R.string.no_email_app, Toast.LENGTH_SHORT).show();
+		}
+	}
+
+	/**
+	 * The app's version name (e.g. "2.0.71"), or an empty string if it can't be read.
+	 */
+	private String appVersionName() {
+		try {
+			return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+		} catch (PackageManager.NameNotFoundException e) {
+			return "";
+		}
+	}
+
+	/**
+	 * A short diagnostic block appended to a feedback email so reports carry the essentials.
+	 */
+	private String deviceInfoBlock() {
+		return "\n\n---\n"
+				+ "App: " + appVersionName() + "\n"
+				+ "Device: " + Build.MANUFACTURER + " " + Build.MODEL + "\n"
+				+ "Android: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")";
 	}
 }
