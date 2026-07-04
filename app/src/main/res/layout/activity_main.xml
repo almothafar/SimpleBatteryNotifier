@@ -43,44 +43,58 @@
             android:layout_marginBottom="-10dp" />
     </LinearLayout>
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/detailsFragmentLayout"
+    <!-- Option 1 (#75): table + footer share one NestedScrollView so the footer is non-sticky
+         and every row is reachable by scrolling. Toolbar + gauge stay pinned above. -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:name="com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment"
-        tools:layout="@layout/fragment_battery_details" />
+        android:fillViewport="true">
 
-    <!-- Battery Health Section -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="@dimen/content_navigation_bar_padding"
-        android:background="@android:color/white">
-
-        <!-- Battery Insights Button - Material3 -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/batteryInsightsButton"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/view_battery_insights"
-            android:textColor="@android:color/white"
-            app:backgroundTint="@color/top_background_color"
-            android:layout_marginBottom="8dp"
-            style="@style/Widget.Material3.Button" />
+            android:orientation="vertical">
 
-        <!-- Developer Signature Fragment -->
-        <androidx.fragment.app.FragmentContainerView
-            android:id="@+id/signatureFragmentLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:name="com.almothafar.simplebatterynotifier.ui.fragment.SignatureFragment"
-            tools:layout="@layout/fragment_signature" />
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/detailsFragmentLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:name="com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment"
+                tools:layout="@layout/fragment_battery_details" />
 
-    </LinearLayout>
+            <!-- Battery Health Section — now scrolls WITH the table (non-sticky) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="@dimen/content_navigation_bar_padding"
+                android:background="@android:color/white">
+
+                <!-- Battery Insights Button - Material3 -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/batteryInsightsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/view_battery_insights"
+                    android:textColor="@android:color/white"
+                    app:backgroundTint="@color/top_background_color"
+                    android:layout_marginBottom="8dp"
+                    style="@style/Widget.Material3.Button" />
+
+                <!-- Developer Signature Fragment -->
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/signatureFragmentLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:name="com.almothafar.simplebatterynotifier.ui.fragment.SignatureFragment"
+                    tools:layout="@layout/fragment_signature" />
+
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

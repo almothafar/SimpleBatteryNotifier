@@ -1,21 +1,9 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<!-- Option 1 (#75): no inner ScrollView — the table + footer scroll together in the activity's
+     NestedScrollView, so the footer is non-sticky and no rows stay hidden below the fold. -->
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/batteryDetailsTable"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context="com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment">
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
-
-        <TableLayout
-            android:id="@+id/batteryDetailsTable"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:stretchColumns="0,1"
-            android:padding="20sp"
-            android:orientation="horizontal" />
-
-    </ScrollView>
-</FrameLayout>
+    android:layout_height="wrap_content"
+    android:stretchColumns="0,1"
+    android:padding="20sp"
+    android:orientation="horizontal" />
