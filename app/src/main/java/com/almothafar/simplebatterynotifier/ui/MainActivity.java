@@ -363,7 +363,7 @@ public class MainActivity extends BaseActivity {
 	 * Open the GitHub issue-template chooser in a browser.
 	 */
 	private void openGitHubIssues() {
-		final Uri uri = Uri.parse("https://github.com/almothafar/SimpleBatteryNotifier/issues/new/choose");
+		final Uri uri = Uri.parse(getString(R.string.feedback_github_url));
 		try {
 			startActivity(new Intent(Intent.ACTION_VIEW, uri));
 		} catch (ActivityNotFoundException e) {
@@ -375,7 +375,8 @@ public class MainActivity extends BaseActivity {
 	 * Open the mail app to the developer with a prefilled subject and a device-info block.
 	 */
 	private void emailDeveloper() {
-		final Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:support@almothafar.com"));
+		final Intent intent = new Intent(Intent.ACTION_SENDTO,
+				Uri.fromParts("mailto", getString(R.string.feedback_support_email), null));
 		intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.feedback_email_subject, appVersionName()));
 		intent.putExtra(Intent.EXTRA_TEXT, deviceInfoBlock());
 		try {
@@ -392,6 +393,9 @@ public class MainActivity extends BaseActivity {
 		try {
 			return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
 		} catch (PackageManager.NameNotFoundException e) {
+			// The app can always resolve its own package, so this is effectively unreachable;
+			// log it rather than swallow silently, and degrade to an empty version string.
+			Log.w(TAG, "Unable to read app version name", e);
 			return "";
 		}
 	}

@@ -231,6 +231,10 @@
     <!-- Notification service -->
     <string name="_default_notification_sound_uri" translatable="false">content://settings/system/notification_sound</string>
 
+    <!-- External endpoints — single source of truth for the links/emails used in code -->
+    <string name="feedback_github_url" translatable="false">https://github.com/almothafar/SimpleBatteryNotifier/issues/new/choose</string>
+    <string name="feedback_support_email" translatable="false">support@almothafar.com</string>
+
     <!-- Accessibility -->
     <string name="battery_progress_description">Battery at %1$d percent</string>
     <string name="battery_details_separator">:</string>
