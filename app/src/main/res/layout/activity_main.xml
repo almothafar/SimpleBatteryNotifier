@@ -35,7 +35,7 @@
             android:id="@+id/batteryPercentage"
             style="@style/Widget.ProgressBar.CircularProgressBar"
             android:layout_width="wrap_content"
-            android:layout_height="200dp"
+            android:layout_height="160dp"
             tools:cpb_subtitle="subtitle"
             tools:cpb_title="Title"
             android:layout_marginTop="10dp"

@@ -89,6 +89,9 @@ public class CircularProgressBar extends ProgressBar {
 	private int progressAlertColor;
 	private int glowExtraStrokePx;
 
+	// Base (un-shrunk) title text size in px. onDraw() shrinks from this to fit wide values like "100%".
+	private float baseTitleTextSizePx;
+
 	/**
 	 * Constructor for programmatic instantiation
 	 *
@@ -415,6 +418,14 @@ public class CircularProgressBar extends ProgressBar {
 
 		// Draw title and subtitle
 		if (nonNull(title) && !title.isEmpty()) {
+			// Auto-fit the title so wide values (e.g. "100%") don't overflow the arc on a small gauge.
+			titlePaint.setTextSize(baseTitleTextSizePx);
+			final float maxTitleWidth = circleBounds.width() * 0.68f;
+			final float rawTitleWidth = titlePaint.measureText(title);
+			if (rawTitleWidth > maxTitleWidth) {
+				titlePaint.setTextSize(baseTitleTextSizePx * maxTitleWidth / rawTitleWidth);
+			}
+
 			float xPos = (int) (getMeasuredWidth() / 2f - titlePaint.measureText(title) / 2);
 			float yPos = getMeasuredHeight() / 2f;
 
@@ -559,6 +570,7 @@ public class CircularProgressBar extends ProgressBar {
 
 			// Percentage text - bold and clear
 			titlePaint.setTextSize(GeneralHelper.dpToPixel(res, titleTextSize));
+			baseTitleTextSizePx = titlePaint.getTextSize();
 			titlePaint.setStyle(Style.FILL);
 			titlePaint.setAntiAlias(true);
 			titlePaint.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
