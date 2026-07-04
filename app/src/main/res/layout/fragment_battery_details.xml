@@ -4,10 +4,15 @@
     android:layout_height="match_parent"
     tools:context="com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment">
 
+    <!-- Option 3 (#75): a bottom fading edge + scrollbar make it obvious the table scrolls,
+         so the rows below the fold aren't mistaken for the end of the list. Footer stays pinned. -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:scrollbars="vertical"
+        android:requiresFadingEdge="vertical"
+        android:fadingEdgeLength="28dp">
 
         <TableLayout
             android:id="@+id/batteryDetailsTable"
