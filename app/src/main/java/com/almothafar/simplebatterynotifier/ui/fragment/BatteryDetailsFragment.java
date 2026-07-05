@@ -2,7 +2,6 @@ package com.almothafar.simplebatterynotifier.ui.fragment;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
@@ -38,6 +37,12 @@ import static java.util.Objects.nonNull;
 public class BatteryDetailsFragment extends Fragment {
 
 	private static final String TAG = "BatteryDetailsFragment";
+
+	// Scroll hint (#75): a one-time bob showing the details table scrolls. All tunable.
+	private static final long SCROLL_HINT_DELAY_MS = 1300L;   // wait before the first bob
+	private static final long SCROLL_HINT_BOB_MS = 2300L;     // duration of one down+up bob
+	private static final int SCROLL_HINT_BOB_COUNT = 2;       // how many bobs
+	private static final int SCROLL_HINT_REVEAL_DP = 96;      // max peek distance
 
 	private BatteryDO batteryDO;
 	private Map<String, String> valuesMap;
@@ -115,9 +120,9 @@ public class BatteryDetailsFragment extends Fragment {
 
 	/**
 	 * #75: on first display, gently bob the details list down and back up when rows sit below the
-	 * fold — a one-time motion cue that (together with the always-on fading edge) shows the table
-	 * scrolls. The first touch cancels it so it never fights the user, and it is skipped when the
-	 * system "remove animations" setting is on. Timing is deliberately unhurried — tune here.
+	 * fold — a short motion cue that (with the always-on fading edge) shows the table scrolls. Bobs
+	 * {@link #SCROLL_HINT_BOB_COUNT} times; the first touch cancels it so it never fights the user,
+	 * and it is skipped when the system "remove animations" setting is on.
 	 *
 	 * @param root The fragment view containing the scroll view
 	 */
@@ -128,8 +133,7 @@ public class BatteryDetailsFragment extends Fragment {
 			return;
 		}
 		// Respect the accessibility "remove animations" setting.
-		final float animScale = Settings.Global.getFloat(
-				root.getContext().getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE, 1f);
+		final float animScale = Settings.Global.getFloat(root.getContext().getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE, 1f);
 		if (animScale == 0f) {
 			return;
 		}
@@ -143,13 +147,11 @@ public class BatteryDetailsFragment extends Fragment {
 			if (hiddenPx <= 0) {
 				return; // nothing below the fold — no hint needed
 			}
-			final int reveal = Math.min(hiddenPx,
-					Math.round(96 * scroll.getResources().getDisplayMetrics().density));
-			final ObjectAnimator down = ObjectAnimator.ofInt(scroll, "scrollY", 0, reveal);
-			final ObjectAnimator up = ObjectAnimator.ofInt(scroll, "scrollY", reveal, 0);
-			final AnimatorSet hint = new AnimatorSet();
-			hint.playSequentially(down, up);
-			hint.setDuration(1150); // per leg — a little slower for a gentler bob
+			final int reveal = Math.min(hiddenPx, Math.round(SCROLL_HINT_REVEAL_DP * scroll.getResources().getDisplayMetrics().density));
+			// Peek down to `reveal` and back, repeated SCROLL_HINT_BOB_COUNT times.
+			final ObjectAnimator hint = ObjectAnimator.ofInt(scroll, "scrollY", 0, reveal, 0);
+			hint.setDuration(SCROLL_HINT_BOB_MS);
+			hint.setRepeatCount(SCROLL_HINT_BOB_COUNT - 1);
 			hint.setInterpolator(new AccelerateDecelerateInterpolator());
 
 			// Never fight the user: the first touch cancels the hint and hands scrolling back.
@@ -164,7 +166,7 @@ public class BatteryDetailsFragment extends Fragment {
 				}
 			});
 			hint.start();
-		}, 1300L); // a bit more delay than the first pass
+		}, SCROLL_HINT_DELAY_MS);
 	}
 
 	/**
