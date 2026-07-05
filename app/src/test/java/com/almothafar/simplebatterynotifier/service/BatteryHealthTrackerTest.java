@@ -104,4 +104,31 @@ public class BatteryHealthTrackerTest {
 		assertEquals(BatteryHealthGrade.POOR, BatteryHealthTracker.gradeForPercentage(69));
 		assertEquals(BatteryHealthGrade.POOR, BatteryHealthTracker.gradeForPercentage(0));
 	}
+
+	@Test
+	public void isEstimateImplausible_flagsReadingsFarFromDesign() {
+		// Broken counter (the real #94 case): an 852 mAh estimate against a 4000 mAh design is
+		// implausibly low, so the measured figure (21%) can't be trusted.
+		assertTrue(BatteryHealthTracker.isEstimateImplausible(852, 4000));
+		// Impossibly high: the estimate is well above the rated capacity.
+		assertTrue(BatteryHealthTracker.isEstimateImplausible(5000, 4000));
+	}
+
+	@Test
+	public void isEstimateImplausible_acceptsPlausibleReadings() {
+		// Healthy / lightly worn batteries stay within the plausibility window.
+		assertFalse(BatteryHealthTracker.isEstimateImplausible(4000, 4000));
+		assertFalse(BatteryHealthTracker.isEstimateImplausible(3800, 4000));
+		// A genuinely worn but believable battery (50% of rated) is still shown as a number, not "unknown".
+		assertFalse(BatteryHealthTracker.isEstimateImplausible(2000, 4000));
+	}
+
+	@Test
+	public void isEstimateImplausible_missingInputs_returnsFalse() {
+		// No estimate available (0) is "unavailable", not "implausible".
+		assertFalse(BatteryHealthTracker.isEstimateImplausible(0, 4000));
+		// No design capacity set: nothing to cross-check against.
+		assertFalse(BatteryHealthTracker.isEstimateImplausible(852, 0));
+		assertFalse(BatteryHealthTracker.isEstimateImplausible(-5, 4000));
+	}
 }

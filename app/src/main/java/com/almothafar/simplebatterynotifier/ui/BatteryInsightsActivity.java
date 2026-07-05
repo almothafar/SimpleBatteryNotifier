@@ -9,7 +9,9 @@ import android.os.Bundle;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
@@ -34,6 +36,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 	private TextView healthPercentageText;
 	private TextView healthStatusText;
 	private TextView healthBasisText;
+	private ImageView healthInfoIcon;
 	private TextView chargeCyclesText;
 	private TextView daysInUseText;
 	private TextView healthDescriptionText;
@@ -53,10 +56,14 @@ public class BatteryInsightsActivity extends BaseActivity {
 		healthPercentageText = findViewById(R.id.healthPercentageText);
 		healthStatusText = findViewById(R.id.healthStatusText);
 		healthBasisText = findViewById(R.id.healthBasisText);
+		healthInfoIcon = findViewById(R.id.healthInfoIcon);
 		chargeCyclesText = findViewById(R.id.chargeCyclesText);
 		daysInUseText = findViewById(R.id.daysInUseText);
 		healthDescriptionText = findViewById(R.id.healthDescriptionText);
 		designCapacityText = findViewById(R.id.designCapacityText);
+
+		// Tap the info icon (shown only when health can't be measured, #94) to explain why
+		healthInfoIcon.setOnClickListener(v -> showUnreliableHealthDialog());
 
 		// Tap the design-capacity card to set/edit the rated capacity
 		findViewById(R.id.designCapacityCard).setOnClickListener(v -> showDesignCapacityDialog());
@@ -79,8 +86,29 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * Updates all health data displays with current values from BatteryHealthTracker.
 	 */
 	private void updateHealthData() {
-		// Prefer the measured health figure (current capacity vs. user-entered design capacity) when
-		// available; otherwise fall back to the cycle-based estimate. See issue #32 / #7.
+		// When the device's charge counter disagrees badly with the rated capacity, no honest health
+		// figure can be shown — surface an explicit "Unknown" with a tappable explanation (#94).
+		if (BatteryHealthTracker.isMeasuredHealthUnreliable(this)) {
+			showUnreliableHealth();
+		} else {
+			showResolvedHealth();
+		}
+
+		// Metrics and the design-capacity row are shown the same way in every health state.
+		chargeCyclesText.setText(String.valueOf(BatteryHealthTracker.getEffectiveCycleCount(this)));
+		daysInUseText.setText(String.valueOf(BatteryHealthTracker.getDaysSinceFirstUse(this)));
+
+		final int designCapacity = BatteryHealthTracker.getDesignCapacity(this);
+		designCapacityText.setText(designCapacity > 0
+		                           ? getString(R.string.design_capacity_value, designCapacity)
+		                           : getString(R.string.set_design_capacity_action));
+	}
+
+	/**
+	 * Shows the resolved health figure: the measured percentage (current capacity vs. user-entered
+	 * design capacity) when available, otherwise the cycle-based estimate. See issue #32 / #7.
+	 */
+	private void showResolvedHealth() {
 		final int measuredHealth = BatteryHealthTracker.getMeasuredHealthPercentage(this);
 		final boolean measured = measuredHealth >= 0;
 
@@ -90,9 +118,9 @@ public class BatteryInsightsActivity extends BaseActivity {
 		final BatteryHealthGrade grade = measured
 		                                 ? BatteryHealthTracker.gradeForPercentage(measuredHealth)
 		                                 : BatteryHealthTracker.getHealthGrade(this);
-		final String healthDescription = BatteryHealthTracker.describeHealthGrade(this, grade);
-		final int chargeCycles = BatteryHealthTracker.getEffectiveCycleCount(this);
-		final int daysInUse = BatteryHealthTracker.getDaysSinceFirstUse(this);
+
+		healthInfoIcon.setVisibility(View.GONE);
+		healthBasisText.setVisibility(View.VISIBLE);
 
 		// Update health percentage and color it based on grade
 		healthPercentageText.setText(healthPercentage + "%");
@@ -105,18 +133,39 @@ public class BatteryInsightsActivity extends BaseActivity {
 		// Tell the user whether the figure is measured (honest) or a cycle-based estimate
 		healthBasisText.setText(measured ? R.string.health_basis_measured : R.string.health_basis_estimated);
 
-		// Update metrics
-		chargeCyclesText.setText(String.valueOf(chargeCycles));
-		daysInUseText.setText(String.valueOf(daysInUse));
+		healthDescriptionText.setText(BatteryHealthTracker.describeHealthGrade(this, grade));
+	}
 
-		// Update description
-		healthDescriptionText.setText(healthDescription);
+	/**
+	 * Shows the "unknown" health state used when this device's charge counter can't be trusted (#94): a
+	 * short amber placeholder plus a tappable info icon that opens {@link #showUnreliableHealthDialog}.
+	 */
+	private void showUnreliableHealth() {
+		final int amber = getColor(R.color.circular_progress_default_progress_warning);
 
-		// Update the design-capacity row (value when set, call-to-action when unset)
-		final int designCapacity = BatteryHealthTracker.getDesignCapacity(this);
-		designCapacityText.setText(designCapacity > 0
-		                           ? getString(R.string.design_capacity_value, designCapacity)
-		                           : getString(R.string.set_design_capacity_action));
+		healthPercentageText.setText(R.string.health_unknown_short);
+		healthPercentageText.setTextColor(amber);
+
+		healthStatusText.setText(R.string.unknown);
+		healthStatusText.setTextColor(amber);
+
+		// The full explanation lives in the dialog behind the info icon; hide the measured/estimated basis.
+		healthBasisText.setVisibility(View.GONE);
+		healthInfoIcon.setVisibility(View.VISIBLE);
+
+		healthDescriptionText.setText(R.string.health_unreliable_description);
+	}
+
+	/**
+	 * Explains why battery health is shown as unknown, including the possibility that the battery is
+	 * genuinely wearing out (#94).
+	 */
+	private void showUnreliableHealthDialog() {
+		new MaterialAlertDialogBuilder(this)
+				.setTitle(R.string.health_unreliable_dialog_title)
+				.setMessage(R.string.health_unreliable_dialog_message)
+				.setPositiveButton(android.R.string.ok, null)
+				.show();
 	}
 
 	/**

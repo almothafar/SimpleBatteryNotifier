@@ -70,14 +70,35 @@
                             android:textColor="@color/top_background_color"
                             android:layout_marginBottom="8dp"/>
 
-                    <TextView
-                            android:id="@+id/healthStatusText"
+                    <!-- Status word + (when health can't be measured, #94) a tappable amber info icon -->
+                    <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Excellent"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/title_bar_background_color"/>
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                        <TextView
+                                android:id="@+id/healthStatusText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Excellent"
+                                android:textSize="20sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/title_bar_background_color"/>
+
+                        <ImageView
+                                android:id="@+id/healthInfoIcon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="6dp"
+                                android:src="@drawable/ic_info_amber"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:contentDescription="@string/health_unreliable_info_cd"
+                                android:visibility="gone"
+                                tools:visibility="visible"/>
+                    </LinearLayout>
 
                     <TextView
                             android:id="@+id/healthBasisText"
