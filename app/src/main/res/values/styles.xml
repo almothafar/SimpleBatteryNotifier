@@ -25,7 +25,7 @@
         <item name="cpb_hasShadow">true</item>
         <item name="cpb_strokeWidth">30</item>
         <item name="cpb_titleColor">@color/circular_progress_default_title</item>
-        <item name="cpb_titleTextSize">55</item>
+        <item name="cpb_titleTextSize">48</item>
         <item name="cpb_subtitleColor">@color/circular_progress_default_subtitle</item>
         <item name="cpb_subtitleTextSize">20</item>
     </style>
