@@ -439,13 +439,17 @@ public class CircularProgressBar extends ProgressBar {
 			}
 			canvas.drawText(title, xPos, yPos, titlePaint);
 
-			// Auto-fit the subtitle too, so long status labels (e.g. "Not Charging") don't overrun the
-			// ring. Mirrors the title fit above; the subtitle sits just below centre so it can use a bit
-			// more width. See issue #91.
+			// Auto-fit the subtitle inside the ring. The 270° arc narrows below centre, so shrink long
+			// labels like "Not Charging" to the actual horizontal chord available at the subtitle's
+			// offset (titleHeight below centre), within the ring thickness. See issue #91.
 			subtitlePaint.setTextSize(baseSubtitleTextSizePx);
-			final float maxSubtitleWidth = circleBounds.width() * 0.72f;
+			final float innerRadius = circleBounds.width() / 2f - progressColorPaint.getStrokeWidth() / 2f;
+			final float halfChord = titleHeight < innerRadius
+					? (float) Math.sqrt(innerRadius * innerRadius - titleHeight * titleHeight)
+					: 0f;
+			final float maxSubtitleWidth = 2f * halfChord * 0.9f;
 			final float rawSubtitleWidth = subtitlePaint.measureText(subTitle);
-			if (rawSubtitleWidth > maxSubtitleWidth) {
+			if (maxSubtitleWidth > 0f && rawSubtitleWidth > maxSubtitleWidth) {
 				subtitlePaint.setTextSize(baseSubtitleTextSizePx * maxSubtitleWidth / rawSubtitleWidth);
 			}
 
