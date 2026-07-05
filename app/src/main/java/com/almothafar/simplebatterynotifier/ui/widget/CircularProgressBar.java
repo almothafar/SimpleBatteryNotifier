@@ -92,6 +92,10 @@ public class CircularProgressBar extends ProgressBar {
 	// Base (un-shrunk) title text size in px. onDraw() shrinks from this to fit wide values like "100%".
 	private float baseTitleTextSizePx;
 
+	// Base (un-shrunk) subtitle text size in px. onDraw() shrinks from this to fit long status labels
+	// like "Not Charging" so they don't overrun the ring. See issue #91.
+	private float baseSubtitleTextSizePx;
+
 	/**
 	 * Constructor for programmatic instantiation
 	 *
@@ -435,6 +439,16 @@ public class CircularProgressBar extends ProgressBar {
 			}
 			canvas.drawText(title, xPos, yPos, titlePaint);
 
+			// Auto-fit the subtitle too, so long status labels (e.g. "Not Charging") don't overrun the
+			// ring. Mirrors the title fit above; the subtitle sits just below centre so it can use a bit
+			// more width. See issue #91.
+			subtitlePaint.setTextSize(baseSubtitleTextSizePx);
+			final float maxSubtitleWidth = circleBounds.width() * 0.72f;
+			final float rawSubtitleWidth = subtitlePaint.measureText(subTitle);
+			if (rawSubtitleWidth > maxSubtitleWidth) {
+				subtitlePaint.setTextSize(baseSubtitleTextSizePx * maxSubtitleWidth / rawSubtitleWidth);
+			}
+
 			yPos += titleHeight;
 			xPos = (int) (getMeasuredWidth() / 2f - subtitlePaint.measureText(subTitle) / 2);
 
@@ -578,6 +592,7 @@ public class CircularProgressBar extends ProgressBar {
 
 			// Status text
 			subtitlePaint.setTextSize(GeneralHelper.dpToPixel(res, subtitleTextSize));
+			baseSubtitleTextSizePx = subtitlePaint.getTextSize();
 			subtitlePaint.setStyle(Style.FILL);
 			subtitlePaint.setAntiAlias(true);
 			subtitlePaint.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
