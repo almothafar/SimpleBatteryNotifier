@@ -66,7 +66,7 @@ public class BatteryHealthTracker {
 	// must land within [design x LOW, design x HIGH]. Outside it the device's charge counter disagrees
 	// with the rated capacity so badly that no honest health figure can be shown — usually a broken or
 	// quirky counter (some Kirin/HiSilicon devices report a small fixed uAh), though a genuinely failing
-	// battery can also read this low. See issue #94 / {@link #isMeasuredHealthUnreliable}.
+	// battery can also read this low. See issue #94 / {@link #isBatteryReadingUnreliable}.
 	private static final float MEASURED_HEALTH_MIN_PLAUSIBLE_RATIO = 0.40f;
 	private static final float MEASURED_HEALTH_MAX_PLAUSIBLE_RATIO = 1.15f;
 
@@ -326,21 +326,22 @@ public class BatteryHealthTracker {
 	}
 
 	/**
-	 * Whether the measured health figure can't be trusted on this device, because the charge-counter
+	 * Whether this device's battery capacity reading can't be trusted, because the charge-counter
 	 * estimate of the current full capacity is wildly out of line with the user-entered design capacity.
 	 * <p>
 	 * Some devices (notably certain Kirin/HiSilicon chipsets) report a charge counter that bears no
-	 * relation to the real capacity, which would otherwise surface as an absurd health figure (e.g. 21%
-	 * on a healthy 4000 mAh battery). When detected, callers should show an explicit "unknown" state
-	 * rather than a misleading number — see issue #94. A genuinely worn-out battery can also read this
-	 * low, a possibility the UI surfaces to the user.
+	 * relation to the real capacity, which surfaces as an absurd capacity (e.g. 852 mAh) and the absurd
+	 * health figure derived from it (e.g. 21% on a healthy 4000 mAh battery). When detected, callers
+	 * should flag the reading — the home screen shows "Unknown" for the capacity, the insights screen
+	 * keeps the figure but adds a warning — see issue #94. A genuinely worn-out battery can also read
+	 * this low, a possibility the UI surfaces to the user.
 	 *
 	 * @param context Application context
 	 *
 	 * @return true when a design capacity is set, a charge-counter estimate exists, and the estimate is
 	 * outside the plausible window around the design capacity
 	 */
-	public static boolean isMeasuredHealthUnreliable(final Context context) {
+	public static boolean isBatteryReadingUnreliable(final Context context) {
 		if (isNull(context)) {
 			return false;
 		}
@@ -350,7 +351,7 @@ public class BatteryHealthTracker {
 	}
 
 	/**
-	 * Pure helper for {@link #isMeasuredHealthUnreliable}, unit-testable with no Android dependencies.
+	 * Pure helper for {@link #isBatteryReadingUnreliable}, unit-testable with no Android dependencies.
 	 * <p>
 	 * Returns false when either input is missing: without a design capacity there is nothing to
 	 * cross-check against, and a missing estimate ({@code <= 0}) is "unavailable" rather than

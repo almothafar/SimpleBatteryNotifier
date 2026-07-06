@@ -143,13 +143,11 @@
     <string name="health_basis_measured">Measured from rated capacity</string>
     <string name="health_basis_estimated">Estimated from charge cycles</string>
 
-    <!-- #94: shown when the device's charge counter is too inaccurate for an honest health figure -->
-    <!-- Short placeholder in the big health slot (a glyph, no translation needed) -->
-    <string name="health_unknown_short" translatable="false">?</string>
-    <string name="health_unreliable_info_cd">Why battery health is unknown</string>
-    <string name="health_unreliable_description">We can\'t reliably measure this battery\'s health on this device — its charge sensor reports a full-charge capacity that doesn\'t match the rated capacity you entered. Tap the info icon next to the health for details.</string>
-    <string name="health_unreliable_dialog_title">Battery health unavailable</string>
-    <string name="health_unreliable_dialog_message" formatted="false">This device\'s battery sensor reports a full-charge capacity that doesn\'t match the rated capacity you entered, so we can\'t calculate an honest health figure.\n\nThis is usually a quirk of the phone\'s battery hardware — some chipsets report the charge counter incorrectly — not a problem with your battery.\n\nBut it can also mean the battery is genuinely wearing out. Watch for these signs:\n\n• The phone shuts down or restarts under heavy load even though it still shows charge left\n• The level collapses near the bottom (e.g. 20% behaves like 2%)\n• It drains much faster than it used to\n\nIf you notice these, consider having the battery replaced.</string>
+    <!-- #94: shown when the device's charge counter is too inaccurate to trust the capacity/health reading.
+         Shared by the home Capacity row ("Unknown" + info icon) and the insights health figure (warning icon). -->
+    <string name="battery_reading_unreliable_cd">Why this battery reading may be unreliable</string>
+    <string name="battery_reading_unreliable_dialog_title">Battery reading may be unreliable</string>
+    <string name="battery_reading_unreliable_dialog_message" formatted="false">This device reports a full-charge capacity that doesn\'t match the rated capacity you entered, so the measured capacity — and the health figure based on it — can\'t be trusted here.\n\nThis is usually a quirk of the phone\'s battery hardware (some chipsets report the charge counter incorrectly), not a problem with your battery.\n\nBut it can also mean the battery is genuinely wearing out. Watch for these signs:\n\n• The phone shuts down or restarts under heavy load even though it still shows charge left\n• The level collapses near the bottom (e.g. 20% behaves like 2%)\n• It drains much faster than it used to\n\nIf you notice these, consider having the battery replaced.</string>
 
     <!-- Battery health wear grades (shown as the health status) and their descriptions -->
     <string name="battery_health_grade_excellent">Excellent</string>

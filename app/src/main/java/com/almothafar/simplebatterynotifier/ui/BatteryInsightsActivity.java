@@ -36,7 +36,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 	private TextView healthPercentageText;
 	private TextView healthStatusText;
 	private TextView healthBasisText;
-	private ImageView healthInfoIcon;
+	private ImageView healthWarningIcon;
 	private TextView chargeCyclesText;
 	private TextView daysInUseText;
 	private TextView healthDescriptionText;
@@ -56,14 +56,14 @@ public class BatteryInsightsActivity extends BaseActivity {
 		healthPercentageText = findViewById(R.id.healthPercentageText);
 		healthStatusText = findViewById(R.id.healthStatusText);
 		healthBasisText = findViewById(R.id.healthBasisText);
-		healthInfoIcon = findViewById(R.id.healthInfoIcon);
+		healthWarningIcon = findViewById(R.id.healthWarningIcon);
 		chargeCyclesText = findViewById(R.id.chargeCyclesText);
 		daysInUseText = findViewById(R.id.daysInUseText);
 		healthDescriptionText = findViewById(R.id.healthDescriptionText);
 		designCapacityText = findViewById(R.id.designCapacityText);
 
-		// Tap the info icon (shown only when health can't be measured, #94) to explain why
-		healthInfoIcon.setOnClickListener(v -> showUnreliableHealthDialog());
+		// Tap the warning icon (shown only when the reading can't be trusted, #94) to explain why
+		healthWarningIcon.setOnClickListener(v -> showUnreliableReadingDialog());
 
 		// Tap the design-capacity card to set/edit the rated capacity
 		findViewById(R.id.designCapacityCard).setOnClickListener(v -> showDesignCapacityDialog());
@@ -86,15 +86,15 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * Updates all health data displays with current values from BatteryHealthTracker.
 	 */
 	private void updateHealthData() {
-		// When the device's charge counter disagrees badly with the rated capacity, no honest health
-		// figure can be shown — surface an explicit "Unknown" with a tappable explanation (#94).
-		if (BatteryHealthTracker.isMeasuredHealthUnreliable(this)) {
-			showUnreliableHealth();
-		} else {
-			showResolvedHealth();
-		}
+		// Always show the resolved health figure (measured, else cycle-based).
+		showResolvedHealth();
 
-		// Metrics and the design-capacity row are shown the same way in every health state.
+		// When the device's charge counter can't be trusted (#94) the figure may be wrong: keep showing
+		// it, but flag it with a tappable warning that explains why (and the failing-battery edge case).
+		healthWarningIcon.setVisibility(BatteryHealthTracker.isBatteryReadingUnreliable(this)
+		                                ? View.VISIBLE : View.GONE);
+
+		// Metrics and the design-capacity row are shown the same way in every state.
 		chargeCyclesText.setText(String.valueOf(BatteryHealthTracker.getEffectiveCycleCount(this)));
 		daysInUseText.setText(String.valueOf(BatteryHealthTracker.getDaysSinceFirstUse(this)));
 
@@ -119,9 +119,6 @@ public class BatteryInsightsActivity extends BaseActivity {
 		                                 ? BatteryHealthTracker.gradeForPercentage(measuredHealth)
 		                                 : BatteryHealthTracker.getHealthGrade(this);
 
-		healthInfoIcon.setVisibility(View.GONE);
-		healthBasisText.setVisibility(View.VISIBLE);
-
 		// Update health percentage and color it based on grade
 		healthPercentageText.setText(healthPercentage + "%");
 		healthPercentageText.setTextColor(getHealthColor(grade));
@@ -137,33 +134,13 @@ public class BatteryInsightsActivity extends BaseActivity {
 	}
 
 	/**
-	 * Shows the "unknown" health state used when this device's charge counter can't be trusted (#94): a
-	 * short amber placeholder plus a tappable info icon that opens {@link #showUnreliableHealthDialog}.
+	 * Explains why the battery reading may be unreliable on this device, including the possibility that
+	 * the battery is genuinely wearing out (#94). Shares its wording with the home Capacity row.
 	 */
-	private void showUnreliableHealth() {
-		final int amber = getColor(R.color.circular_progress_default_progress_warning);
-
-		healthPercentageText.setText(R.string.health_unknown_short);
-		healthPercentageText.setTextColor(amber);
-
-		healthStatusText.setText(R.string.unknown);
-		healthStatusText.setTextColor(amber);
-
-		// The full explanation lives in the dialog behind the info icon; hide the measured/estimated basis.
-		healthBasisText.setVisibility(View.GONE);
-		healthInfoIcon.setVisibility(View.VISIBLE);
-
-		healthDescriptionText.setText(R.string.health_unreliable_description);
-	}
-
-	/**
-	 * Explains why battery health is shown as unknown, including the possibility that the battery is
-	 * genuinely wearing out (#94).
-	 */
-	private void showUnreliableHealthDialog() {
+	private void showUnreliableReadingDialog() {
 		new MaterialAlertDialogBuilder(this)
-				.setTitle(R.string.health_unreliable_dialog_title)
-				.setMessage(R.string.health_unreliable_dialog_message)
+				.setTitle(R.string.battery_reading_unreliable_dialog_title)
+				.setMessage(R.string.battery_reading_unreliable_dialog_message)
 				.setPositiveButton(android.R.string.ok, null)
 				.show();
 	}

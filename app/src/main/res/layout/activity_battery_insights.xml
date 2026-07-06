@@ -87,15 +87,15 @@
                                 android:textColor="@color/title_bar_background_color"/>
 
                         <ImageView
-                                android:id="@+id/healthInfoIcon"
+                                android:id="@+id/healthWarningIcon"
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:layout_marginStart="6dp"
-                                android:src="@drawable/ic_info_amber"
+                                android:src="@drawable/ic_warning_amber"
                                 android:background="?attr/selectableItemBackgroundBorderless"
                                 android:clickable="true"
                                 android:focusable="true"
-                                android:contentDescription="@string/health_unreliable_info_cd"
+                                android:contentDescription="@string/battery_reading_unreliable_cd"
                                 android:visibility="gone"
                                 tools:visibility="visible"/>
                     </LinearLayout>
