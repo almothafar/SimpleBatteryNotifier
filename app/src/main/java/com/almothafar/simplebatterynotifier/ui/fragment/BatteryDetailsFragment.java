@@ -101,12 +101,12 @@ public class BatteryDetailsFragment extends Fragment {
 
 		final TableLayout tableLayout = view.findViewById(R.id.batteryDetailsTable);
 		tableLayout.removeAllViews();
-		// Colon-aligned rows (#96): the label column (0) sizes to the widest label and its cells are
-		// end-aligned, so the colons line up; only the value column (2) stretches, so values sit right
-		// after the colon. Give the table the locale direction so columns order right-to-left in Arabic,
-		// and let long labels/values shrink rather than clip.
+		// Colon-aligned rows with the divider near the horizontal centre (#96): stretch BOTH the label (0)
+		// and value (2) columns so they share the width evenly, and the end-aligned labels' colons line up
+		// around the middle in both LTR and RTL (rather than wherever the widest label happens to end).
+		// Locale direction orders columns right-to-left in Arabic; long labels/values shrink rather than clip.
 		ViewCompat.setLayoutDirection(tableLayout, ViewCompat.LAYOUT_DIRECTION_LOCALE);
-		tableLayout.setColumnStretchable(0, false);
+		tableLayout.setColumnStretchable(0, true);
 		tableLayout.setColumnStretchable(1, false);
 		tableLayout.setColumnStretchable(2, true);
 		tableLayout.setColumnShrinkable(0, true);
