@@ -101,7 +101,14 @@ public class BatteryDetailsFragment extends Fragment {
 
 		final TableLayout tableLayout = view.findViewById(R.id.batteryDetailsTable);
 		tableLayout.removeAllViews();
-		tableLayout.setStretchAllColumns(true);
+		// Cluster each row tightly around the colon and mirror correctly in RTL (#96): stretch only the
+		// label (0) and value (2) columns so the colon column (1) keeps its natural width, let long values
+		// wrap, and give the table itself the locale direction so its columns order right-to-left in Arabic.
+		ViewCompat.setLayoutDirection(tableLayout, ViewCompat.LAYOUT_DIRECTION_LOCALE);
+		tableLayout.setColumnStretchable(0, true);
+		tableLayout.setColumnStretchable(1, false);
+		tableLayout.setColumnStretchable(2, true);
+		tableLayout.setColumnShrinkable(2, true);
 		final int cellPadding = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding);
 		final int cellPaddingTop = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding_top);
 
@@ -310,8 +317,9 @@ public class BatteryDetailsFragment extends Fragment {
 		// Show the user-entered design (rated) capacity when set (issue #32)
 		final int designCapacity = BatteryHealthTracker.getDesignCapacity(view.getContext());
 		if (designCapacity > 0) {
+			// Western digits (0-9) in every locale — see design_capacity_value / #96.
 			valuesMap.put(getResources().getString(R.string.design_capacity),
-					getResources().getString(R.string.design_capacity_value, designCapacity));
+					getResources().getString(R.string.design_capacity_value, String.valueOf(designCapacity)));
 		}
 
 		// Add charge cycles from the battery health tracker - positioned right after capacity
