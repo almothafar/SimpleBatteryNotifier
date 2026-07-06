@@ -24,6 +24,7 @@ import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -47,6 +48,12 @@ public class BatteryDetailsFragment extends Fragment {
 	private BatteryDO batteryDO;
 	private Map<String, String> valuesMap;
 	private View viewRef;
+
+	// #94: when this device's charge counter can't be trusted, the Capacity row shows "Unknown" with a
+	// tappable info icon instead of a misleading mAh figure. Computed in fillBatteryInfo, applied by
+	// createDetailsTable to just the capacity row.
+	private boolean capacityUnreliable;
+	private String capacityLabel;
 
 	/**
 	 * Default constructor required for fragment instantiation
@@ -100,7 +107,9 @@ public class BatteryDetailsFragment extends Fragment {
 
 		int rowIndex = 0;
 		for (final String key : valuesMap.keySet()) {
-			final TableRow row = createTableRow(view, key, valuesMap.get(key), cellPadding, cellPaddingTop);
+			// Only the capacity row gets the "unreliable reading" info affordance (#94).
+			final boolean unreliable = capacityUnreliable && key.equals(capacityLabel);
+			final TableRow row = createTableRow(view, key, valuesMap.get(key), cellPadding, cellPaddingTop, unreliable);
 			tableLayout.addView(row, rowIndex);
 			rowIndex++;
 		}
@@ -172,16 +181,17 @@ public class BatteryDetailsFragment extends Fragment {
 	/**
 	 * Create a single table row with label, separator, and value
 	 *
-	 * @param view           The fragment view
-	 * @param label          The label text
-	 * @param value          The value text
-	 * @param cellPadding    The horizontal cell padding
-	 * @param cellPaddingTop The top cell padding
+	 * @param view            The fragment view
+	 * @param label           The label text
+	 * @param value           The value text
+	 * @param cellPadding     The horizontal cell padding
+	 * @param cellPaddingTop  The top cell padding
+	 * @param valueUnreliable When true, decorate the value cell with a tappable "unreliable reading" icon
 	 *
 	 * @return The created table row
 	 */
 	private TableRow createTableRow(final View view, final String label, final String value,
-	                                final int cellPadding, final int cellPaddingTop) {
+	                                final int cellPadding, final int cellPaddingTop, final boolean valueUnreliable) {
 		final TableRow row = new TableRow(view.getContext());
 		final TableRow.LayoutParams layoutParams = new TableRow.LayoutParams(
 				TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT, 1.0f);
@@ -193,7 +203,7 @@ public class BatteryDetailsFragment extends Fragment {
 
 		final TextView textViewLabel = createLabelTextView(view, label, cellPadding, cellPaddingTop);
 		final TextView textViewSep = createSeparatorTextView(view);
-		final TextView textViewValue = createValueTextView(view, value, cellPadding, cellPaddingTop);
+		final TextView textViewValue = createValueTextView(view, value, cellPadding, cellPaddingTop, valueUnreliable);
 
 		// Add views in logical order (label -> separator -> value)
 		// RTL languages will automatically reverse the visual order
@@ -249,19 +259,30 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param text           The value text
 	 * @param cellPadding    The horizontal cell padding
 	 * @param cellPaddingTop The top cell padding
+	 * @param unreliable     When true, append a tappable amber info icon that opens the "unreliable
+	 *                       reading" explanation (#94)
 	 *
 	 * @return The created TextView
 	 */
 	private TextView createValueTextView(final View view,
 	                                     final String text,
 	                                     final int cellPadding,
-	                                     final int cellPaddingTop) {
+	                                     final int cellPaddingTop,
+	                                     final boolean unreliable) {
 		final TextView textView = new TextView(view.getContext());
 		textView.setTextAppearance(R.style.DefaultTextStyle);
 		textView.setText(text);
 		textView.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
 		textView.setGravity(Gravity.START);
 		textView.setPadding(cellPadding, 0, 0, cellPaddingTop);
+		if (unreliable) {
+			// #94: amber warning affordance after the value; tap to learn why the reading can't be trusted.
+			// Same mark as the insights health figure, so the two screens read consistently.
+			textView.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_warning_amber, 0);
+			textView.setCompoundDrawablePadding((int) (6 * getResources().getDisplayMetrics().density));
+			textView.setContentDescription(getString(R.string.battery_reading_unreliable_cd));
+			textView.setOnClickListener(v -> showCapacityUnreliableDialog());
+		}
 		return textView;
 	}
 
@@ -275,13 +296,16 @@ public class BatteryDetailsFragment extends Fragment {
 
 		valuesMap.put(getResources().getString(R.string.technology), batteryDO.getTechnology());
 
-		// Capacity is an estimate from BatteryManager; show "Unknown" rather than "0 mAh" when
-		// the device doesn't report the charge counter.
+		// Capacity is an estimate from BatteryManager. Show "Unknown" rather than "0 mAh" when the device
+		// doesn't report the charge counter, and also when the reported figure can't be trusted (#94) —
+		// in that case createDetailsTable adds a tappable info icon explaining why.
 		final int capacity = batteryDO.getCapacity();
-		final String capacityText = capacity > 0
+		capacityUnreliable = BatteryHealthTracker.isBatteryReadingUnreliable(view.getContext());
+		final String capacityText = (capacity > 0 && !capacityUnreliable)
 		                            ? capacity + " mAh"
 		                            : getResources().getString(R.string.unknown);
-		valuesMap.put(getResources().getString(R.string.capacity), capacityText);
+		capacityLabel = getResources().getString(R.string.capacity);
+		valuesMap.put(capacityLabel, capacityText);
 
 		// Show the user-entered design (rated) capacity when set (issue #32)
 		final int designCapacity = BatteryHealthTracker.getDesignCapacity(view.getContext());
@@ -299,5 +323,18 @@ public class BatteryDetailsFragment extends Fragment {
 		valuesMap.put(getResources().getString(R.string.temperature),
 				TemperatureUtils.format(view.getContext(), batteryDO.getTemperature()));
 		valuesMap.put(getResources().getString(R.string.health), batteryDO.getHealth());
+	}
+
+	/**
+	 * Explains why the capacity (and the health figure derived from it) can't be trusted on this device,
+	 * including the possibility that the battery is genuinely wearing out (#94). Shares its wording with
+	 * the battery insights screen.
+	 */
+	private void showCapacityUnreliableDialog() {
+		new MaterialAlertDialogBuilder(requireContext())
+				.setTitle(R.string.battery_reading_unreliable_dialog_title)
+				.setMessage(R.string.battery_reading_unreliable_dialog_message)
+				.setPositiveButton(android.R.string.ok, null)
+				.show();
 	}
 }

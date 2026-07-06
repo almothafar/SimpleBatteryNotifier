@@ -151,6 +151,10 @@
     <string name="error_design_capacity_range">أدخل سعة بين %1$d و %2$d mAh</string>
     <string name="health_basis_measured">مقاسة من السعة المقدّرة</string>
     <string name="health_basis_estimated">مقدّرة من دورات الشحن</string>
+    <!-- #94 unreliable battery-reading copy (drafted by Claude — pending maintainer review) -->
+    <string name="battery_reading_unreliable_cd">لماذا قد تكون قراءة البطارية غير موثوقة</string>
+    <string name="battery_reading_unreliable_dialog_title">قد تكون قراءة البطارية غير موثوقة</string>
+    <string name="battery_reading_unreliable_dialog_message" formatted="false">يُبلّغ هذا الجهاز عن سعة شحن كاملة لا تُطابق السعة المقدّرة التي أدخلتها، لذا لا يمكن الوثوق بالسعة المقاسة — ولا بنسبة الصحة المبنية عليها.\n\nغالباً ما يكون هذا خللاً في عتاد بطارية الهاتف (إذ تُبلّغ بعض المعالجات عن عدّاد الشحن بصورة غير صحيحة)، وليس مشكلة في بطاريتك.\n\nلكن قد يعني ذلك أيضاً أنّ البطارية بدأت تتلف فعلاً. انتبه لهذه العلامات:\n\n• ينطفئ الهاتف أو يُعيد التشغيل تحت الحِمل الثقيل رغم وجود شحن كافٍ\n• ينخفض المستوى فجأة قرب النهاية، فيسلك مستوى 20% وكأنه 2%\n• ينفد الشحن أسرع بكثير من ذي قبل\n\nإذا لاحظت هذه العلامات، ففكّر في استبدال البطارية.</string>
     <string name="how_it_works">كيف يعمل</string>
     <string name="how_battery_health_works" formatted="false" tools:ignore="TypographyDashes">تُقدَّر صحة البطارية بناءً على دورات الشحن. تُحتسب دورة شحن عندما تُشحن بطاريتك من 20% أو أقل إلى 95% أو أكثر. يبدأ هذا التتبع عند أول استخدام لهذا التطبيق.\n\nتقديرات الصحة:\n• 0–300 دورة: ممتازة (95–100%)\n• 300-500 دورة: جيدة (85-95%)\n• 500-800 دورة: مقبولة (70-85%)\n• 800+ دورة: ضعيفة (&lt;70%)</string>
     <string name="developed_by">طوّره</string>
