@@ -276,8 +276,9 @@ public class BatteryDetailsFragment extends Fragment {
 		textView.setGravity(Gravity.START);
 		textView.setPadding(cellPadding, 0, 0, cellPaddingTop);
 		if (unreliable) {
-			// #94: amber info affordance after the value; tap to learn why the reading can't be trusted.
-			textView.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_info_amber, 0);
+			// #94: amber warning affordance after the value; tap to learn why the reading can't be trusted.
+			// Same mark as the insights health figure, so the two screens read consistently.
+			textView.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_warning_amber, 0);
 			textView.setCompoundDrawablePadding((int) (6 * getResources().getDisplayMetrics().density));
 			textView.setContentDescription(getString(R.string.battery_reading_unreliable_cd));
 			textView.setOnClickListener(v -> showCapacityUnreliableDialog());
