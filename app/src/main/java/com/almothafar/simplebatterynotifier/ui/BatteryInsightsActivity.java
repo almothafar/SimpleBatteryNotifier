@@ -52,6 +52,11 @@ public class BatteryInsightsActivity extends BaseActivity {
 		final Toolbar toolbar = findViewById(R.id.toolbar);
 		setupToolbar(toolbar, true);
 
+		// Keep the scrollable content (down to the developer signature) clear of the system
+		// navigation bar. Android 15+ (targetSdk 35+) enforces edge-to-edge and no longer insets
+		// content above the nav bar, so without this the footer draws underneath it (#102).
+		applyBottomSystemBarInset(findViewById(R.id.insightsScrollContent));
+
 		// Initialize views
 		healthPercentageText = findViewById(R.id.healthPercentageText);
 		healthStatusText = findViewById(R.id.healthStatusText);
