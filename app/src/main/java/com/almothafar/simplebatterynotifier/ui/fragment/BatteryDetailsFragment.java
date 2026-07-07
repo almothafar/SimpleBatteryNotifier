@@ -338,7 +338,7 @@ public class BatteryDetailsFragment extends Fragment {
 		valuesMap.put(getResources().getString(R.string.power_source), batteryDO.getPowerSource());
 		valuesMap.put(getResources().getString(R.string.temperature),
 				TemperatureUtils.format(view.getContext(), batteryDO.getTemperature()));
-		valuesMap.put(getResources().getString(R.string.health), batteryDO.getHealth());
+		valuesMap.put(getResources().getString(R.string.battery_condition), batteryDO.getHealth());
 	}
 
 	/**

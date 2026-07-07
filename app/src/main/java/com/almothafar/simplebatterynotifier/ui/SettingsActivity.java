@@ -107,6 +107,10 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
 
 		// Load root preferences if this is the first creation
 		if (isNull(savedInstanceState)) {
+			// Set the title via the app's (locale-aware) resources. Without this, the toolbar falls back
+			// to the manifest android:label, which the framework resolves in the SYSTEM locale — showing an
+			// English "Settings" under an Arabic app until the back stack next changes (#98).
+			setTitle(R.string.title_activity_settings);
 			getSupportFragmentManager()
 					.beginTransaction()
 					.replace(R.id.settings_container, new HeaderFragment())
