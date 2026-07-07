@@ -109,6 +109,33 @@ public class BatteryHealthTrackerStateTest {
 	}
 
 	@Test
+	public void autoDetectDesignCapacity_storesDetectedValueOnceWhenUnset() {
+		// A readable kernel value is stored as the design capacity...
+		assertTrue(BatteryHealthTracker.applyAutoDetectedDesignCapacity(context, 4700));
+		assertEquals(4700, BatteryHealthTracker.getDesignCapacity(context));
+		// ...and a later detection never overrides the now-present value.
+		assertFalse(BatteryHealthTracker.applyAutoDetectedDesignCapacity(context, 5000));
+		assertEquals(4700, BatteryHealthTracker.getDesignCapacity(context));
+	}
+
+	@Test
+	public void autoDetectDesignCapacity_neverOverridesUserValue() {
+		BatteryHealthTracker.setDesignCapacity(context, 4000);
+		assertFalse(BatteryHealthTracker.applyAutoDetectedDesignCapacity(context, 4700));
+		assertEquals(4000, BatteryHealthTracker.getDesignCapacity(context));
+	}
+
+	@Test
+	public void autoDetectDesignCapacity_attemptsAtMostOnce() {
+		// First attempt finds nothing readable (0) but records the attempt...
+		assertFalse(BatteryHealthTracker.applyAutoDetectedDesignCapacity(context, 0));
+		assertFalse(BatteryHealthTracker.hasDesignCapacity(context));
+		// ...so even a later successful read is ignored (a user who cleared the value isn't re-populated).
+		assertFalse(BatteryHealthTracker.applyAutoDetectedDesignCapacity(context, 4700));
+		assertFalse(BatteryHealthTracker.hasDesignCapacity(context));
+	}
+
+	@Test
 	public void resetHealthData_clearsCyclesAndFirstUse() {
 		BatteryHealthTracker.recordBatteryState(context, 0, BatteryManager.BATTERY_STATUS_DISCHARGING);
 		BatteryHealthTracker.recordBatteryState(context, 100, BatteryManager.BATTERY_STATUS_CHARGING);

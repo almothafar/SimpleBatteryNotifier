@@ -44,6 +44,9 @@ public class BatteryHealthTracker {
 	// Debug-only cycle offset kept separate from real tracking so it can be cleared without
 	// destroying genuine data (see the debug menu in BatteryInsightsActivity).
 	private static final String PREF_DEBUG_CHARGE_CYCLES = "_battery_health_debug_charge_cycles";
+	// Set once we've attempted the best-effort auto-detect of the design capacity, so a user who clears
+	// the value isn't silently re-populated on the next run. See issue #104.
+	private static final String PREF_DESIGN_CAPACITY_AUTO_TRIED = "_battery_design_capacity_auto_tried";
 
 	// One charge cycle = this many percentage-points of charge delivered to the battery.
 	private static final int CYCLE_PERCENT_POINTS = 100;
@@ -238,6 +241,50 @@ public class BatteryHealthTracker {
 	 */
 	public static boolean hasDesignCapacity(final Context context) {
 		return getDesignCapacity(context) > 0;
+	}
+
+	/**
+	 * Best-effort: auto-detect and store the battery design capacity when the user hasn't set one.
+	 * <p>
+	 * Reads the kernel's rated-capacity node via {@link SystemService#getDesignCapacityFromSystem()}
+	 * (available on some devices, blocked on many newer ones). Attempted at most once — a flag records
+	 * the attempt so a user who later clears the value isn't re-populated — and never overrides a value
+	 * the user already set. When nothing is readable this is a silent no-op and manual entry stands.
+	 *
+	 * @param context Application context
+	 *
+	 * @return true when a design capacity was auto-detected and stored by this call
+	 */
+	public static boolean autoDetectDesignCapacityIfUnset(final Context context) {
+		if (isNull(context)) {
+			return false;
+		}
+		return applyAutoDetectedDesignCapacity(context, SystemService.getDesignCapacityFromSystem());
+	}
+
+	/**
+	 * Applies an already-read auto-detected capacity under the once-only, never-override rules. Split
+	 * out (and package-private) from {@link #autoDetectDesignCapacityIfUnset} so the policy can be
+	 * unit-tested without depending on the device's sysfs nodes.
+	 *
+	 * @param context     Application context
+	 * @param detectedMah design capacity read from the system in mAh, or {@code <= 0} when unavailable
+	 *
+	 * @return true when {@code detectedMah} was stored as the design capacity by this call
+	 */
+	static boolean applyAutoDetectedDesignCapacity(final Context context, final int detectedMah) {
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		// Attempt at most once, and never override a value the user already has.
+		if (prefs.getBoolean(PREF_DESIGN_CAPACITY_AUTO_TRIED, false) || hasDesignCapacity(context)) {
+			return false;
+		}
+		prefs.edit().putBoolean(PREF_DESIGN_CAPACITY_AUTO_TRIED, true).apply();
+		if (detectedMah <= 0) {
+			return false;
+		}
+		setDesignCapacity(context, detectedMah);
+		Log.i(TAG, "Design capacity auto-detected from system: " + detectedMah + " mAh");
+		return true;
 	}
 
 	/**
