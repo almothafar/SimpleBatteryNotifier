@@ -114,6 +114,11 @@ public class MainActivity extends BaseActivity {
 		final Toolbar toolbar = findViewById(R.id.toolbar);
 		setupToolbar(toolbar);
 
+		// Keep the bottom section (Insights button + developer signature) clear of the system
+		// navigation bar. Android 15+ (targetSdk 35+) enforces edge-to-edge and no longer insets
+		// content above the nav bar, so without this the signature draws underneath it (#102).
+		applyBottomSystemBarInset(findViewById(R.id.homeBottomSection));
+
 		// setStatusBarColor()/setNavigationBarColor() removed (deprecated in API 35).
 		// Edge-to-edge is enforced by the platform on Android 15+; system-bar insets are handled
 		// in BaseActivity. System bar colors should be set via themes (values/themes.xml).
