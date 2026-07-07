@@ -28,6 +28,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar;
@@ -149,6 +150,11 @@ public class MainActivity extends BaseActivity {
 
 		// Set up button click listeners
 		batteryInsightsButton.setOnClickListener(v -> openBatteryInsights());
+
+		// Best-effort: auto-fill the battery design capacity from the device on first run, so the
+		// measured health/capacity works without the user having to look up and type it in (#104).
+		// No-op on devices where the kernel node isn't readable — manual entry still applies there.
+		BatteryHealthTracker.autoDetectDesignCapacityIfUnset(this);
 
 		// Start the power connection service as a foreground service so monitoring
 		// survives the app being closed (required on Android 8+).

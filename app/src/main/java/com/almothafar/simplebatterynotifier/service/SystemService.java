@@ -20,6 +20,9 @@ import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.model.BatteryHealthStatus;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 
 import static java.util.Objects.isNull;
@@ -35,6 +38,11 @@ public final class SystemService {
 	// mAh estimates; anything outside this range is treated as "unknown". See issue #69.
 	private static final int MIN_PLAUSIBLE_CAPACITY_MAH = 500;
 	private static final int MAX_PLAUSIBLE_CAPACITY_MAH = 15000;
+
+	// Linux power-supply sysfs directory; a supply's charge_full_design node holds the rated capacity
+	// in µAh. Readable on some devices, blocked by SELinux on many newer ones (issue #104).
+	private static final String POWER_SUPPLY_DIR = "/sys/class/power_supply";
+	private static final String CHARGE_FULL_DESIGN_NODE = "charge_full_design";
 
 	private SystemService() {
 		// Utility class - prevent instantiation
@@ -300,6 +308,83 @@ public final class SystemService {
 			return 0;
 		}
 		return estimateMah;
+	}
+
+	// --- Battery design (rated) capacity, read best-effort from the kernel (issue #104) ---
+
+	/**
+	 * Best-effort read of the battery's design (rated) capacity from the kernel power-supply nodes.
+	 * <p>
+	 * Android exposes no public API for design capacity, but many devices surface it via the Linux
+	 * power-supply class at {@code /sys/class/power_supply/<supply>/charge_full_design} (in µAh). This
+	 * scans the available supplies for that node and returns the first plausible value in mAh. When the
+	 * node is missing or blocked — common under SELinux on newer devices — it returns 0 so callers fall
+	 * back to manual entry.
+	 *
+	 * @return design capacity in mAh, or 0 when it cannot be read
+	 */
+	public static int getDesignCapacityFromSystem() {
+		final File[] supplies = new File(POWER_SUPPLY_DIR).listFiles();
+		if (isNull(supplies)) {
+			return 0; // Directory not listable (e.g. SELinux) — fall back to manual entry.
+		}
+		for (final File supply : supplies) {
+			final int mah = readDesignCapacityMah(new File(supply, CHARGE_FULL_DESIGN_NODE));
+			if (mah > 0) {
+				return mah;
+			}
+		}
+		return 0;
+	}
+
+	/**
+	 * Reads and validates a single {@code charge_full_design} node.
+	 * <p>
+	 * The expected "missing" cases (node absent or not readable) are validated up front rather than
+	 * caught. Only the genuinely-exceptional case — the node passes those checks but the read still
+	 * fails — is caught, logged (not swallowed) and treated as "unavailable".
+	 *
+	 * @param node the candidate {@code charge_full_design} file
+	 *
+	 * @return design capacity in mAh, or 0 when unavailable or implausible
+	 */
+	private static int readDesignCapacityMah(final File node) {
+		if (!node.exists() || !node.canRead()) {
+			return 0;
+		}
+		try (BufferedReader reader = new BufferedReader(new FileReader(node))) {
+			return designCapacityMahFromMicroAmpHours(reader.readLine());
+		} catch (IOException e) {
+			Log.d(TAG, "Unable to read " + node + ": " + e.getMessage());
+			return 0;
+		}
+	}
+
+	/**
+	 * Converts a raw {@code charge_full_design} value (microampere-hours) to a plausible mAh capacity.
+	 * <p>
+	 * Pure and Android-free so it is unit-testable. Validates the text before parsing (so malformed
+	 * content is a no-op, not an exception) and rejects results outside the plausible battery range,
+	 * mirroring {@link #estimateFullCapacityMah}.
+	 *
+	 * @param rawMicroAmpHours raw node contents (µAh as text), or null
+	 *
+	 * @return design capacity in mAh, or 0 when the value is missing, malformed or implausible
+	 */
+	static int designCapacityMahFromMicroAmpHours(final String rawMicroAmpHours) {
+		if (isNull(rawMicroAmpHours)) {
+			return 0;
+		}
+		final String trimmed = rawMicroAmpHours.trim();
+		// µAh for a phone battery is at most ~8 digits; bound the length so the parse can't overflow.
+		if (!trimmed.matches("\\d{1,9}")) {
+			return 0;
+		}
+		final int mah = (int) (Long.parseLong(trimmed) / 1000L);
+		if (mah < MIN_PLAUSIBLE_CAPACITY_MAH || mah > MAX_PLAUSIBLE_CAPACITY_MAH) {
+			return 0;
+		}
+		return mah;
 	}
 
 	/**
