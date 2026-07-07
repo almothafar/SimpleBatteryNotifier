@@ -303,28 +303,6 @@ public final class SystemService {
 	}
 
 	/**
-	 * Read the current battery charge level as a percentage via the public
-	 * {@link BatteryManager#BATTERY_PROPERTY_CAPACITY} property.
-	 * <p>
-	 * Used to gate the measured health figure: the charge-counter-based full-capacity estimate is
-	 * only stable near full charge (see issue #37 and {@code BatteryHealthTracker}).
-	 *
-	 * @param context The application context
-	 *
-	 * @return current battery level (1-100), or -1 when it cannot be determined
-	 */
-	public static int getBatteryLevelPercent(final Context context) {
-		final BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
-		if (isNull(batteryManager)) {
-			Log.w(TAG, "BatteryManager service unavailable");
-			return -1;
-		}
-		final int capacityPercent = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-		// getIntProperty returns Integer.MIN_VALUE for unsupported properties; keep only a valid 1-100.
-		return (capacityPercent >= 1 && capacityPercent <= 100) ? capacityPercent : -1;
-	}
-
-	/**
 	 * Read the OS-reported charge cycle count, where available.
 	 * <p>
 	 * Exposed to apps via the public {@link BatteryManager#EXTRA_CYCLE_COUNT} extra on
