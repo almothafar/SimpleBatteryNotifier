@@ -17,7 +17,9 @@
     <string name="temperature">Temperature</string>
     <string name="technology">Technology</string>
     <string name="voltage">Voltage</string>
-    <string name="health">Health</string>
+    <!-- Details-table row: the OS battery-health flag (a coarse condition), distinct from the wear
+         percentage labelled "Battery Health" on the insights screen (#98) -->
+    <string name="battery_condition">Condition</string>
     <string name="capacity">Capacity</string>
     <string name="battery_health_good">Good</string>
     <string name="battery_health_dead">Dead</string>
