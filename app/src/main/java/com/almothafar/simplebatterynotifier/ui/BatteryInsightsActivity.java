@@ -99,8 +99,9 @@ public class BatteryInsightsActivity extends BaseActivity {
 		daysInUseText.setText(String.valueOf(BatteryHealthTracker.getDaysSinceFirstUse(this)));
 
 		final int designCapacity = BatteryHealthTracker.getDesignCapacity(this);
+		// Pass the number as a String so it renders in Western digits (0-9) in every locale (#96).
 		designCapacityText.setText(designCapacity > 0
-		                           ? getString(R.string.design_capacity_value, designCapacity)
+		                           ? getString(R.string.design_capacity_value, String.valueOf(designCapacity))
 		                           : getString(R.string.set_design_capacity_action));
 	}
 

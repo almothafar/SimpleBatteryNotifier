@@ -101,7 +101,16 @@ public class BatteryDetailsFragment extends Fragment {
 
 		final TableLayout tableLayout = view.findViewById(R.id.batteryDetailsTable);
 		tableLayout.removeAllViews();
-		tableLayout.setStretchAllColumns(true);
+		// Colon-aligned rows with the divider near the horizontal centre (#96): stretch BOTH the label (0)
+		// and value (2) columns so they share the width evenly, and the end-aligned labels' colons line up
+		// around the middle in both LTR and RTL (rather than wherever the widest label happens to end).
+		// Locale direction orders columns right-to-left in Arabic; long labels/values shrink rather than clip.
+		ViewCompat.setLayoutDirection(tableLayout, ViewCompat.LAYOUT_DIRECTION_LOCALE);
+		tableLayout.setColumnStretchable(0, true);
+		tableLayout.setColumnStretchable(1, false);
+		tableLayout.setColumnStretchable(2, true);
+		tableLayout.setColumnShrinkable(0, true);
+		tableLayout.setColumnShrinkable(2, true);
 		final int cellPadding = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding);
 		final int cellPaddingTop = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding_top);
 
@@ -229,9 +238,12 @@ public class BatteryDetailsFragment extends Fragment {
 		final TextView textView = new TextView(view.getContext());
 		textView.setTextAppearance(R.style.DefaultTextStyle);
 		textView.setText(text);
+		// Right-align the label against the colon (END) so labels form a fixed column and the colons line
+		// up; relative padding + locale text direction keep the gap on the correct side in RTL (#96).
 		textView.setGravity(Gravity.END);
+		textView.setTextDirection(View.TEXT_DIRECTION_LOCALE);
 		textView.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_label_color));
-		textView.setPadding(0, 0, cellPadding, cellPaddingTop);
+		textView.setPaddingRelative(0, 0, cellPadding, cellPaddingTop);
 		return textView;
 	}
 
@@ -273,8 +285,11 @@ public class BatteryDetailsFragment extends Fragment {
 		textView.setTextAppearance(R.style.DefaultTextStyle);
 		textView.setText(text);
 		textView.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
+		// Start-align + relative padding + locale text direction so numeric (Latin) values sit right after
+		// the colon like the Arabic text values do, instead of flying to the far edge in RTL (#96).
 		textView.setGravity(Gravity.START);
-		textView.setPadding(cellPadding, 0, 0, cellPaddingTop);
+		textView.setTextDirection(View.TEXT_DIRECTION_LOCALE);
+		textView.setPaddingRelative(cellPadding, 0, 0, cellPaddingTop);
 		if (unreliable) {
 			// #94: amber warning affordance after the value; tap to learn why the reading can't be trusted.
 			// Same mark as the insights health figure, so the two screens read consistently.
@@ -310,8 +325,9 @@ public class BatteryDetailsFragment extends Fragment {
 		// Show the user-entered design (rated) capacity when set (issue #32)
 		final int designCapacity = BatteryHealthTracker.getDesignCapacity(view.getContext());
 		if (designCapacity > 0) {
+			// Western digits (0-9) in every locale — see design_capacity_value / #96.
 			valuesMap.put(getResources().getString(R.string.design_capacity),
-					getResources().getString(R.string.design_capacity_value, designCapacity));
+					getResources().getString(R.string.design_capacity_value, String.valueOf(designCapacity)));
 		}
 
 		// Add charge cycles from the battery health tracker - positioned right after capacity
