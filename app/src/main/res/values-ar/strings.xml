@@ -39,10 +39,10 @@
 
     <string name="pref_header_general">عام</string>
     <string name="pref_header_notifications">التنبيهات والأصوات</string>
-    <string name="pref_header_time_settings">اعدادات الوقت</string>
-    <string name="pref_header_summary_general">إعدادات التطبيق العامة, ويمكنك تحديد المستويات</string>
-    <string name="pref_header_summary_notifications">اعدادات كيفية وصول التبيهات, وتحديدها, والاصوات</string>
-    <string name="pref_header_summary_time_settings">اعدادات الوقت للتنبيهات</string>
+    <string name="pref_header_time_settings">إعدادات الوقت</string>
+    <string name="pref_header_summary_general">إعدادات التطبيق العامة، ويمكنك تحديد المستويات</string>
+    <string name="pref_header_summary_notifications">إعدادات كيفية وصول التنبيهات، وتحديدها، والأصوات</string>
+    <string name="pref_header_summary_time_settings">إعدادات الوقت للتنبيهات</string>
 
     <string name="pref_title_ringtone">الرنين</string>
     <string name="pref_ringtone_silent">صامت</string>
@@ -51,7 +51,7 @@
     <string name="warn_start_level">مستوى التحذير يبدأ من</string>
     <string name="alert_start_level">المستوى الحرج يبدأ من</string>
     <string name="temperature_unit">وحدة الحرارة</string>
-    <string name="off">اطفاء</string>
+    <string name="off">إطفاء</string>
     <string name="on">تشغيل</string>
     <string name="notification_is_sticky">التنبيهات ثابتة</string>
     <string name="notification_is_not_sticky">التنبيهات غير ثابتة</string>
@@ -59,7 +59,7 @@
     <string name="notifications_apply_silent_mode_summary_off">صوت التنبيه سيسمع حتى لو في وضعية الصامت</string>
     <string name="notifications_apply_silent_mode_summary_on">وضعية الصامت لن يتم تجاهلها ولن تسمع التنبيهات في وضعية صامت</string>
     <string name="notifications_apply_silent_mode">تفعيل وضعية صامت</string>
-    <string name="notifications_time_range_summary_off">التنبيه الصوتي في أي وصت من اليوم</string>
+    <string name="notifications_time_range_summary_off">التنبيه الصوتي في أي وقت من اليوم</string>
     <string name="notifications_time_range_summary_on">التنبيه الصوتي محدود بفترة محددة في اليوم</string>
     <string name="notifications_time_range">وقت محدد للتنبيهات</string>
     <string name="notifications_time_range_start">وقت البداية للتنبيه</string>
@@ -68,37 +68,37 @@
     <string name="notifications_vibrate_summary_on">التنبيه بالرجاج معطل</string>
     <string name="notifications_alert_sound_ringtone">صوت المستوى الحرج</string>
     <string name="notifications_warning_sound_ringtone">صوت مستوى التنبيه</string>
-    <string name="notifications_full_sound_ringtone">صوت تبيه اكتمال الشحن</string>
+    <string name="notifications_full_sound_ringtone">صوت تنبيه اكتمال الشحن</string>
     <string name="notifications_sound">التنبيه بالصوت</string>
     <string name="notifications_sound_summary_on">التنبيه بالصوت مفعل</string>
     <string name="notifications_sound_summary_off">التنبيه بالصوت معطل</string>
     <string name="notify_for_warning_level">التنبيه لمستوى التحذير</string>
     <string name="notify_for_warning_level_summary_on">مستوى التحذير مفعل</string>
-    <string name="notify_for_warning_level_summary_off">مستوى التخذير معطل</string>
+    <string name="notify_for_warning_level_summary_off">مستوى التحذير معطل</string>
     <string name="notify_for_full_level">التنبيه لاكتمال الشحن</string>
     <string name="notify_for_full_level_summary_on">تنبيه اكتمال الشحن مفعل</string>
     <string name="notify_for_full_level_summary_off">تنبيه اكتمال الشحن معطل</string>
-    <string name="notify_every_tick">االتنبيه للوضع الحرج كل (1%)</string>
+    <string name="notify_every_tick">التنبيه للمستوى الحرج كل (1%)</string>
     <string name="notify_every_tick_summary_on">التنبيه كل درجة (1%) للمستوى الحرج مفعل</string>
     <string name="notify_every_tick_summary_off">التنبيه كل درجة (1%) للمستوى الحرج معطل</string>
 
-    <string name="notification_critical_ticker">مستوى حرج للبطارية أقل من  %1$d%%</string>
+    <string name="notification_critical_ticker">مستوى حرج للبطارية أقل من %1$d%%</string>
     <string name="notification_critical_title">وقت الشحن الصحي</string>
     <string name="notification_critical_content">البطارية على وشك النفاذ (%1$d%%)</string>
-    <string name="notification_critical_content_big">البطارية في مستوى حرج وأقل من (%1$d%%) حان الوقت لشحن الهاتف</string>
-    <string name="notification_warning_ticker">البطارية في منتصف الطريق اقل من %1$d%%</string>
+    <string name="notification_critical_content_big">البطارية في مستوى حرج وأقل من (%1$d%%)، حان الوقت لشحن الهاتف</string>
+    <string name="notification_warning_ticker">البطارية في منتصف الطريق، أقل من %1$d%%</string>
     <string name="notification_warning_title">اقتصد في الاستخدام</string>
     <string name="notification_warning_content">تحتاج فقط للانتباه للبطارية (%1$d%%)</string>
-    <string name="notification_warning_content_big">مستوى البطارية %1$d%%. لا تحتاج للشاحن بعد, لكن انتبه لاستهلاك البطارية</string>
-    <string name="notification_full_level_ticker">البطارية تم شحنها بالكامل, بامكانك فصل الشاحن</string>
+    <string name="notification_warning_content_big">مستوى البطارية %1$d%%. لا تحتاج للشاحن بعد، لكن انتبه لاستهلاك البطارية</string>
+    <string name="notification_full_level_ticker">البطارية تم شحنها بالكامل، بإمكانك فصل الشاحن</string>
     <string name="notification_full_level_title_healthy">الشحن الصحي اكتمل</string>
     <string name="notification_full_level_title_regular">الشحن الاعتيادي اكتمل</string>
     <string name="notification_full_level_content">استخدم هاتفك بحرية الآن</string>
-    <string name="notification_full_level_content_big">بامكانك استخدام الهاتف الآن, ولا يضر ان ابقيت الشاحن, لا تخف لن تصاب البطارية بالتخمة:D</string>
+    <string name="notification_full_level_content_big">بإمكانك استخدام الهاتف الآن، ولا يضر إن أبقيت الشاحن، لا تخف لن تصاب البطارية بالتخمة 😋</string>
 
     <string name="notification_charge_started_title_healthy">شحن صحي بدأ</string>
     <string name="notification_charge_started_title_regular">شحن اعتيادي بدأ</string>
-    <string name="notification_charge_started_content">البطارية تشحن بواسطة  %1$s </string>
+    <string name="notification_charge_started_content">البطارية تشحن بواسطة %1$s</string>
 
     <!-- Validation error messages -->
     <string name="error_warning_level_too_low">يجب أن يكون مستوى التحذير أعلى من المستوى الحرج (%d%%)</string>

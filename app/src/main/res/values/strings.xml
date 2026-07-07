@@ -96,7 +96,7 @@
     <string name="notification_full_level_title_healthy">Healthy charge completed</string>
     <string name="notification_full_level_title_regular">Regular charge completed</string>
     <string name="notification_full_level_content">You can use your phone</string>
-    <string name="notification_full_level_content_big">You can use your phone, you may disconnect your charger, or keep it and don\'t worry the battery will not get indigestion :P</string>
+    <string name="notification_full_level_content_big">You can use your phone, you may disconnect your charger, or keep it and don\'t worry the battery will not get indigestion 😋</string>
 
     <string name="notification_charge_started_title_healthy">Healthy charging started</string>
     <string name="notification_charge_started_title_regular">Regular charging started</string>
