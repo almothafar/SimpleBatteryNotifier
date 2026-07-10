@@ -162,7 +162,12 @@ public final class NotificationService {
 		                    ? R.drawable.ic_stat_device_battery_charging_20
 		                    : R.drawable.ic_stat_device_battery_charging_50;
 
-		final Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID_FULL)
+		// Plugging in during quiet hours shouldn't ding: shown on the silent channel outside the
+		// window instead of the audible full-battery channel (issue #111).
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
+
+		final Notification.Builder builder = new Notification.Builder(context, channelFor(withinWindow, CHANNEL_ID_FULL))
 				.setSmallIcon(iconRes)
 				.setOnlyAlertOnce(true)
 				.setTicker(ticker)
@@ -198,10 +203,9 @@ public final class NotificationService {
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final String temperature = TemperatureUtils.format(context, rawTenthsC);
 
-		// A high-temperature warning is not a critical battery alert, so it respects quiet hours: shown
-		// on the silent channel outside the window (issue #111).
+		// A high-temperature warning is not a critical battery alert, so it respects quiet hours (#111).
 		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
-		final String channelId = withinWindow ? CHANNEL_ID_TEMPERATURE : CHANNEL_ID_ALERTS_SILENT;
+		final String channelId = channelFor(withinWindow, CHANNEL_ID_TEMPERATURE);
 
 		final Notification.Builder builder = new Notification.Builder(context, channelId)
 				.setSmallIcon(R.drawable.ic_stat_temperature_hot)
@@ -395,8 +399,11 @@ public final class NotificationService {
 	 * @param name        The channel name
 	 * @param description The channel description
 	 */
-	private static void createSilentChannelIfNotExists(final NotificationManager manager, final String channelId,
-	                                                   final String name, final String description) {
+	private static void createSilentChannelIfNotExists(
+			final NotificationManager manager,
+			final String channelId,
+			final String name,
+			final String description) {
 		if (nonNull(manager.getNotificationChannel(channelId))) {
 			return;
 		}
@@ -420,8 +427,13 @@ public final class NotificationService {
 	 * @param ledColor  The LED color for notifications
 	 * @param vibrate   Whether the channel should vibrate (from the user's Vibrate preference)
 	 */
-	private static void createChannelIfNotExists(final NotificationManager manager, final String channelId, final String name,
-	                                             final String description, final int ledColor, final boolean vibrate) {
+	private static void createChannelIfNotExists(
+			final NotificationManager manager,
+			final String channelId,
+			final String name,
+			final String description,
+			final int ledColor,
+			final boolean vibrate) {
 		if (nonNull(manager.getNotificationChannel(channelId))) {
 			return;
 		}
@@ -465,9 +477,7 @@ public final class NotificationService {
 	 * @return Notification.Builder instance
 	 */
 	private static Notification.Builder createNotificationBuilder(final Context context, final NotificationConfig config) {
-		// During quiet hours the alert is still shown, but on the silent channel so it makes no sound or
-		// vibration (issue #111). Alerts allowed to sound keep their high-importance channel.
-		final String channelId = config.alertsAllowed ? config.channelId : CHANNEL_ID_ALERTS_SILENT;
+		final String channelId = channelFor(config.alertsAllowed, config.channelId);
 		final Notification.Builder builder = new Notification.Builder(context, channelId).setSmallIcon(config.iconRes);
 
 		if (config.type != CRITICAL_TYPE) {
@@ -475,6 +485,19 @@ public final class NotificationService {
 		}
 
 		return builder;
+	}
+
+	/**
+	 * The channel an alerting notification should post to: its normal audible (high-importance) channel
+	 * when alerts may sound now, or the shared silent channel during quiet hours so the alert is still
+	 * shown but makes no sound or vibration (issue #111).
+	 *
+	 * @param alertsAllowed    whether alerts may sound now (inside the window, or a critical override)
+	 * @param audibleChannelId the channel to use when alerts are allowed to sound
+	 * @return the channel id to post the notification on
+	 */
+	private static String channelFor(final boolean alertsAllowed, final String audibleChannelId) {
+		return alertsAllowed ? audibleChannelId : CHANNEL_ID_ALERTS_SILENT;
 	}
 
 	/**
