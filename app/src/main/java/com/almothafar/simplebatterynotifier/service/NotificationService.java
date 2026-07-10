@@ -63,6 +63,9 @@ public final class NotificationService {
 	private static final String CHANNEL_ID_FULL = "battery_full";
 	private static final String CHANNEL_ID_STATUS = "battery_status";
 	private static final String CHANNEL_ID_TEMPERATURE = "battery_temperature";
+	// Silent, low-importance channel used to deliver an alert quietly during the user's quiet hours:
+	// the alert is still visible but makes no sound or vibration (issue #111).
+	private static final String CHANNEL_ID_ALERTS_SILENT = "battery_alerts_quiet";
 
 	// Notification settings
 	private static final long[] VIBRATION_PATTERN = {0, 500, 250, 500, 250};
@@ -195,7 +198,12 @@ public final class NotificationService {
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final String temperature = TemperatureUtils.format(context, rawTenthsC);
 
-		final Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID_TEMPERATURE)
+		// A high-temperature warning is not a critical battery alert, so it respects quiet hours: shown
+		// on the silent channel outside the window (issue #111).
+		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
+		final String channelId = withinWindow ? CHANNEL_ID_TEMPERATURE : CHANNEL_ID_ALERTS_SILENT;
+
+		final Notification.Builder builder = new Notification.Builder(context, channelId)
 				.setSmallIcon(R.drawable.ic_stat_temperature_hot)
 				.setTicker(context.getString(R.string.notification_temperature_ticker))
 				.setContentTitle(context.getString(R.string.notification_temperature_title))
@@ -215,7 +223,7 @@ public final class NotificationService {
 		final String sound = prefs.getString(
 				context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
 				context.getString(R.string._default_notification_sound_uri));
-		playAlarm(context, sound, isWithinNotificationWindow(context, prefs), shouldIgnoreSilentMode(context, prefs),
+		playAlarm(context, sound, withinWindow, shouldIgnoreSilentMode(context, prefs),
 				isVibrationEnabled(context, prefs));
 	}
 
@@ -367,28 +375,32 @@ public final class NotificationService {
 		createChannelIfNotExists(manager, CHANNEL_ID_TEMPERATURE,
 				context.getString(R.string.notification_temperature_channel_name),
 				context.getString(R.string.notification_temperature_channel_description), Color.RED, vibrate);
-		createStatusChannelIfNotExists(manager,
+		createSilentChannelIfNotExists(manager, CHANNEL_ID_STATUS,
 				context.getString(R.string.notification_status_channel_name),
 				context.getString(R.string.notification_status_channel_description));
+		createSilentChannelIfNotExists(manager, CHANNEL_ID_ALERTS_SILENT,
+				context.getString(R.string.notification_quiet_channel_name),
+				context.getString(R.string.notification_quiet_channel_description));
 	}
 
 	/**
-	 * Create the low-importance channel used by the persistent status notification.
+	 * Create a low-importance, fully silent channel (no sound, vibration, lights or badge).
 	 * <p>
-	 * Unlike the alert channels, this channel is silent (no sound, vibration, lights or badge)
-	 * so the ongoing battery-status notification stays unobtrusive.
+	 * Used both by the persistent status notification and, during the user's quiet hours, to deliver
+	 * an alert quietly so it stays visible without disturbing the user (issue #111).
 	 *
 	 * @param manager     The NotificationManager
+	 * @param channelId   The channel ID to create
 	 * @param name        The channel name
 	 * @param description The channel description
 	 */
-	private static void createStatusChannelIfNotExists(final NotificationManager manager, final String name,
-	                                                   final String description) {
-		if (nonNull(manager.getNotificationChannel(CHANNEL_ID_STATUS))) {
+	private static void createSilentChannelIfNotExists(final NotificationManager manager, final String channelId,
+	                                                   final String name, final String description) {
+		if (nonNull(manager.getNotificationChannel(channelId))) {
 			return;
 		}
 
-		final NotificationChannel channel = new NotificationChannel(CHANNEL_ID_STATUS, name, NotificationManager.IMPORTANCE_LOW);
+		final NotificationChannel channel = new NotificationChannel(channelId, name, NotificationManager.IMPORTANCE_LOW);
 		channel.setDescription(description);
 		channel.enableLights(false);
 		channel.enableVibration(false);
@@ -452,7 +464,10 @@ public final class NotificationService {
 	 * @return Notification.Builder instance
 	 */
 	private static Notification.Builder createNotificationBuilder(final Context context, final NotificationConfig config) {
-		final Notification.Builder builder = new Notification.Builder(context, config.channelId).setSmallIcon(config.iconRes);
+		// During quiet hours the alert is still shown, but on the silent channel so it makes no sound or
+		// vibration (issue #111). Alerts allowed to sound keep their high-importance channel.
+		final String channelId = config.alertsAllowed ? config.channelId : CHANNEL_ID_ALERTS_SILENT;
+		final Notification.Builder builder = new Notification.Builder(context, channelId).setSmallIcon(config.iconRes);
 
 		if (config.type != CRITICAL_TYPE) {
 			builder.setOnlyAlertOnce(true);
@@ -516,22 +531,22 @@ public final class NotificationService {
 	 * @param config  The notification configuration
 	 */
 	private static void playSoundIfNeeded(final Context context, final NotificationConfig config) {
-		playAlarm(context, config.alarmSound, config.withinTime, config.ignoreSilent, config.vibrate);
+		playAlarm(context, config.alarmSound, config.alertsAllowed, config.ignoreSilent, config.vibrate);
 	}
 
 	/**
 	 * Play the alert sound (and optionally vibrate) when the phone is silenced but the user opted
 	 * to override silent mode. In normal ringer mode the notification channel plays its own sound.
 	 *
-	 * @param context      The application context
-	 * @param soundUriStr  The alarm sound URI string
-	 * @param withinTime   Whether the current time is inside the allowed notification window
-	 * @param ignoreSilent Whether the user opted to override silent/DND mode
-	 * @param vibrate      Whether the user enabled vibration
+	 * @param context       The application context
+	 * @param soundUriStr   The alarm sound URI string
+	 * @param alertsAllowed Whether alerts may sound now (inside the window, or a critical override)
+	 * @param ignoreSilent  Whether the user opted to override silent/DND mode
+	 * @param vibrate       Whether the user enabled vibration
 	 */
 	private static void playAlarm(final Context context, final String soundUriStr,
-	                              final boolean withinTime, final boolean ignoreSilent, final boolean vibrate) {
-		if (!withinTime) {
+	                              final boolean alertsAllowed, final boolean ignoreSilent, final boolean vibrate) {
+		if (!alertsAllowed) {
 			return;
 		}
 
@@ -573,7 +588,10 @@ public final class NotificationService {
 	 * @return true if alerts are allowed at the current time
 	 */
 	private static boolean isWithinNotificationWindow(final Context context, final SharedPreferences prefs) {
-		final boolean limitedTime = prefs.getBoolean(context.getString(R.string._pref_key_notifications_time_range), false);
+		// Default ON to match the toggle's XML default (pref_time_settings.xml). Reading false here let a
+		// fresh install that never opened Time Settings alert around the clock, so quiet hours silently
+		// did nothing (issue #111). Now quiet hours apply by default (06:30–23:30).
+		final boolean limitedTime = prefs.getBoolean(context.getString(R.string._pref_key_notifications_time_range), true);
 		final String startTime = prefs.getString(
 				context.getString(R.string._pref_key_notifications_time_range_start),
 				context.getString(R.string._pref_value_notifications_time_range_start));
@@ -581,6 +599,22 @@ public final class NotificationService {
 				context.getString(R.string._pref_key_notifications_time_range_end),
 				context.getString(R.string._pref_value_notifications_time_range_end));
 		return isWithinTime(startTime, endTime) || !limitedTime;
+	}
+
+	/**
+	 * Whether an alert may sound/vibrate right now, given the quiet-hours window and the critical-alert
+	 * override. Alerts are allowed inside the window; a critical alert may additionally be allowed to
+	 * break through quiet hours when the user has left that option on (default), so a genuinely low
+	 * battery still wakes them (issue #111). Pure and Android-free so it is unit-testable.
+	 *
+	 * @param withinWindow             whether now falls inside the allowed notification window
+	 * @param isCritical               whether this is a critical (about-to-die) alert
+	 * @param criticalIgnoresQuietHours whether critical alerts are allowed to break through quiet hours
+	 * @return true when the alert may sound/vibrate now
+	 */
+	static boolean alertsAllowedNow(final boolean withinWindow, final boolean isCritical,
+	                                final boolean criticalIgnoresQuietHours) {
+		return withinWindow || (isCritical && criticalIgnoresQuietHours);
 	}
 
 	/**
@@ -744,7 +778,7 @@ public final class NotificationService {
 		final String content;
 		final String bigContent;
 		final String alarmSound;
-		final boolean withinTime;
+		final boolean alertsAllowed;
 		final boolean ignoreSilent;
 		final boolean vibrate;
 		final boolean stickyNotification;
@@ -764,7 +798,10 @@ public final class NotificationService {
 			final int criticalLevel = prefs.getInt(context.getString(R.string._pref_key_critical_battery_level), 20);
 
 			this.stickyNotification = prefs.getBoolean(context.getString(R.string._pref_key_notifications_sticky), false);
-			this.withinTime = isWithinNotificationWindow(context, prefs);
+			final boolean withinWindow = isWithinNotificationWindow(context, prefs);
+			final boolean criticalIgnoresQuietHours = prefs.getBoolean(
+					context.getString(R.string._pref_key_critical_ignore_quiet_hours), true);
+			this.alertsAllowed = alertsAllowedNow(withinWindow, type == CRITICAL_TYPE, criticalIgnoresQuietHours);
 			this.ignoreSilent = shouldIgnoreSilentMode(context, prefs);
 			this.vibrate = isVibrationEnabled(context, prefs);
 
