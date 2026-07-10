@@ -888,7 +888,11 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Build the content line of the ongoing status notification, e.g. "85% · Discharging · 32.0 °C".
+	 * Build the content line of the ongoing status notification, e.g. "85% · Discharging 9%/h · 32.0 °C".
+	 * <p>
+	 * The middle segment appends the charge/drain rate to the status label when available, falling back
+	 * to the raw mA, then to the plain label — always showing the best number on hand (issue #108). The
+	 * appended rate is gated by a user setting (default on); the plain label always shows.
 	 *
 	 * @param context   The application context
 	 * @param batteryDO Current battery snapshot, or null if unavailable
@@ -898,7 +902,35 @@ public final class NotificationService {
 		final int percentage = isNull(batteryDO) ? 0 : Math.round(batteryDO.getBatteryPercentage());
 		final String statusLabel = SystemService.getStatusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
 		final String temperature = isNull(batteryDO) ? "" : TemperatureUtils.format(context, batteryDO.getTemperature());
-		return context.getString(R.string.notification_status_content, percentage, statusLabel, temperature);
+		return context.getString(R.string.notification_status_content, percentage, statusWithRate(context, batteryDO, statusLabel), temperature);
+	}
+
+	/**
+	 * The status segment with the rate (or raw mA) appended, e.g. "Discharging 9%/h" — or the plain
+	 * label when no reading is available or the user turned the appended rate off (issue #108).
+	 *
+	 * @param context     The application context
+	 * @param batteryDO   Current battery snapshot, or null if unavailable
+	 * @param statusLabel The plain localized status label
+	 * @return The status label, optionally with the rate/current appended
+	 */
+	private static String statusWithRate(final Context context, final BatteryDO batteryDO, final String statusLabel) {
+		if (isNull(batteryDO)) {
+			return statusLabel;
+		}
+		final boolean showRate = PreferenceManager.getDefaultSharedPreferences(context)
+		                                           .getBoolean(context.getString(R.string._pref_key_show_rate_in_notification), true);
+		if (!showRate) {
+			return statusLabel;
+		}
+		final BatteryRateTracker.BatteryRate rate = BatteryRateTracker.getRate(context, batteryDO);
+		if (rate.hasRate()) {
+			return statusLabel + " " + BatteryRateTracker.formatRateValue(context, rate.percentPerHour());
+		}
+		if (rate.hasCurrent()) {
+			return statusLabel + " " + BatteryRateTracker.formatCurrentValue(context, rate.currentMilliAmps());
+		}
+		return statusLabel;
 	}
 
 	/**

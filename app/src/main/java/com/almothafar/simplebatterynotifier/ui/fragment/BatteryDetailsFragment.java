@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
@@ -21,6 +22,7 @@ import androidx.fragment.app.Fragment;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
+import com.almothafar.simplebatterynotifier.service.BatteryRateTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
@@ -54,6 +56,12 @@ public class BatteryDetailsFragment extends Fragment {
 	// createDetailsTable to just the capacity row.
 	private boolean capacityUnreliable;
 	private String capacityLabel;
+
+	// #108: the drain-rate row's label, and the colour applied to its value cell (amber near the user's
+	// limit, red at/above it, while discharging; 0 = no special colour). Both set in fillBatteryInfo and
+	// applied by createDetailsTable to just that row, mirroring the capacity special-case above.
+	private String rateLabel;
+	private int rateValueColor;
 
 	/**
 	 * Default constructor required for fragment instantiation
@@ -118,7 +126,9 @@ public class BatteryDetailsFragment extends Fragment {
 		for (final String key : valuesMap.keySet()) {
 			// Only the capacity row gets the "unreliable reading" info affordance (#94).
 			final boolean unreliable = capacityUnreliable && key.equals(capacityLabel);
-			final TableRow row = createTableRow(view, key, valuesMap.get(key), cellPadding, cellPaddingTop, unreliable);
+			// Only the drain-rate row is coloured (amber/red near the limit while discharging) — #108.
+			final int valueColor = (rateValueColor != 0 && key.equals(rateLabel)) ? rateValueColor : 0;
+			final TableRow row = createTableRow(view, key, valuesMap.get(key), cellPadding, cellPaddingTop, unreliable, valueColor);
 			tableLayout.addView(row, rowIndex);
 			rowIndex++;
 		}
@@ -196,11 +206,13 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param cellPadding     The horizontal cell padding
 	 * @param cellPaddingTop  The top cell padding
 	 * @param valueUnreliable When true, decorate the value cell with a tappable "unreliable reading" icon
+	 * @param valueColor      Colour for the value text, or 0 to keep the default value colour (#108)
 	 *
 	 * @return The created table row
 	 */
 	private TableRow createTableRow(final View view, final String label, final String value,
-	                                final int cellPadding, final int cellPaddingTop, final boolean valueUnreliable) {
+	                                final int cellPadding, final int cellPaddingTop,
+	                                final boolean valueUnreliable, final int valueColor) {
 		final TableRow row = new TableRow(view.getContext());
 		final TableRow.LayoutParams layoutParams = new TableRow.LayoutParams(
 				TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT, 1.0f);
@@ -212,7 +224,7 @@ public class BatteryDetailsFragment extends Fragment {
 
 		final TextView textViewLabel = createLabelTextView(view, label, cellPadding, cellPaddingTop);
 		final TextView textViewSep = createSeparatorTextView(view);
-		final TextView textViewValue = createValueTextView(view, value, cellPadding, cellPaddingTop, valueUnreliable);
+		final TextView textViewValue = createValueTextView(view, value, cellPadding, cellPaddingTop, valueUnreliable, valueColor);
 
 		// Add views in logical order (label -> separator -> value)
 		// RTL languages will automatically reverse the visual order
@@ -273,6 +285,7 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param cellPaddingTop The top cell padding
 	 * @param unreliable     When true, append a tappable amber info icon that opens the "unreliable
 	 *                       reading" explanation (#94)
+	 * @param valueColor     Colour for the value text, or 0 to keep the default value colour (#108)
 	 *
 	 * @return The created TextView
 	 */
@@ -280,11 +293,14 @@ public class BatteryDetailsFragment extends Fragment {
 	                                     final String text,
 	                                     final int cellPadding,
 	                                     final int cellPaddingTop,
-	                                     final boolean unreliable) {
+	                                     final boolean unreliable,
+	                                     final int valueColor) {
 		final TextView textView = new TextView(view.getContext());
 		textView.setTextAppearance(R.style.DefaultTextStyle);
 		textView.setText(text);
-		textView.setTextColor(GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
+		textView.setTextColor(valueColor != 0
+		                      ? valueColor
+		                      : GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
 		// Start-align + relative padding + locale text direction so numeric (Latin) values sit right after
 		// the colon like the Arabic text values do, instead of flying to the far edge in RTL (#96).
 		textView.setGravity(Gravity.START);
@@ -308,6 +324,11 @@ public class BatteryDetailsFragment extends Fragment {
 	 */
 	private void fillBatteryInfo(final View view) {
 		valuesMap = new LinkedHashMap<>();
+
+		// #108: live charge/drain rate and signed current at the very top, each shown only when its
+		// reading is trustworthy. Recording here also feeds the smoothing window from the foreground
+		// refresh (the other feed is the battery broadcast) without any polling timer of our own.
+		addRateRows(view);
 
 		valuesMap.put(getResources().getString(R.string.technology), batteryDO.getTechnology());
 
@@ -339,6 +360,57 @@ public class BatteryDetailsFragment extends Fragment {
 		valuesMap.put(getResources().getString(R.string.temperature),
 				TemperatureUtils.format(view.getContext(), batteryDO.getTemperature()));
 		valuesMap.put(getResources().getString(R.string.battery_condition), batteryDO.getHealth());
+	}
+
+	/**
+	 * Adds the drain/charge rate and signed-current rows at the top of the table (#108).
+	 * <p>
+	 * Each row appears only when its reading is trustworthy (independent gating like #94): the rate hides
+	 * during the brief post-unplug warm-up or a static level, the current hides when the device doesn't
+	 * report a plausible mA. The label flips between "Drain rate" and "Charge rate" with direction, and
+	 * the rate value is coloured amber/red near the user's limit while discharging (see {@link #rateColor}).
+	 *
+	 * @param view The fragment view
+	 */
+	private void addRateRows(final View view) {
+		rateLabel = null;
+		rateValueColor = 0;
+
+		final BatteryRateTracker.BatteryRate rate = BatteryRateTracker.record(view.getContext(), batteryDO);
+
+		if (rate.hasRate()) {
+			rateLabel = getResources().getString(rate.charging() ? R.string.charge_rate : R.string.drain_rate);
+			valuesMap.put(rateLabel, BatteryRateTracker.formatRateValue(view.getContext(), rate.percentPerHour()));
+			rateValueColor = rateColor(view.getContext(), rate);
+		}
+		if (rate.hasCurrent()) {
+			valuesMap.put(getResources().getString(R.string.battery_current),
+					BatteryRateTracker.formatCurrentValue(view.getContext(), rate.currentMilliAmps()));
+		}
+	}
+
+	/**
+	 * The colour for the drain-rate value: red at/above the user's limit, amber as it approaches (derived
+	 * just below the limit), otherwise the default. Charging is left uncoloured in v1 — its context traps
+	 * (thermal throttling, deliberate trickle near 100%) make a single limit misleading (#108).
+	 *
+	 * @param context The context for resolving colours and the limit preference
+	 * @param rate    The computed rate
+	 *
+	 * @return a colour int, or 0 to keep the default value colour
+	 */
+	private int rateColor(final Context context, final BatteryRateTracker.BatteryRate rate) {
+		if (rate.charging()) {
+			return 0;
+		}
+		final int limit = BatteryRateTracker.getDrainLimitPercentPerHour(context);
+		if (rate.percentPerHour() >= limit) {
+			return GeneralHelper.getColor(getResources(), R.color.battery_rate_high);
+		}
+		if (rate.percentPerHour() >= BatteryRateTracker.amberThreshold(limit)) {
+			return GeneralHelper.getColor(getResources(), R.color.battery_rate_warn);
+		}
+		return 0;
 	}
 
 	/**

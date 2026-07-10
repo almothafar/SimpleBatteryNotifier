@@ -27,4 +27,9 @@
     <color name="battery_details_label_color">#004A5B</color>
     <color name="battery_details_value_color">#01708A</color>
     <color name="default_text_color">#004A5B</color>
+
+    <!-- Drain-rate colouring in the details table (#108): amber as the rate nears the user's limit, red
+         at/above it. Reuse the circular gauge's warning/alert hues so the app reads as one system. -->
+    <color name="battery_rate_warn">#FFB100</color>
+    <color name="battery_rate_high">#E01A00</color>
 </resources>
