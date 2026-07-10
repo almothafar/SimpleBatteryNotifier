@@ -223,8 +223,9 @@ public final class NotificationService {
 		final String sound = prefs.getString(
 				context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
 				context.getString(R.string._default_notification_sound_uri));
-		playAlarm(context, sound, withinWindow, shouldIgnoreSilentMode(context, prefs),
-				isVibrationEnabled(context, prefs));
+		if (withinWindow) {
+			playAlarm(context, sound, shouldIgnoreSilentMode(context, prefs), isVibrationEnabled(context, prefs));
+		}
 	}
 
 	/**
@@ -531,25 +532,27 @@ public final class NotificationService {
 	 * @param config  The notification configuration
 	 */
 	private static void playSoundIfNeeded(final Context context, final NotificationConfig config) {
-		playAlarm(context, config.alarmSound, config.alertsAllowed, config.ignoreSilent, config.vibrate);
+		if (config.alertsAllowed) {
+			playAlarm(context, config.alarmSound, config.ignoreSilent, config.vibrate);
+		}
 	}
 
 	/**
 	 * Play the alert sound (and optionally vibrate) when the phone is silenced but the user opted
 	 * to override silent mode. In normal ringer mode the notification channel plays its own sound.
+	 * <p>
+	 * Callers must first check that alerts are allowed right now (quiet hours / critical override).
 	 *
-	 * @param context       The application context
-	 * @param soundUriStr   The alarm sound URI string
-	 * @param alertsAllowed Whether alerts may sound now (inside the window, or a critical override)
-	 * @param ignoreSilent  Whether the user opted to override silent/DND mode
-	 * @param vibrate       Whether the user enabled vibration
+	 * @param context      The application context
+	 * @param soundUriStr  The alarm sound URI string
+	 * @param ignoreSilent Whether the user opted to override silent/DND mode
+	 * @param vibrate      Whether the user enabled vibration
 	 */
-	private static void playAlarm(final Context context, final String soundUriStr,
-	                              final boolean alertsAllowed, final boolean ignoreSilent, final boolean vibrate) {
-		if (!alertsAllowed) {
-			return;
-		}
-
+	private static void playAlarm(
+			final Context context,
+			final String soundUriStr,
+			final boolean ignoreSilent,
+			final boolean vibrate) {
 		final Uri soundUri = Uri.parse(soundUriStr);
 		final AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 		if (isNull(audioManager)) {
@@ -799,8 +802,7 @@ public final class NotificationService {
 
 			this.stickyNotification = prefs.getBoolean(context.getString(R.string._pref_key_notifications_sticky), false);
 			final boolean withinWindow = isWithinNotificationWindow(context, prefs);
-			final boolean criticalIgnoresQuietHours = prefs.getBoolean(
-					context.getString(R.string._pref_key_critical_ignore_quiet_hours), true);
+			final boolean criticalIgnoresQuietHours = prefs.getBoolean(context.getString(R.string._pref_key_critical_ignore_quiet_hours), true);
 			this.alertsAllowed = alertsAllowedNow(withinWindow, type == CRITICAL_TYPE, criticalIgnoresQuietHours);
 			this.ignoreSilent = shouldIgnoreSilentMode(context, prefs);
 			this.vibrate = isVibrationEnabled(context, prefs);
