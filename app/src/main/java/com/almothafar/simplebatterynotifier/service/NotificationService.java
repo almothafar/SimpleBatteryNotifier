@@ -68,6 +68,7 @@ public final class NotificationService {
 	private static final String CHANNEL_ID_FULL = "battery_full";
 	private static final String CHANNEL_ID_STATUS = "battery_status";
 	private static final String CHANNEL_ID_TEMPERATURE = "battery_temperature";
+	private static final String CHANNEL_ID_FAST_DRAIN = "battery_fast_drain";
 	// Silent, low-importance channel used to deliver an alert quietly during the user's quiet hours:
 	// the alert is still visible but makes no sound or vibration (issue #111).
 	private static final String CHANNEL_ID_ALERTS_SILENT = "battery_alerts_quiet";
@@ -79,6 +80,8 @@ public final class NotificationService {
 	private static final int ONGOING_NOTIFICATION_ID = 1641988;
 	// Separate ID so a temperature alert doesn't replace a battery-level alert
 	private static final int TEMPERATURE_NOTIFICATION_ID = 1641989;
+	// Separate ID so a fast-drain alert doesn't replace a level or temperature alert (#109)
+	private static final int FAST_DRAIN_NOTIFICATION_ID = 1641990;
 
 	// Do Not Disturb mode constants
 	private static final String ZEN_MODE = "zen_mode";
@@ -365,6 +368,64 @@ public final class NotificationService {
 	}
 
 	/**
+	 * Send a "battery draining fast" alert (issue #109).
+	 * <p>
+	 * Uses a dedicated channel and notification ID so it never replaces a level or temperature alert, and
+	 * honours the same quiet-hours / silent-mode / vibrate preferences as the other alerts. The message is
+	 * transparent: it states the real measured rate, how long it has been sustained, and the user's own
+	 * limit, so it explains why it fired and that the user controls it. It deliberately cannot name the
+	 * culprit app (that needs a privileged permission — see the issue).
+	 *
+	 * @param context        The application context
+	 * @param ratePph        The measured drain rate in %/h
+	 * @param limitPph       The user's high-drain limit in %/h
+	 * @param elapsedMinutes How long the rate has been sustained at/above the limit, in minutes
+	 */
+	public static void sendFastDrainNotification(final Context context, final int ratePph,
+	                                             final int limitPph, final int elapsedMinutes) {
+		if (lacksNotificationPermission(context)) {
+			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, fast-drain alert not sent");
+			return;
+		}
+
+		createNotificationChannels(context);
+
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		// A fast-drain warning is not a critical battery alert, so it respects quiet hours (#111).
+		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
+		final String channelId = channelFor(withinWindow, CHANNEL_ID_FAST_DRAIN);
+
+		// Western digits in every locale (#96) via String.valueOf.
+		final String rate = String.valueOf(ratePph);
+		final String limit = String.valueOf(limitPph);
+		final String minutes = String.valueOf(elapsedMinutes);
+
+		final Notification.Builder builder = new Notification.Builder(context, channelId)
+				.setSmallIcon(R.drawable.ic_stat_device_battery_charging_20)
+				.setTicker(context.getString(R.string.notification_fast_drain_ticker))
+				.setContentTitle(context.getString(R.string.notification_fast_drain_title))
+				.setContentText(context.getString(R.string.notification_fast_drain_content, rate, minutes, limit))
+				.setWhen(System.currentTimeMillis())
+				.setLargeIcon(getLauncherIcon(context))
+				.setContentIntent(createMainActivityIntent(context))
+				.setVisibility(Notification.VISIBILITY_PUBLIC)
+				.setStyle(new Notification.BigTextStyle()
+						          .bigText(context.getString(R.string.notification_fast_drain_content, rate, minutes, limit)));
+
+		final NotificationManager manager = getNotificationManager(context);
+		if (nonNull(manager)) {
+			manager.notify(FAST_DRAIN_NOTIFICATION_ID, builder.build());
+		}
+
+		final String sound = prefs.getString(
+				context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
+				context.getString(R.string._default_notification_sound_uri));
+		if (withinWindow) {
+			playAlarm(context, sound, shouldIgnoreSilentMode(context, prefs), isVibrationEnabled(context, prefs));
+		}
+	}
+
+	/**
 	 * Clear all battery notifications
 	 *
 	 * @param context The application context
@@ -529,6 +590,9 @@ public final class NotificationService {
 		createChannelIfNotExists(manager, CHANNEL_ID_TEMPERATURE,
 				context.getString(R.string.notification_temperature_channel_name),
 				context.getString(R.string.notification_temperature_channel_description), Color.RED, vibrate);
+		createChannelIfNotExists(manager, CHANNEL_ID_FAST_DRAIN,
+				context.getString(R.string.notification_fast_drain_channel_name),
+				context.getString(R.string.notification_fast_drain_channel_description), Color.rgb(0xff, 0x66, 0x00), vibrate);
 		createSilentChannelIfNotExists(manager, CHANNEL_ID_STATUS,
 				context.getString(R.string.notification_status_channel_name),
 				context.getString(R.string.notification_status_channel_description));
@@ -615,6 +679,7 @@ public final class NotificationService {
 		manager.deleteNotificationChannel(CHANNEL_ID_WARNING);
 		manager.deleteNotificationChannel(CHANNEL_ID_FULL);
 		manager.deleteNotificationChannel(CHANNEL_ID_TEMPERATURE);
+		manager.deleteNotificationChannel(CHANNEL_ID_FAST_DRAIN);
 		createNotificationChannels(context);
 	}
 

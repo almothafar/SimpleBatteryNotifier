@@ -1,6 +1,7 @@
 package com.almothafar.simplebatterynotifier.service;
 
 import android.annotation.SuppressLint;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -12,6 +13,7 @@ import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
@@ -454,6 +456,28 @@ public final class SystemService {
 		}
 		final int cycles = batteryStatus.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1);
 		return cycles > 0 ? cycles : -1;
+	}
+
+	/**
+	 * Whether the user is actively using the phone right now: the screen is on <em>and</em> unlocked.
+	 * <p>
+	 * Used by the fast-drain alert (#109) to tell a visible, expected drain (warn once) from a background
+	 * drain the user can't see (remind while it continues). Needs no special permission. A missing
+	 * PowerManager conservatively reads as "not actively used", so the higher-value background reminders
+	 * still fire.
+	 *
+	 * @param context The application context
+	 *
+	 * @return true when the screen is interactive and the keyguard is not locked
+	 */
+	public static boolean isActivelyUsed(final Context context) {
+		final PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+		if (isNull(powerManager) || !powerManager.isInteractive()) {
+			return false;
+		}
+		final KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+		// No keyguard service means we can't confirm it's unlocked; treat as unlocked since the screen is on.
+		return isNull(keyguardManager) || !keyguardManager.isKeyguardLocked();
 	}
 
 	/**

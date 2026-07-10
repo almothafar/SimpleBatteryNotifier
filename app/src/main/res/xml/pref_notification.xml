@@ -116,8 +116,19 @@
         android:title="@string/pref_cat_title_drain"
         app:iconSpaceReserved="false">
 
-        <!-- defaultValue/min/max must match BatteryRateTracker.DEFAULT/MIN/MAX_DRAIN_LIMIT_PPH, which
-             clamp the stored value when it is read (#108/#109). -->
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/_pref_key_notify_fast_drain"
+            android:summaryOff="@string/notify_fast_drain_summary_off"
+            android:summaryOn="@string/notify_fast_drain_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/notify_fast_drain"
+            app:iconSpaceReserved="false" />
+
+        <!-- Shared with #108's table colouring, so it is NOT gated by the alert toggle above.
+             defaultValue/min/max must match BatteryRateTracker.DEFAULT/MIN/MAX_DRAIN_LIMIT_PPH,
+             which clamp the stored value when it is read (#108/#109). -->
         <SeekBarPreference
             android:defaultValue="20"
             android:key="@string/_pref_key_fast_drain_limit"
@@ -125,6 +136,30 @@
             android:max="60"
             android:summary="@string/drain_limit_summary"
             android:title="@string/drain_limit"
+            style="@style/PreferenceSeekBar"
+            app:showSeekBarValue="true"
+            app:adjustable="true"
+            app:iconSpaceReserved="false" />
+
+        <SeekBarPreference
+            android:defaultValue="5"
+            android:dependency="@string/_pref_key_notify_fast_drain"
+            android:key="@string/_pref_key_fast_drain_sustained_minutes"
+            android:min="1"
+            android:max="30"
+            android:title="@string/fast_drain_sustained_minutes"
+            style="@style/PreferenceSeekBar"
+            app:showSeekBarValue="true"
+            app:adjustable="true"
+            app:iconSpaceReserved="false" />
+
+        <SeekBarPreference
+            android:defaultValue="15"
+            android:dependency="@string/_pref_key_notify_fast_drain"
+            android:key="@string/_pref_key_fast_drain_reminder_minutes"
+            android:min="5"
+            android:max="60"
+            android:title="@string/fast_drain_reminder_minutes"
             style="@style/PreferenceSeekBar"
             app:showSeekBarValue="true"
             app:adjustable="true"
