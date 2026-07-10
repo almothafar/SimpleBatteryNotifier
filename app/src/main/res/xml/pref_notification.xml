@@ -124,6 +124,16 @@
             android:title="@string/notify_every_tick"
             app:iconSpaceReserved="false" />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/_pref_key_critical_ignore_quiet_hours"
+            android:summaryOff="@string/critical_ignore_quiet_hours_summary_off"
+            android:summaryOn="@string/critical_ignore_quiet_hours_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/critical_ignore_quiet_hours"
+            app:iconSpaceReserved="false" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>

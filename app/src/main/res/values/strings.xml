@@ -83,6 +83,9 @@
     <string name="notify_every_tick">Notify for critical every (1%)</string>
     <string name="notify_every_tick_summary_on">Notify every tick (1%) for critical level enabled</string>
     <string name="notify_every_tick_summary_off">Notify every tick (1%) for critical level disabled</string>
+    <string name="critical_ignore_quiet_hours">Critical alerts ignore quiet hours</string>
+    <string name="critical_ignore_quiet_hours_summary_on">A critically low battery still alerts during quiet hours</string>
+    <string name="critical_ignore_quiet_hours_summary_off">Critical alerts stay silent during quiet hours</string>
 
     <string name="notification_critical_ticker">Your battery in critical level and below %1$d%%</string>
     <string name="notification_critical_title">Healthy charge time</string>
@@ -105,6 +108,9 @@
     <!-- Persistent foreground-service status notification -->
     <string name="notification_status_channel_name">Battery Status</string>
     <string name="notification_status_channel_description">Ongoing battery status while monitoring is active</string>
+    <!-- Silent channel used to show an alert quietly during quiet hours (issue #111) -->
+    <string name="notification_quiet_channel_name">Quiet Alerts</string>
+    <string name="notification_quiet_channel_description">Battery alerts shown silently during your quiet hours</string>
     <!-- e.g. "85% · Discharging · 32.0 °C" -->
     <string name="notification_status_content">%1$d%% · %2$s · %3$s</string>
 
@@ -224,14 +230,15 @@
     <string name="_pref_key_notifications_time_range_end" translatable="false">key_notifications_time_range_end</string>
     <string name="_pref_key_notifications_apply_silent_mode" translatable="false">key_notifications_apply_silent_mode</string>
     <string name="_pref_key_notify_every_tick" translatable="false">key_notify_every_tick</string>
+    <string name="_pref_key_critical_ignore_quiet_hours" translatable="false">key_critical_ignore_quiet_hours</string>
     <string name="_pref_key_notify_high_temperature" translatable="false">key_notify_high_temperature</string>
     <string name="_pref_key_high_temperature_threshold" translatable="false">key_high_temperature_threshold</string>
     <string name="_pref_key_language" translatable="false">key_language</string>
 
     <string name="_pref_value_temperatures_unit_c" translatable="false">celsius</string>
     <string name="_pref_value_temperatures_unit_f" translatable="false">fahrenheit</string>
-    <string name="_pref_value_notifications_time_range_end" translatable="false">23:00</string>
-    <string name="_pref_value_notifications_time_range_start" translatable="false">08:00</string>
+    <string name="_pref_value_notifications_time_range_end" translatable="false">23:30</string>
+    <string name="_pref_value_notifications_time_range_start" translatable="false">06:30</string>
 
     <!-- Validation error messages -->
     <string name="error_warning_level_too_low">Warning level must be higher than critical level (%d%%)</string>

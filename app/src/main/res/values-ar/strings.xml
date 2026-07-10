@@ -81,6 +81,9 @@
     <string name="notify_every_tick">التنبيه للمستوى الحرج كل (1%)</string>
     <string name="notify_every_tick_summary_on">التنبيه كل درجة (1%) للمستوى الحرج مفعل</string>
     <string name="notify_every_tick_summary_off">التنبيه كل درجة (1%) للمستوى الحرج معطل</string>
+    <string name="critical_ignore_quiet_hours">التنبيهات الحرجة تتجاوز ساعات الهدوء</string>
+    <string name="critical_ignore_quiet_hours_summary_on">البطارية المنخفضة جداً تنبّهك حتى أثناء ساعات الهدوء</string>
+    <string name="critical_ignore_quiet_hours_summary_off">التنبيهات الحرجة تبقى صامتة أثناء ساعات الهدوء</string>
 
     <string name="notification_critical_ticker">مستوى حرج للبطارية أقل من %1$d%%</string>
     <string name="notification_critical_title">وقت الشحن الصحي</string>
@@ -113,6 +116,8 @@
     <!-- Persistent foreground-service status notification -->
     <string name="notification_status_channel_name">حالة البطارية</string>
     <string name="notification_status_channel_description">حالة البطارية المستمرة أثناء تفعيل المراقبة</string>
+    <string name="notification_quiet_channel_name">تنبيهات صامتة</string>
+    <string name="notification_quiet_channel_description">تنبيهات البطارية تُعرض بصمت أثناء ساعات الهدوء</string>
     <string name="notification_status_content">%1$d%% · %2$s · %3$s</string>
 
     <!-- High temperature alert -->

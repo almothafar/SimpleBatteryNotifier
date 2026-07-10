@@ -71,4 +71,27 @@ public class NotificationServiceTest {
 		assertTrue(NotificationService.isWithinTimeRange(0, 10 * 60, 10 * 60));
 		assertTrue(NotificationService.isWithinTimeRange(23 * 60 + 59, 10 * 60, 10 * 60));
 	}
+
+	// --- alertsAllowedNow: quiet-hours gating with the critical override (issue #111) ---
+
+	@Test
+	public void insideWindow_alwaysAllowed() {
+		assertTrue(NotificationService.alertsAllowedNow(true, false, false));
+		assertTrue(NotificationService.alertsAllowedNow(true, true, false));
+	}
+
+	@Test
+	public void outsideWindow_nonCritical_silenced() {
+		assertFalse(NotificationService.alertsAllowedNow(false, false, true));
+	}
+
+	@Test
+	public void outsideWindow_critical_breaksThroughWhenEnabled() {
+		assertTrue(NotificationService.alertsAllowedNow(false, true, true));
+	}
+
+	@Test
+	public void outsideWindow_critical_silencedWhenOverrideOff() {
+		assertFalse(NotificationService.alertsAllowedNow(false, true, false));
+	}
 }
