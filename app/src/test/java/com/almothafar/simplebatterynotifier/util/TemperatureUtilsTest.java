@@ -1,76 +1,135 @@
 package com.almothafar.simplebatterynotifier.util;
 
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+
+import java.util.Arrays;
+import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for the pure (context-free) parts of {@link TemperatureUtils}.
  */
+@RunWith(Enclosed.class)
 public class TemperatureUtilsTest {
 
-	@Test
-	public void celsiusToFahrenheit_knownValues() {
-		assertEquals(32, TemperatureUtils.celsiusToFahrenheit(0));
-		assertEquals(104, TemperatureUtils.celsiusToFahrenheit(40));
-		assertEquals(113, TemperatureUtils.celsiusToFahrenheit(45));
-		assertEquals(140, TemperatureUtils.celsiusToFahrenheit(60));
-		assertEquals(212, TemperatureUtils.celsiusToFahrenheit(100));
-	}
+	/**
+	 * {@link TemperatureUtils#celsiusToFahrenheit(int)} and its inverse
+	 * {@link TemperatureUtils#fahrenheitToCelsius(int)} across known integer values.
+	 */
+	@RunWith(Parameterized.class)
+	public static class IntConversions {
 
-	@Test
-	public void celsiusToFahrenheit_float_roundsToNearestTenth() {
-		assertEquals(89.6f, TemperatureUtils.celsiusToFahrenheit(32.0f), 0.001f);
-		assertEquals(98.6f, TemperatureUtils.celsiusToFahrenheit(37.0f), 0.001f);
-		// 20.02 °C -> 68.036 °F: rounds DOWN to 68.0 (the old Math.ceil path returned 68.1).
-		assertEquals(68.0f, TemperatureUtils.celsiusToFahrenheit(20.02f), 0.001f);
-	}
+		@Parameter(0) public int celsius;
+		@Parameter(1) public int fahrenheit;
 
-	@Test
-	public void fahrenheitToCelsius_knownValues() {
-		assertEquals(0, TemperatureUtils.fahrenheitToCelsius(32));
-		assertEquals(40, TemperatureUtils.fahrenheitToCelsius(104));
-		assertEquals(45, TemperatureUtils.fahrenheitToCelsius(113));
-		assertEquals(60, TemperatureUtils.fahrenheitToCelsius(140));
-		assertEquals(100, TemperatureUtils.fahrenheitToCelsius(212));
-	}
+		@Parameters(name = "{0}C = {1}F")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{0, 32},
+					{40, 104},
+					{45, 113},
+					{60, 140},
+					{100, 212},
+			});
+		}
 
-	/** The canonical threshold values must survive a round-trip through Fahrenheit display. */
-	@Test
-	public void roundTrip_isStableForThresholdRange() {
-		for (int c = TemperatureUtils.MIN_HIGH_TEMP_THRESHOLD_C; c <= TemperatureUtils.MAX_HIGH_TEMP_THRESHOLD_C; c++) {
-			final int back = TemperatureUtils.fahrenheitToCelsius(TemperatureUtils.celsiusToFahrenheit(c));
-			assertEquals("°C should round-trip via °F for " + c, c, back);
+		@Test
+		public void celsiusToFahrenheit() {
+			assertEquals(fahrenheit, TemperatureUtils.celsiusToFahrenheit(celsius));
+		}
+
+		@Test
+		public void fahrenheitToCelsius() {
+			assertEquals(celsius, TemperatureUtils.fahrenheitToCelsius(fahrenheit));
 		}
 	}
 
-	@Test
-	public void isAtOrAboveThreshold_comparesInCelsius() {
-		// 45.0 °C reading vs 45 °C threshold -> trips
-		assertTrue(TemperatureUtils.isAtOrAboveThreshold(450, 45));
-		// 60.0 °C -> trips
-		assertTrue(TemperatureUtils.isAtOrAboveThreshold(600, 45));
-		// 44.9 °C -> does not trip
-		assertFalse(TemperatureUtils.isAtOrAboveThreshold(449, 45));
+	/**
+	 * {@link TemperatureUtils#isAtOrAboveThreshold(int, int)} — reading (tenths of °C) vs threshold
+	 * (°C), always compared in Celsius.
+	 */
+	@RunWith(Parameterized.class)
+	public static class AtOrAboveThreshold {
+
+		@Parameter(0) public String label;
+		@Parameter(1) public int readingTenthsC;
+		@Parameter(2) public int thresholdC;
+		@Parameter(3) public boolean expected;
+
+		@Parameters(name = "{0}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{"45.0C at 45 trips", 450, 45, true},
+					{"60.0C at 45 trips", 600, 45, true},
+					{"44.9C at 45 does not trip", 449, 45, false},
+					// The bug this guards: a chilly 45°F (~7.2°C = 72 tenths) must NOT trip a 45°C threshold.
+					{"chilly 45F (7.2C) does not trip", 72, 45, false},
+			});
+		}
+
+		@Test
+		public void matchesExpected() {
+			assertEquals(label, expected, TemperatureUtils.isAtOrAboveThreshold(readingTenthsC, thresholdC));
+		}
 	}
 
 	/**
-	 * The bug this guards against: a chilly 45 °F (~7.2 °C, i.e. 72 tenths) must NOT trip a
-	 * 45 °C threshold. Temperature is always compared in Celsius.
+	 * {@link TemperatureUtils#isBelowResetThreshold(int, int, int)} — hysteresis re-arm: true once the
+	 * reading (tenths of °C) drops to/below threshold − hysteresis.
 	 */
-	@Test
-	public void isAtOrAboveThreshold_chilly45Fahrenheit_doesNotTrip() {
-		final int sevenPointTwoCelsiusInTenths = 72; // == 45 °F
-		assertFalse(TemperatureUtils.isAtOrAboveThreshold(sevenPointTwoCelsiusInTenths, 45));
+	@RunWith(Parameterized.class)
+	public static class BelowResetThreshold {
+
+		@Parameter(0) public String label;
+		@Parameter(1) public int readingTenthsC;
+		@Parameter(2) public int thresholdC;
+		@Parameter(3) public int hysteresisC;
+		@Parameter(4) public boolean expected;
+
+		@Parameters(name = "{0}")
+		public static Collection<Object[]> data() {
+			// threshold 45°C, hysteresis 3°C -> re-arm at/below 42.0°C (420 tenths).
+			return Arrays.asList(new Object[][]{
+					{"42.0C re-arms", 420, 45, 3, true},
+					{"30.0C re-arms", 300, 45, 3, true},
+					{"43.0C still too warm", 430, 45, 3, false},
+			});
+		}
+
+		@Test
+		public void matchesExpected() {
+			assertEquals(label, expected,
+					TemperatureUtils.isBelowResetThreshold(readingTenthsC, thresholdC, hysteresisC));
+		}
 	}
 
-	@Test
-	public void isBelowResetThreshold_appliesHysteresis() {
-		// threshold 45 °C, hysteresis 3 °C -> re-arm at/below 42.0 °C (420 tenths)
-		assertTrue(TemperatureUtils.isBelowResetThreshold(420, 45, 3));
-		assertTrue(TemperatureUtils.isBelowResetThreshold(300, 45, 3));
-		assertFalse(TemperatureUtils.isBelowResetThreshold(430, 45, 3)); // 43.0 °C still too warm
+	/**
+	 * Float rounding and the °C↔°F round-trip stay as named tests — the behaviour, not a data row, is
+	 * the point.
+	 */
+	public static class FloatAndRoundTrip {
+
+		@Test
+		public void celsiusToFahrenheit_float_roundsToNearestTenth() {
+			assertEquals(89.6f, TemperatureUtils.celsiusToFahrenheit(32.0f), 0.001f);
+			assertEquals(98.6f, TemperatureUtils.celsiusToFahrenheit(37.0f), 0.001f);
+			// 20.02 °C -> 68.036 °F: rounds DOWN to 68.0 (the old Math.ceil path returned 68.1).
+			assertEquals(68.0f, TemperatureUtils.celsiusToFahrenheit(20.02f), 0.001f);
+		}
+
+		/** The canonical threshold values must survive a round-trip through Fahrenheit display. */
+		@Test
+		public void roundTrip_isStableForThresholdRange() {
+			for (int c = TemperatureUtils.MIN_HIGH_TEMP_THRESHOLD_C; c <= TemperatureUtils.MAX_HIGH_TEMP_THRESHOLD_C; c++) {
+				final int back = TemperatureUtils.fahrenheitToCelsius(TemperatureUtils.celsiusToFahrenheit(c));
+				assertEquals("°C should round-trip via °F for " + c, c, back);
+			}
+		}
 	}
 }
