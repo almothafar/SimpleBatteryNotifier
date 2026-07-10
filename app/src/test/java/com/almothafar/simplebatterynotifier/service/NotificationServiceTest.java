@@ -1,97 +1,98 @@
 package com.almothafar.simplebatterynotifier.service;
 
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.util.Arrays;
+import java.util.Collection;
+
+import static org.junit.Assert.assertEquals;
 
 /**
- * Unit tests for the pure quiet-hours range logic in {@link NotificationService}.
+ * Unit tests for the pure quiet-hours logic in {@link NotificationService}.
  * Times are expressed as minutes since midnight (hour * 60 + minute).
  */
+@RunWith(Enclosed.class)
 public class NotificationServiceTest {
 
-	// Daytime window 08:00 (480) – 23:00 (1380)
-	private static final int DAY_START = 8 * 60;
-	private static final int DAY_END = 23 * 60;
+	/**
+	 * {@link NotificationService#isWithinTimeRange(int, int, int)} across daytime, overnight-wrap and
+	 * degenerate windows. The label documents each row's intent.
+	 */
+	@RunWith(Parameterized.class)
+	public static class TimeRange {
 
-	// Overnight window 22:00 (1320) – 06:00 (360)
-	private static final int NIGHT_START = 22 * 60;
-	private static final int NIGHT_END = 6 * 60;
+		// Daytime window 08:00 (480) – 23:00 (1380)
+		private static final int DAY_START = 8 * 60;
+		private static final int DAY_END = 23 * 60;
 
-	@Test
-	public void daytime_inside() {
-		assertTrue(NotificationService.isWithinTimeRange(10 * 60, DAY_START, DAY_END));
-	}
+		// Overnight window 22:00 (1320) – 06:00 (360)
+		private static final int NIGHT_START = 22 * 60;
+		private static final int NIGHT_END = 6 * 60;
 
-	@Test
-	public void daytime_beforeStart_excluded() {
-		assertFalse(NotificationService.isWithinTimeRange(6 * 60 + 40, DAY_START, DAY_END));
-	}
+		@Parameter(0) public String label;
+		@Parameter(1) public int now;
+		@Parameter(2) public int start;
+		@Parameter(3) public int end;
+		@Parameter(4) public boolean expected;
 
-	@Test
-	public void daytime_startIsInclusive() {
-		assertTrue(NotificationService.isWithinTimeRange(DAY_START, DAY_START, DAY_END));
-	}
+		@Parameters(name = "{0}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{"daytime inside", 10 * 60, DAY_START, DAY_END, true},
+					{"daytime before start excluded", 6 * 60 + 40, DAY_START, DAY_END, false},
+					{"daytime start is inclusive", DAY_START, DAY_START, DAY_END, true},
+					{"daytime end is exclusive", DAY_END, DAY_START, DAY_END, false},
+					{"overnight late night inside", 22 * 60 + 30, NIGHT_START, NIGHT_END, true},
+					{"overnight early morning inside", 2 * 60, NIGHT_START, NIGHT_END, true},
+					{"overnight midday outside", 12 * 60, NIGHT_START, NIGHT_END, false},
+					// Overnight window whose start/end share the same hour bucket (22:30 -> 22:00). The old
+					// hour-only logic mishandled this; the minute-based logic must not.
+					{"same-hour-bucket 23:30 inside", 23 * 60 + 30, 22 * 60 + 30, 22 * 60, true},
+					{"same-hour-bucket 22:15 outside", 22 * 60 + 15, 22 * 60 + 30, 22 * 60, false},
+					// start == end means the whole day is covered.
+					{"equal times means whole day (00:00)", 0, 10 * 60, 10 * 60, true},
+					{"equal times means whole day (23:59)", 23 * 60 + 59, 10 * 60, 10 * 60, true},
+			});
+		}
 
-	@Test
-	public void daytime_endIsExclusive() {
-		assertFalse(NotificationService.isWithinTimeRange(DAY_END, DAY_START, DAY_END));
-	}
-
-	@Test
-	public void overnight_lateNight_inside() {
-		assertTrue(NotificationService.isWithinTimeRange(22 * 60 + 30, NIGHT_START, NIGHT_END));
-	}
-
-	@Test
-	public void overnight_earlyMorning_inside() {
-		assertTrue(NotificationService.isWithinTimeRange(2 * 60, NIGHT_START, NIGHT_END));
-	}
-
-	@Test
-	public void overnight_midday_outside() {
-		assertFalse(NotificationService.isWithinTimeRange(12 * 60, NIGHT_START, NIGHT_END));
+		@Test
+		public void matchesExpected() {
+			assertEquals(label, expected, NotificationService.isWithinTimeRange(now, start, end));
+		}
 	}
 
 	/**
-	 * Overnight window whose start/end share the same hour bucket, e.g. 22:30 → 22:00.
-	 * The old hour-only logic mishandled this; the minute-based logic must not.
+	 * {@link NotificationService#alertsAllowedNow(boolean, boolean, boolean)} — quiet-hours gating with
+	 * the critical override (issue #111).
 	 */
-	@Test
-	public void overnight_sameHourBucket() {
-		final int start = 22 * 60 + 30; // 22:30
-		final int end = 22 * 60;        // 22:00
-		assertTrue(NotificationService.isWithinTimeRange(23 * 60 + 30, start, end));  // 23:30 inside
-		assertFalse(NotificationService.isWithinTimeRange(22 * 60 + 15, start, end)); // 22:15 outside
-	}
+	@RunWith(Parameterized.class)
+	public static class AlertsAllowedNow {
 
-	@Test
-	public void equalTimes_meansWholeDay() {
-		assertTrue(NotificationService.isWithinTimeRange(0, 10 * 60, 10 * 60));
-		assertTrue(NotificationService.isWithinTimeRange(23 * 60 + 59, 10 * 60, 10 * 60));
-	}
+		@Parameter(0) public boolean withinWindow;
+		@Parameter(1) public boolean isCritical;
+		@Parameter(2) public boolean criticalIgnoresQuietHours;
+		@Parameter(3) public boolean expected;
 
-	// --- alertsAllowedNow: quiet-hours gating with the critical override (issue #111) ---
+		@Parameters(name = "within={0} critical={1} override={2} -> {3}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{true, false, false, true},   // inside window -> always allowed
+					{true, true, false, true},     // inside window -> allowed even without the override
+					{false, false, true, false},   // outside, non-critical -> silenced
+					{false, true, true, true},      // outside, critical breaks through when enabled
+					{false, true, false, false},   // outside, critical silenced when override off
+			});
+		}
 
-	@Test
-	public void insideWindow_alwaysAllowed() {
-		assertTrue(NotificationService.alertsAllowedNow(true, false, false));
-		assertTrue(NotificationService.alertsAllowedNow(true, true, false));
-	}
-
-	@Test
-	public void outsideWindow_nonCritical_silenced() {
-		assertFalse(NotificationService.alertsAllowedNow(false, false, true));
-	}
-
-	@Test
-	public void outsideWindow_critical_breaksThroughWhenEnabled() {
-		assertTrue(NotificationService.alertsAllowedNow(false, true, true));
-	}
-
-	@Test
-	public void outsideWindow_critical_silencedWhenOverrideOff() {
-		assertFalse(NotificationService.alertsAllowedNow(false, true, false));
+		@Test
+		public void matchesExpected() {
+			assertEquals(expected,
+					NotificationService.alertsAllowedNow(withinWindow, isCritical, criticalIgnoresQuietHours));
+		}
 	}
 }

@@ -1,120 +1,93 @@
 package com.almothafar.simplebatterynotifier.model;
 
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
-import static org.junit.Assert.*;
+import java.util.Arrays;
+import java.util.Collection;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 
 /**
- * Integration tests for BatteryDO
- * Tests actual calculation logic and edge cases
+ * Tests for {@link BatteryDO} calculation logic and edge cases.
  */
+@RunWith(Enclosed.class)
 public class BatteryDOTest {
 
-	private BatteryDO battery;
+	/**
+	 * {@link BatteryDO#getBatteryPercentage()} across normal, boundary and malformed inputs. A zero or
+	 * negative scale must be guarded so it never yields Infinity/NaN, which would become
+	 * Integer.MAX_VALUE when cast to int downstream.
+	 */
+	@RunWith(Parameterized.class)
+	public static class GetBatteryPercentage {
 
-	@Before
-	public void setUp() {
-		battery = new BatteryDO();
-	}
+		@Parameter(0) public String label;
+		@Parameter(1) public int level;
+		@Parameter(2) public int scale;
+		@Parameter(3) public float expected;
 
-	// ===== REAL TESTS FOR getBatteryPercentage() CALCULATION LOGIC =====
+		@Parameters(name = "{0}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{"normal 50/100", 50, 100, 50.0f},
+					{"different scale 80/200", 80, 200, 40.0f},
+					{"full battery", 100, 100, 100.0f},
+					{"empty battery", 0, 100, 0.0f},
+					{"decimal 33/100", 33, 100, 33.0f},
+					// Malformed data must be guarded, not produce Infinity.
+					{"zero scale guarded", 50, 0, 0.0f},
+					{"negative scale guarded", 50, -1, 0.0f},
+					// Defensive: out-of-range inputs still compute rather than crash.
+					{"negative level", -10, 100, -10.0f},
+					{"level exceeds scale", 150, 100, 150.0f},
+			});
+		}
 
-	@Test
-	public void getBatteryPercentage_normalCase_calculatesCorrectly() {
-		battery.setLevel(50).setScale(100);
-		assertEquals(50.0f, battery.getBatteryPercentage(), 0.01f);
-	}
-
-	@Test
-	public void getBatteryPercentage_differentScale_calculatesCorrectly() {
-		battery.setLevel(80).setScale(200);
-		assertEquals(40.0f, battery.getBatteryPercentage(), 0.01f);
-	}
-
-	@Test
-	public void getBatteryPercentage_fullBattery_returns100() {
-		battery.setLevel(100).setScale(100);
-		assertEquals(100.0f, battery.getBatteryPercentage(), 0.01f);
-	}
-
-	@Test
-	public void getBatteryPercentage_emptyBattery_returns0() {
-		battery.setLevel(0).setScale(100);
-		assertEquals(0.0f, battery.getBatteryPercentage(), 0.01f);
+		@Test
+		public void matchesExpected() {
+			final float result = new BatteryDO().setLevel(level).setScale(scale).getBatteryPercentage();
+			assertEquals(label, expected, result, 0.01f);
+		}
 	}
 
 	/**
-	 * CRITICAL EDGE CASE: Division by zero / invalid scale
-	 * A zero (or negative) scale is malformed battery data. It must be guarded so it never
-	 * produces Infinity/NaN, which would become Integer.MAX_VALUE when cast to int downstream.
+	 * Builder chaining, decimal precision and the health-status enum are distinct concerns, kept as
+	 * named tests.
 	 */
-	@Test
-	public void getBatteryPercentage_scaleZero_returnsZero() {
-		battery.setLevel(50).setScale(0);
-		final float result = battery.getBatteryPercentage();
-		assertEquals("Invalid scale must be guarded, not produce Infinity", 0.0f, result, 0.01f);
-	}
+	public static class Behaviour {
 
-	@Test
-	public void getBatteryPercentage_negativeScale_returnsZero() {
-		battery.setLevel(50).setScale(-1);
-		assertEquals("Negative scale must be guarded", 0.0f, battery.getBatteryPercentage(), 0.01f);
-	}
+		@Test
+		public void getBatteryPercentage_oneThird_maintainsPrecision() {
+			assertEquals(33.333f, new BatteryDO().setLevel(1).setScale(3).getBatteryPercentage(), 0.001f);
+		}
 
-	/**
-	 * EDGE CASE: Negative level (shouldn't happen but test defensive code)
-	 */
-	@Test
-	public void getBatteryPercentage_negativeLevel_calculatesCorrectly() {
-		battery.setLevel(-10).setScale(100);
-		assertEquals(-10.0f, battery.getBatteryPercentage(), 0.01f);
-	}
+		@Test
+		public void setters_returnThis_forMethodChaining() {
+			final BatteryDO battery = new BatteryDO();
+			final BatteryDO result = battery
+					.setLevel(50)
+					.setScale(100)
+					.setStatus(3)
+					.setPlugged(1);
+			assertSame("Builder pattern should return same instance", battery, result);
+		}
 
-	/**
-	 * EDGE CASE: Level exceeds scale (malformed data)
-	 */
-	@Test
-	public void getBatteryPercentage_levelExceedsScale_calculatesOver100() {
-		battery.setLevel(150).setScale(100);
-		assertEquals(150.0f, battery.getBatteryPercentage(), 0.01f);
-	}
+		@Test
+		public void healthStatus_defaultsToUnknown() {
+			assertEquals(BatteryHealthStatus.UNKNOWN, new BatteryDO().getHealthStatus());
+		}
 
-	/**
-	 * PRECISION TEST: Decimal percentages
-	 */
-	@Test
-	public void getBatteryPercentage_decimalResult_maintainsPrecision() {
-		battery.setLevel(33).setScale(100);
-		assertEquals(33.0f, battery.getBatteryPercentage(), 0.01f);
-
-		battery.setLevel(1).setScale(3);
-		assertEquals(33.333f, battery.getBatteryPercentage(), 0.001f);
-	}
-
-	// ===== BUILDER PATTERN TESTS (minimal, only testing method chaining works) =====
-
-	@Test
-	public void setters_returnThis_forMethodChaining() {
-		final BatteryDO result = battery
-				.setLevel(50)
-				.setScale(100)
-				.setStatus(3)
-				.setPlugged(1);
-
-		assertSame("Builder pattern should return same instance", battery, result);
-	}
-
-	// ===== HEALTH STATUS ENUM TEST =====
-
-	@Test
-	public void healthStatus_defaultsToUnknown() {
-		assertEquals(BatteryHealthStatus.UNKNOWN, battery.getHealthStatus());
-	}
-
-	@Test
-	public void setHealthStatus_storesCorrectValue() {
-		battery.setHealthStatus(BatteryHealthStatus.CRITICAL);
-		assertEquals(BatteryHealthStatus.CRITICAL, battery.getHealthStatus());
+		@Test
+		public void setHealthStatus_storesCorrectValue() {
+			final BatteryDO battery = new BatteryDO();
+			battery.setHealthStatus(BatteryHealthStatus.CRITICAL);
+			assertEquals(BatteryHealthStatus.CRITICAL, battery.getHealthStatus());
+		}
 	}
 }
