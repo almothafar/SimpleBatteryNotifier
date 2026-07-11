@@ -4,27 +4,26 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Resources;
 import android.os.BatteryManager;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
-import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
-
-import static java.util.Objects.isNull;
+import com.almothafar.simplebatterynotifier.service.SystemService;
 
 /**
- * Broadcast receiver for power connection/disconnection events
+ * Broadcast receiver for power connection/disconnection events.
  * <p>
- * This receiver monitors when the device is plugged in or unplugged from a charger
- * and triggers appropriate notifications. It detects the charger type (AC, USB, Wireless)
- * and determines whether the charging session qualifies as "healthy" based on battery level.
+ * When the device is plugged in, this reports what's actually useful — the estimated charging speed
+ * and whether it's wired or wireless — rather than the old, often-misleading "AC charger connected"
+ * message (issue #122). The AC/USB distinction was dropped because {@code EXTRA_PLUGGED} reports
+ * {@code BATTERY_PLUGGED_AC} for many power banks and fast chargers, so it couldn't be trusted; the
+ * wired/wireless split, by contrast, is reliable.
  * <p>
- * User Feedback: This receiver relies on system notifications for user feedback rather than
- * Toast messages. Notifications are preferred because they:
- * - Are accessible to screen readers (TalkBack)
- * - Persist and can be reviewed later
- * - Support actions and rich content
- * - Follow Material Design guidelines
+ * Charging current reads 0 or noisy for a moment right at plug-in, so the speed is sampled a short
+ * delay after connection (see {@link #CHARGE_SAMPLE_DELAY_MS}) rather than synchronously here. The
+ * foreground {@code PowerConnectionService} keeps the process alive across that delay.
  */
 public class PowerConnectionReceiver extends BroadcastReceiver {
 
@@ -36,11 +35,22 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	private static final int HEALTHY_CHARGE_THRESHOLD = 20;
 
 	/**
+	 * Delay before sampling the charging current, giving it time to stabilise after plug-in.
+	 * Package-visible so tests can advance the main looper by exactly this amount.
+	 */
+	static final long CHARGE_SAMPLE_DELAY_MS = 2000L;
+
+	/**
 	 * Previous plugged state to prevent duplicate notifications for the same state
 	 * <p>
 	 * This static field is thread-safe via synchronized access methods.
 	 */
 	private static int currentState = -1;
+
+	// Main-thread handler used to sample the charging speed a short delay after connection. Static so a
+	// stale pending sample can be cancelled if the charger is unplugged (or re-plugged) during the delay.
+	private static final Handler sampleHandler = new Handler(Looper.getMainLooper());
+	private static Runnable pendingSample;
 
 	/**
 	 * Update the current plugged state (synchronized for thread safety)
@@ -57,8 +67,8 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	/**
 	 * Called when a power connection broadcast is received
 	 * <p>
-	 * This method determines the current battery state, detects charger type,
-	 * and triggers appropriate notifications for the user.
+	 * This method determines the current battery state, detects whether charging is wired or
+	 * wireless, and schedules the charge-connected notification for the user.
 	 *
 	 * @param context The context in which the receiver is running
 	 * @param intent  The intent being received
@@ -81,11 +91,9 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 		final int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
 		final int percentage = (int) ((level / (float) scale) * 100);
 
-		final Resources resources = context.getResources();
-
 		if (pluggedState > 0) {
 			// Charger connected
-			handleChargerConnected(context, pluggedState, percentage, resources);
+			handleChargerConnected(context, pluggedState, percentage);
 		} else {
 			// Charger disconnected
 			handleChargerDisconnected(context);
@@ -93,39 +101,46 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	}
 
 	/**
-	 * Handle charger connected event
+	 * Handle charger connected event.
 	 * <p>
-	 * Detects charger type, determines if charging is "healthy" (started at low battery),
-	 * and sends appropriate notification to the user.
+	 * Records whether this is a "healthy" charge (started at low battery), determines wired vs
+	 * wireless, and schedules the speed sample + notification for a short delay later.
 	 *
 	 * @param context      The application context
 	 * @param pluggedState The type of charger plugged in
 	 * @param percentage   Current battery percentage
-	 * @param resources    Resources for string lookup
 	 */
-	private void handleChargerConnected(final Context context, final int pluggedState,
-	                                     final int percentage, final Resources resources) {
-		final ChargerInfo chargerInfo = detectChargerType(pluggedState, resources);
-
+	private void handleChargerConnected(final Context context, final int pluggedState, final int percentage) {
 		// Determine if this is a "healthy" charge (starting at low battery level)
 		final boolean isHealthyCharge = percentage <= HEALTHY_CHARGE_THRESHOLD;
 		NotificationService.setIsHealthy(isHealthyCharge);
 
-		// Send notification to user
-		NotificationService.sendChargeNotification(context, chargerInfo.source);
+		final boolean wireless = pluggedState == BatteryManager.BATTERY_PLUGGED_WIRELESS;
+		final Context appContext = context.getApplicationContext();
 
-		Log.i(TAG, String.format("Charger connected: %s (Battery: %d%%, Healthy: %s)",
-				chargerInfo.source, percentage, isHealthyCharge));
+		// Sample the charging speed after a short delay (the current is 0/noisy right at plug-in), then
+		// notify. Re-check that we're still plugged in, in case the charger was pulled during the delay.
+		scheduleSample(() -> {
+			if (!isStillPlugged(appContext)) {
+				return;
+			}
+			final ChargeSpeed speed = SystemService.getChargeSpeed(appContext);
+			NotificationService.notifyChargeConnected(appContext, speed, wireless, isHealthyCharge);
+		});
+
+		Log.i(TAG, String.format("Charger connected (Battery: %d%%, Wireless: %s, Healthy: %s)",
+				percentage, wireless, isHealthyCharge));
 	}
 
 	/**
 	 * Handle charger disconnected event
 	 * <p>
-	 * Resets battery monitoring state and clears any active battery notifications.
+	 * Cancels any pending speed sample, resets battery monitoring state and clears active notifications.
 	 *
 	 * @param context The application context
 	 */
 	private void handleChargerDisconnected(final Context context) {
+		cancelPendingSample();
 		BatteryLevelReceiver.resetVariables();
 		NotificationService.clearNotifications(context);
 
@@ -133,29 +148,38 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	}
 
 	/**
-	 * Detect charger type based on plugged state
-	 * <p>
-	 * Supports AC, USB, and Wireless charging. Falls back to generic "Charger"
-	 * for unknown types (e.g., future Android versions may add new charger types).
+	 * Whether a charger is still connected. Used to abort a pending speed sample if the charger was
+	 * unplugged during the sampling delay.
 	 *
-	 * @param pluggedState The EXTRA_PLUGGED value from battery status intent
-	 * @param resources    Resources for string lookup
-	 * @return ChargerInfo containing messages and source type
+	 * @param context The application context
+	 *
+	 * @return true when still plugged into a power source
 	 */
-	private ChargerInfo detectChargerType(final int pluggedState, final Resources resources) {
-		return switch (pluggedState) {
-			case BatteryManager.BATTERY_PLUGGED_USB -> new ChargerInfo(resources.getString(R.string.charger_usb));
-			case BatteryManager.BATTERY_PLUGGED_AC -> new ChargerInfo(resources.getString(R.string.charger_ac));
-			case BatteryManager.BATTERY_PLUGGED_WIRELESS -> new ChargerInfo(resources.getString(R.string.charger_wireless));
-			default -> new ChargerInfo(resources.getString(R.string.charger));
-		};
+	private static boolean isStillPlugged(final Context context) {
+		final Intent batteryStatus = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+		final int plugged = batteryStatus == null ? 0 : batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+		return plugged > 0;
 	}
 
 	/**
-	 * Simple data class to hold charger information
+	 * Schedule the delayed charge sample, cancelling any previously scheduled one so a quick
+	 * unplug/replug doesn't fire twice.
 	 *
-	 * @param source Short description of charger type
+	 * @param sample The sampling task to run after {@link #CHARGE_SAMPLE_DELAY_MS}
 	 */
-	private record ChargerInfo(String source) {
+	private static synchronized void scheduleSample(final Runnable sample) {
+		cancelPendingSample();
+		pendingSample = sample;
+		sampleHandler.postDelayed(sample, CHARGE_SAMPLE_DELAY_MS);
+	}
+
+	/**
+	 * Cancel any pending delayed charge sample.
+	 */
+	static synchronized void cancelPendingSample() {
+		if (pendingSample != null) {
+			sampleHandler.removeCallbacks(pendingSample);
+			pendingSample = null;
+		}
 	}
 }

@@ -16,12 +16,17 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+import android.widget.Toast;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
+import com.almothafar.simplebatterynotifier.model.ChargeSpeedTier;
 import com.almothafar.simplebatterynotifier.ui.MainActivity;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
@@ -78,6 +83,12 @@ public final class NotificationService {
 	// Do Not Disturb mode constants
 	private static final String ZEN_MODE = "zen_mode";
 	private static final int ZEN_MODE_IMPORTANT_INTERRUPTIONS = 1;
+
+	// Charge-connected notification style (values persisted by the ListPreference in pref_notification.xml).
+	// Toast is the default so plugging in stays low-clutter (issue #122).
+	static final String CHARGE_STYLE_TOAST = "toast";
+	static final String CHARGE_STYLE_NOTIFICATION = "notification";
+	static final String CHARGE_STYLE_NONE = "none";
 
 	/**
 	 * Thread pool for async sound playback
@@ -138,12 +149,136 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Send a charge-started notification
+	 * Announce that charging has started, honoring the user's chosen style.
+	 * <p>
+	 * Instead of the old, often-misleading "AC charger connected" message, this reports what's
+	 * actually useful: the estimated charging speed (tier + wattage) and whether it's wired or
+	 * wireless (issue #122). The user picks how it's surfaced via the "Charge notification style"
+	 * preference:
+	 * <ul>
+	 *   <li>{@link #CHARGE_STYLE_TOAST} (default) — a brief, low-clutter toast;</li>
+	 *   <li>{@link #CHARGE_STYLE_NOTIFICATION} — a full system notification (quiet-hours aware);</li>
+	 *   <li>{@link #CHARGE_STYLE_NONE} — nothing at all.</li>
+	 * </ul>
 	 *
-	 * @param context      The application context
-	 * @param chargeSource The charging source description
+	 * @param context   The application context
+	 * @param speed     The estimated charging speed (may be {@link ChargeSpeed#unknown()})
+	 * @param wireless  true when charging over a wireless charger, false when wired
+	 * @param isHealthy true when charging started at a low battery level ("healthy" charge)
 	 */
-	public static void sendChargeNotification(final Context context, final String chargeSource) {
+	public static void notifyChargeConnected(final Context context, final ChargeSpeed speed,
+	                                         final boolean wireless, final boolean isHealthy) {
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final String style = resolveChargeStyle(prefs.getString(
+				context.getString(R.string._pref_key_charge_notification_style), CHARGE_STYLE_TOAST));
+
+		if (CHARGE_STYLE_NONE.equals(style)) {
+			return; // User opted out of charge-connected feedback entirely.
+		}
+
+		final String content = chargeConnectedMessage(context, speed, wireless);
+
+		if (CHARGE_STYLE_TOAST.equals(style)) {
+			showChargeToast(context, content);
+			return;
+		}
+
+		postChargeNotification(context, content, isHealthy);
+	}
+
+	/**
+	 * Normalize a stored charge-style preference value to a known style, defaulting to
+	 * {@link #CHARGE_STYLE_TOAST} for a null/blank/unrecognized value. Pure and Android-free so it is
+	 * unit-testable.
+	 *
+	 * @param stored the raw persisted value
+	 *
+	 * @return one of the {@code CHARGE_STYLE_*} constants
+	 */
+	static String resolveChargeStyle(final String stored) {
+		if (CHARGE_STYLE_NOTIFICATION.equals(stored)) {
+			return CHARGE_STYLE_NOTIFICATION;
+		}
+		if (CHARGE_STYLE_NONE.equals(stored)) {
+			return CHARGE_STYLE_NONE;
+		}
+		return CHARGE_STYLE_TOAST;
+	}
+
+	/**
+	 * Build the charge-connected message, e.g. "Wireless · Fast charging · ~18 W", or
+	 * "Wired charging" when the speed can't be estimated.
+	 *
+	 * @param context  The application context
+	 * @param speed    The estimated charging speed
+	 * @param wireless true for wireless charging, false for wired
+	 *
+	 * @return the localized message shown in the toast or notification
+	 */
+	private static String chargeConnectedMessage(final Context context, final ChargeSpeed speed, final boolean wireless) {
+		final String source = context.getString(
+				wireless ? R.string.charge_source_wireless : R.string.charge_source_wired);
+
+		if (!speed.isKnown()) {
+			return context.getString(R.string.charge_connected_plain, source);
+		}
+
+		final String tierLabel = context.getString(tierLabelRes(speed.getTier()));
+		final int watts = speed.getWatts();
+		if (watts < 1) {
+			// Known tier but sub-watt (e.g. trickle): showing "~0 W" would read as an error.
+			return context.getString(R.string.charge_connected_tier, source, tierLabel);
+		}
+		return context.getString(R.string.charge_connected_power, source, tierLabel, watts);
+	}
+
+	/**
+	 * Map a {@link ChargeSpeedTier} to its localized label resource.
+	 *
+	 * @param tier the charging-speed tier
+	 *
+	 * @return a string resource id for the tier's label
+	 */
+	private static int tierLabelRes(final ChargeSpeedTier tier) {
+		return switch (tier) {
+			case TRICKLE -> R.string.charge_tier_trickle;
+			case NORMAL -> R.string.charge_tier_normal;
+			case FAST -> R.string.charge_tier_fast;
+			case SUPER_FAST -> R.string.charge_tier_super_fast;
+			case SUPER_FAST_PLUS -> R.string.charge_tier_super_fast_plus;
+			case UNKNOWN -> R.string.charging;
+		};
+	}
+
+	/**
+	 * Show the charge message as a toast. Toasts must be posted from a thread with a Looper, so this
+	 * hops to the main thread when called from a background context. Uses the application context to
+	 * avoid leaking the caller.
+	 *
+	 * @param context The context
+	 * @param message The message to show
+	 */
+	private static void showChargeToast(final Context context, final String message) {
+		final Context appContext = context.getApplicationContext();
+		if (Looper.myLooper() == Looper.getMainLooper()) {
+			Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show();
+		} else {
+			new Handler(Looper.getMainLooper()).post(
+					() -> Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show());
+		}
+	}
+
+	/**
+	 * Post the charge-connected message as a system notification (the "notification" style).
+	 * <p>
+	 * Plugging in during quiet hours shouldn't ding: shown on the silent channel outside the window
+	 * instead of the audible full-battery channel (issue #111).
+	 *
+	 * @param context   The application context
+	 * @param content   The charge message to display
+	 * @param isHealthy true when charging started at a low battery level ("healthy" charge)
+	 */
+	private static void postChargeNotification(final Context context, final String content, final boolean isHealthy) {
 		if (lacksNotificationPermission(context)) {
 			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, notification not sent");
 			return;
@@ -151,19 +286,16 @@ public final class NotificationService {
 
 		createNotificationChannels(context);
 
-		final String title = isHealthyCharge
+		final String title = isHealthy
 		                     ? context.getString(R.string.notification_charge_started_title_healthy)
 		                     : context.getString(R.string.notification_charge_started_title_regular);
 
-		final String content = context.getString(R.string.notification_charge_started_content, chargeSource);
 		final String ticker = title.concat(", ").concat(content);
 
-		final int iconRes = isHealthyCharge
+		final int iconRes = isHealthy
 		                    ? R.drawable.ic_stat_device_battery_charging_20
 		                    : R.drawable.ic_stat_device_battery_charging_50;
 
-		// Plugging in during quiet hours shouldn't ding: shown on the silent channel outside the
-		// window instead of the audible full-battery channel (issue #111).
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
 
