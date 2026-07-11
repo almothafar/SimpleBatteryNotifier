@@ -2,6 +2,7 @@ package com.almothafar.simplebatterynotifier.service;
 
 import android.os.BatteryManager;
 
+import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryRateTracker.BatteryRate;
 import com.almothafar.simplebatterynotifier.service.BatteryRateTracker.Sample;
 
@@ -305,6 +306,112 @@ public class BatteryRateTrackerTest {
 
 			assertEquals(1, parsed.size());
 			assertEquals(new Sample(200, 60, -800_000), parsed.get(0));
+		}
+
+		@Test
+		public void overflowingEntriesAreSkippedNotThrown() {
+			// "9999999999" fits the 10-digit int shape but overflows Integer.parseInt; a 19-digit
+			// timestamp overflows Long.parseLong. Both must be skipped, not crash the receiver.
+			final List<Sample> parsed = BatteryRateTracker.parseSamples(
+					"100:50:9999999999;9999999999999999999:50:-800000;-100:-9999999999:0;200:60:-800000");
+
+			assertEquals(1, parsed.size());
+			assertEquals(new Sample(200, 60, -800_000), parsed.get(0));
+		}
+
+		@Test
+		public void intBoundaryValuesSurviveParsing() {
+			// The "no current" sentinel is Integer.MIN_VALUE itself — the overflow guard must keep
+			// accepting the full int range, not just 9-digit values.
+			final List<Sample> samples = Arrays.asList(
+					new Sample(100, 50, Integer.MIN_VALUE),
+					new Sample(200, 49, Integer.MAX_VALUE));
+			final List<Sample> parsed = BatteryRateTracker.parseSamples(BatteryRateTracker.serializeSamples(samples));
+
+			assertEquals(samples, parsed);
+		}
+	}
+
+	/**
+	 * {@link BatteryRateTracker#hasUsableLevel}: snapshots whose level/scale extras defaulted to -1
+	 * (unavailable) must not be recorded — they'd read as a bogus 0% sample.
+	 */
+	public static class UsableLevel {
+
+		@Test
+		public void validReadingIsUsable() {
+			assertTrue(BatteryRateTracker.hasUsableLevel(new BatteryDO().setLevel(50).setScale(100)));
+		}
+
+		@Test
+		public void missingScaleIsNotUsable() {
+			assertFalse(BatteryRateTracker.hasUsableLevel(new BatteryDO().setLevel(50).setScale(-1)));
+			assertFalse(BatteryRateTracker.hasUsableLevel(new BatteryDO().setLevel(50).setScale(0)));
+		}
+
+		@Test
+		public void missingLevelIsNotUsable() {
+			assertFalse(BatteryRateTracker.hasUsableLevel(new BatteryDO().setLevel(-1).setScale(100)));
+		}
+	}
+
+	/**
+	 * {@link BatteryRateTracker#trimToWindow}: stale and future-dated samples are dropped, so a window
+	 * persisted before a shutdown can't surface as a current rate when read back at boot.
+	 */
+	public static class TrimToWindow {
+
+		@Test
+		public void staleSamplesAreDropped() {
+			// Samples from "last night" (8h before now) must not survive the load.
+			final long now = 8L * 60 * 60 * 1000;
+			final List<Sample> stale = Arrays.asList(new Sample(0, 80, -500_000), new Sample(600_000, 78, -500_000));
+
+			assertTrue(BatteryRateTracker.trimToWindow(stale, now).isEmpty());
+		}
+
+		@Test
+		public void freshSamplesAreKept() {
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -500_000), new Sample(300_000, 49, -500_000));
+
+			assertEquals(window, BatteryRateTracker.trimToWindow(window, 300_000));
+		}
+
+		@Test
+		public void futureDatedSamplesAreDropped() {
+			// A backwards clock jump leaves samples "from the future"; they must not be kept.
+			final List<Sample> window = Arrays.asList(new Sample(500_000, 50, -500_000));
+
+			assertTrue(BatteryRateTracker.trimToWindow(window, 100_000).isEmpty());
+		}
+	}
+
+	/**
+	 * {@link BatteryRateTracker#clampDrainLimit}: a stored limit outside the slider's range is clamped,
+	 * so a corrupt preference can't skew the red line or the #109 trigger.
+	 */
+	@RunWith(Parameterized.class)
+	public static class ClampDrainLimit {
+
+		@Parameter(0) public int stored;
+		@Parameter(1) public int expected;
+
+		@Parameters(name = "stored={0} -> {1}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{20, 20},                                          // in range: unchanged
+					{BatteryRateTracker.MIN_DRAIN_LIMIT_PPH, 5},       // boundaries kept
+					{BatteryRateTracker.MAX_DRAIN_LIMIT_PPH, 60},
+					{0, 5},                                            // below min: clamped up
+					{-3, 5},
+					{999, 60},                                         // above max: clamped down
+			});
+		}
+
+		@Test
+		public void matchesExpected() {
+			assertEquals(expected, BatteryRateTracker.clampDrainLimit(stored));
 		}
 	}
 

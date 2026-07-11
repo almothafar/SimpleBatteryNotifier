@@ -67,10 +67,11 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 
 		// Feed the charge/drain rate window from this broadcast (no polling timer of our own) so both the
 		// ongoing notification below and the details table reflect the latest reading (issue #108).
-		BatteryRateTracker.record(context, batteryDO);
+		final BatteryRateTracker.BatteryRate rate = BatteryRateTracker.record(context, batteryDO);
 
-		// Keep the persistent foreground-service status notification live with the latest reading
-		NotificationService.updateOngoingNotification(context, batteryDO);
+		// Keep the persistent foreground-service status notification live with the latest reading,
+		// reusing the rate just computed instead of re-parsing the persisted sample window.
+		NotificationService.updateOngoingNotification(context, batteryDO, rate);
 
 		if (batteryDO == null) {
 			// Without a real reading, don't assume a level. Previously this defaulted to 100%,

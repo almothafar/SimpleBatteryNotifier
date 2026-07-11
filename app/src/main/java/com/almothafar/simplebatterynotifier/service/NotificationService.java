@@ -397,12 +397,27 @@ public final class NotificationService {
 	 * @return The built ongoing notification
 	 */
 	public static Notification buildOngoingNotification(final Context context, final BatteryDO batteryDO) {
+		return buildOngoingNotification(context, batteryDO, BatteryRateTracker.getRate(context, batteryDO));
+	}
+
+	/**
+	 * Build the ongoing notification from an already-computed rate, so a caller that just fed the rate
+	 * window (see {@link BatteryRateTracker#record}) doesn't trigger a second read-and-parse of the
+	 * persisted samples (issue #108).
+	 *
+	 * @param context   The application context
+	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 * @param rate      The precomputed charge/drain rate
+	 * @return The built ongoing notification
+	 */
+	public static Notification buildOngoingNotification(final Context context, final BatteryDO batteryDO,
+	                                                    final BatteryRateTracker.BatteryRate rate) {
 		createNotificationChannels(context);
 
 		return new Notification.Builder(context, CHANNEL_ID_STATUS)
 				.setSmallIcon(ongoingIconRes(batteryDO))
 				.setContentTitle(context.getString(R.string.app_name))
-				.setContentText(statusText(context, batteryDO))
+				.setContentText(statusText(context, batteryDO, rate))
 				.setContentIntent(createMainActivityIntent(context))
 				.setOnlyAlertOnce(true)
 				.setOngoing(true)
@@ -419,14 +434,16 @@ public final class NotificationService {
 	 *
 	 * @param context   The application context
 	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 * @param rate      The rate already computed while feeding the sample window
 	 */
-	public static void updateOngoingNotification(final Context context, final BatteryDO batteryDO) {
+	public static void updateOngoingNotification(final Context context, final BatteryDO batteryDO,
+	                                             final BatteryRateTracker.BatteryRate rate) {
 		if (lacksNotificationPermission(context)) {
 			return;
 		}
 		final NotificationManager manager = getNotificationManager(context);
 		if (nonNull(manager)) {
-			manager.notify(ONGOING_NOTIFICATION_ID, buildOngoingNotification(context, batteryDO));
+			manager.notify(ONGOING_NOTIFICATION_ID, buildOngoingNotification(context, batteryDO, rate));
 		}
 	}
 
@@ -896,13 +913,15 @@ public final class NotificationService {
 	 *
 	 * @param context   The application context
 	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 * @param rate      The precomputed charge/drain rate
 	 * @return Formatted status text
 	 */
-	private static String statusText(final Context context, final BatteryDO batteryDO) {
+	private static String statusText(final Context context, final BatteryDO batteryDO,
+	                                 final BatteryRateTracker.BatteryRate rate) {
 		final int percentage = isNull(batteryDO) ? 0 : Math.round(batteryDO.getBatteryPercentage());
 		final String statusLabel = SystemService.getStatusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
 		final String temperature = isNull(batteryDO) ? "" : TemperatureUtils.format(context, batteryDO.getTemperature());
-		return context.getString(R.string.notification_status_content, percentage, statusWithRate(context, batteryDO, statusLabel), temperature);
+		return context.getString(R.string.notification_status_content, percentage, statusWithRate(context, batteryDO, statusLabel, rate), temperature);
 	}
 
 	/**
@@ -912,10 +931,12 @@ public final class NotificationService {
 	 * @param context     The application context
 	 * @param batteryDO   Current battery snapshot, or null if unavailable
 	 * @param statusLabel The plain localized status label
+	 * @param rate        The precomputed charge/drain rate
 	 * @return The status label, optionally with the rate/current appended
 	 */
-	private static String statusWithRate(final Context context, final BatteryDO batteryDO, final String statusLabel) {
-		if (isNull(batteryDO)) {
+	private static String statusWithRate(final Context context, final BatteryDO batteryDO,
+	                                     final String statusLabel, final BatteryRateTracker.BatteryRate rate) {
+		if (isNull(batteryDO) || isNull(rate)) {
 			return statusLabel;
 		}
 		final boolean showRate = PreferenceManager.getDefaultSharedPreferences(context)
@@ -923,7 +944,6 @@ public final class NotificationService {
 		if (!showRate) {
 			return statusLabel;
 		}
-		final BatteryRateTracker.BatteryRate rate = BatteryRateTracker.getRate(context, batteryDO);
 		if (rate.hasRate()) {
 			return statusLabel + " " + BatteryRateTracker.formatRateValue(context, rate.percentPerHour());
 		}

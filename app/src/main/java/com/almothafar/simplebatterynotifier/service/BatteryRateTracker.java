@@ -61,6 +61,8 @@ public final class BatteryRateTracker {
 	static final int MAX_PLAUSIBLE_RATE_PPH = 500;
 
 	// The "red / high drain" limit shared with the fast-drain alert (#109): default and accepted range.
+	// MIN/MAX must match the slider bounds (android:min/android:max) in pref_notification.xml; they are
+	// enforced when the preference is read, so an out-of-range stored value can't skew the red line.
 	public static final int DEFAULT_DRAIN_LIMIT_PPH = 20;
 	public static final int MIN_DRAIN_LIMIT_PPH = 5;
 	public static final int MAX_DRAIN_LIMIT_PPH = 60;
@@ -88,25 +90,32 @@ public final class BatteryRateTracker {
 		if (isNull(context) || isNull(batteryDO)) {
 			return BatteryRate.empty();
 		}
+		// A snapshot with a missing/invalid scale reads as 0% (see BatteryDO.getBatteryPercentage), and
+		// recording it would plant a bogus level-0 sample whose delta against the next real reading
+		// yields a huge false drain rate. Fall back to a read-only computation instead.
+		if (!hasUsableLevel(batteryDO)) {
+			return getRate(context, batteryDO);
+		}
+
 		final long now = System.currentTimeMillis();
 		final boolean charging = isChargingDirection(batteryDO.getStatus());
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-		final boolean directionKnown = prefs.contains(PREF_RATE_CHARGING);
-		final boolean prevCharging = prefs.getInt(PREF_RATE_CHARGING, 0) == 1;
-		// A charge/discharge flip invalidates the whole window (mixed slopes/currents); start fresh. This
-		// also produces the brief post-unplug warm-up during which no rate is shown yet.
-		final List<Sample> window = (directionKnown && prevCharging == charging)
-		                            ? parseSamples(prefs.getString(PREF_RATE_SAMPLES, ""))
-		                            : new ArrayList<>();
+		final boolean sameDirection = sameDirection(prefs, charging);
+		final List<Sample> window = loadWindow(prefs, charging, now);
 
 		final int level = Math.round(batteryDO.getBatteryPercentage());
 		final List<Sample> updated = appendAndTrim(window, new Sample(now, level, batteryDO.getCurrentMicroAmps()), now);
 
-		final SharedPreferences.Editor editor = prefs.edit();
-		editor.putString(PREF_RATE_SAMPLES, serializeSamples(updated));
-		editor.putInt(PREF_RATE_CHARGING, charging ? 1 : 0);
-		editor.apply();
+		// Persist only when something actually changed. ACTION_BATTERY_CHANGED can fire every few seconds
+		// (voltage/temperature deltas); when the spacing throttle rejected the sample and nothing was
+		// trimmed, rewriting the whole preferences file would be needless disk I/O in a battery app.
+		if (!sameDirection || !updated.equals(window)) {
+			prefs.edit()
+			     .putString(PREF_RATE_SAMPLES, serializeSamples(updated))
+			     .putInt(PREF_RATE_CHARGING, charging ? 1 : 0)
+			     .apply();
+		}
 
 		return computeRate(updated, batteryDO.getCapacity(), charging, now, batteryDO.getCurrentMicroAmps());
 	}
@@ -128,11 +137,52 @@ public final class BatteryRateTracker {
 		final boolean charging = isChargingDirection(batteryDO.getStatus());
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-		// Ignore a window captured in the other direction (a flip that record() hasn't reset yet).
-		final boolean sameDirection = prefs.contains(PREF_RATE_CHARGING) && (prefs.getInt(PREF_RATE_CHARGING, 0) == 1) == charging;
-		final List<Sample> window = sameDirection ? parseSamples(prefs.getString(PREF_RATE_SAMPLES, "")) : new ArrayList<>();
+		return computeRate(loadWindow(prefs, charging, now), batteryDO.getCapacity(), charging, now, batteryDO.getCurrentMicroAmps());
+	}
 
-		return computeRate(window, batteryDO.getCapacity(), charging, now, batteryDO.getCurrentMicroAmps());
+	/**
+	 * Whether the snapshot's level reading can be trusted for the sample window. BatteryManager defaults
+	 * the level/scale extras to -1 when unavailable; such a snapshot must not be recorded (its percentage
+	 * reads as 0%). Pure so it is unit-testable.
+	 *
+	 * @param batteryDO the battery snapshot
+	 *
+	 * @return true when the level and scale form a real reading
+	 */
+	static boolean hasUsableLevel(final BatteryDO batteryDO) {
+		return batteryDO.getScale() > 0 && batteryDO.getLevel() >= 0;
+	}
+
+	/**
+	 * Whether the persisted window was captured in the same charge/discharge direction as the current
+	 * snapshot. A flip invalidates the whole window (mixed slopes/currents), producing the brief
+	 * post-unplug warm-up during which no rate is shown.
+	 *
+	 * @param prefs    the default shared preferences
+	 * @param charging the current direction
+	 *
+	 * @return true when a window exists and matches the direction
+	 */
+	private static boolean sameDirection(final SharedPreferences prefs, final boolean charging) {
+		return prefs.contains(PREF_RATE_CHARGING) && (prefs.getInt(PREF_RATE_CHARGING, 0) == 1) == charging;
+	}
+
+	/**
+	 * Loads the persisted window for the current direction, age-trimmed to the trailing window so a
+	 * stale pre-restart window (e.g. read at boot before the first {@link #record}) can't surface as a
+	 * current rate. Returns an empty window on a direction flip.
+	 *
+	 * @param prefs    the default shared preferences
+	 * @param charging the current direction
+	 * @param now      current time in millis
+	 *
+	 * @return the loaded samples oldest-first (possibly empty)
+	 */
+	private static List<Sample> loadWindow(final SharedPreferences prefs, final boolean charging, final long now) {
+		if (!sameDirection(prefs, charging)) {
+			return new ArrayList<>();
+		}
+		return trimToWindow(parseSamples(prefs.getString(PREF_RATE_SAMPLES, "")), now);
 	}
 
 	/**
@@ -158,21 +208,36 @@ public final class BatteryRateTracker {
 	 * @return the new window, oldest first
 	 */
 	static List<Sample> appendAndTrim(final List<Sample> window, final Sample sample, final long now) {
+		final List<Sample> result = trimToWindow(window, now);
+		final boolean spacedEnough = result.isEmpty()
+				|| sample.timeMillis() - result.get(result.size() - 1).timeMillis() >= MIN_SAMPLE_SPACING_MS;
+		if (spacedEnough && sample.timeMillis() >= now - WINDOW_MS) {
+			result.add(sample);
+		}
+		// Guard against unbounded growth if the clock jumps; keep the most recent MAX_SAMPLES.
+		if (result.size() > MAX_SAMPLES) {
+			return new ArrayList<>(result.subList(result.size() - MAX_SAMPLES, result.size()));
+		}
+		return result;
+	}
+
+	/**
+	 * Drops samples outside the trailing window: older than {@link #WINDOW_MS} or future-dated (a clock
+	 * jump). Pure so the age trim can be unit-tested; shared by the load and append paths so the two
+	 * cannot disagree on what "fresh" means.
+	 *
+	 * @param window samples oldest-first
+	 * @param now    current time in millis
+	 *
+	 * @return a new list holding only the fresh samples, oldest-first
+	 */
+	static List<Sample> trimToWindow(final List<Sample> window, final long now) {
 		final List<Sample> result = new ArrayList<>(window.size() + 1);
 		final long cutoff = now - WINDOW_MS;
 		for (final Sample s : window) {
 			if (s.timeMillis() >= cutoff && s.timeMillis() <= now) {
 				result.add(s);
 			}
-		}
-		final boolean spacedEnough = result.isEmpty()
-				|| sample.timeMillis() - result.get(result.size() - 1).timeMillis() >= MIN_SAMPLE_SPACING_MS;
-		if (spacedEnough && sample.timeMillis() >= cutoff) {
-			result.add(sample);
-		}
-		// Guard against unbounded growth if the clock jumps; keep the most recent MAX_SAMPLES.
-		if (result.size() > MAX_SAMPLES) {
-			return new ArrayList<>(result.subList(result.size() - MAX_SAMPLES, result.size()));
 		}
 		return result;
 	}
@@ -290,8 +355,22 @@ public final class BatteryRateTracker {
 	 * @return the configured limit in %/h
 	 */
 	public static int getDrainLimitPercentPerHour(final Context context) {
-		return PreferenceManager.getDefaultSharedPreferences(context)
-		                        .getInt(context.getString(R.string._pref_key_fast_drain_limit), DEFAULT_DRAIN_LIMIT_PPH);
+		final int stored = PreferenceManager.getDefaultSharedPreferences(context)
+		                                    .getInt(context.getString(R.string._pref_key_fast_drain_limit), DEFAULT_DRAIN_LIMIT_PPH);
+		return clampDrainLimit(stored);
+	}
+
+	/**
+	 * Clamps a stored drain limit to the accepted range, so a corrupt or out-of-range preference value
+	 * can't skew the red line here or the fast-drain trigger in #109. The bounds mirror the slider's
+	 * {@code android:min}/{@code android:max} in {@code pref_notification.xml}. Pure so it is unit-testable.
+	 *
+	 * @param stored the raw persisted limit in %/h
+	 *
+	 * @return the limit clamped to [{@link #MIN_DRAIN_LIMIT_PPH}, {@link #MAX_DRAIN_LIMIT_PPH}]
+	 */
+	static int clampDrainLimit(final int stored) {
+		return Math.max(MIN_DRAIN_LIMIT_PPH, Math.min(MAX_DRAIN_LIMIT_PPH, stored));
 	}
 
 	/**
@@ -374,11 +453,20 @@ public final class BatteryRateTracker {
 	}
 
 	private static boolean isLong(final String s) {
-		return s.matches("-?\\d{1,19}");
+		// 18 digits max so Long.parseLong can't overflow (Long.MAX_VALUE has 19 digits, and a 19-digit
+		// value above it would throw). Real timestamps are 13 digits, so nothing valid is excluded.
+		return s.matches("-?\\d{1,18}");
 	}
 
 	private static boolean isInt(final String s) {
-		return s.matches("-?\\d{1,10}");
+		// Shape first, then a range check through a long: a 10-digit value like "9999999999" matches the
+		// shape but overflows Integer.parseInt. The full int range must stay accepted because the
+		// serialized "no current" sentinel is Integer.MIN_VALUE itself (10 digits).
+		if (!s.matches("-?\\d{1,10}")) {
+			return false;
+		}
+		final long value = Long.parseLong(s);
+		return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE;
 	}
 
 	/**
