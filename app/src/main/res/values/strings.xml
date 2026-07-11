@@ -52,6 +52,13 @@
 
     <string name="warn_start_level">Warning Level Start From</string>
     <string name="alert_start_level">Critical Level Start From</string>
+
+    <!-- Combined critical/warning battery range slider -->
+    <string name="battery_range_title">Battery Alert Levels</string>
+    <string name="battery_range_caption_critical">Critical %1$d%%</string>
+    <string name="battery_range_caption_warning">Warning %1$d%%</string>
+    <string name="battery_range_summary">Critical %1$d%% • Warning %2$d%%</string>
+    <string name="battery_level_percent" translatable="false">%1$d%%</string>
     <string name="temperature_unit">Temperature Unit</string>
     <string name="off">OFF</string>
     <string name="on">ON</string>
@@ -217,6 +224,7 @@
 
     <string name="_pref_key_warn_battery_level" translatable="false">key_warn_battery_level</string>
     <string name="_pref_key_critical_battery_level" translatable="false">key_critical_battery_level</string>
+    <string name="_pref_key_battery_level_range" translatable="false">key_battery_level_range</string>
     <string name="_pref_key_notifications_sticky" translatable="false">key_notifications_sticky</string>
     <string name="_pref_key_temperatures_unit" translatable="false">key_temperatures_unit</string>
     <string name="_pref_key_notifications_vibrate" translatable="false">key_notifications_vibrate</string>
@@ -239,10 +247,6 @@
     <string name="_pref_value_temperatures_unit_f" translatable="false">fahrenheit</string>
     <string name="_pref_value_notifications_time_range_end" translatable="false">23:30</string>
     <string name="_pref_value_notifications_time_range_start" translatable="false">06:30</string>
-
-    <!-- Validation error messages -->
-    <string name="error_warning_level_too_low">Warning level must be higher than critical level (%d%%)</string>
-    <string name="error_critical_level_too_high">Critical level must be lower than warning level (%d%%)</string>
 
     <!-- Notification service -->
     <string name="_default_notification_sound_uri" translatable="false">content://settings/system/notification_sound</string>
