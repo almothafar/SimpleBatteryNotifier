@@ -369,6 +369,28 @@ public class CircularProgressBar extends ProgressBar {
 	}
 
 	/**
+	 * Pause the ongoing pulse animation when the host activity leaves the foreground.
+	 * <p>
+	 * The pulse is purely decorative, so there is no reason to keep it invalidating on the
+	 * main thread while nobody can see it. Counterpart to {@link #resumePulseAnimation()},
+	 * called from the activity's {@code onPause()}.
+	 */
+	public void pausePulseAnimation() {
+		stopPulseAnimation();
+	}
+
+	/**
+	 * Resume the pulse animation when the host activity returns to the foreground.
+	 * <p>
+	 * Restarts the pulse only if the current battery state still calls for it (charging or
+	 * critical); otherwise it stays off. Counterpart to {@link #pausePulseAnimation()},
+	 * called from the activity's {@code onResume()}.
+	 */
+	public void resumePulseAnimation() {
+		updateAnimationState();
+	}
+
+	/**
 	 * Draw the circular progress bar
 	 *
 	 * @param canvas The canvas to draw on

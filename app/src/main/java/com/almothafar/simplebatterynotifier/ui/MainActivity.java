@@ -186,16 +186,26 @@ public class MainActivity extends BaseActivity {
 		initializeFirstValues();
 
 		startUpdateTimer();
+
+		// Resume the pulse paused in onPause(); restarts only if the battery state still
+		// warrants it (charging or critical).
+		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
+		progressBar.resumePulseAnimation();
 	}
 
 	/**
-	 * Stop the refresh loop while the activity is not in the foreground so it doesn't keep
-	 * polling the battery (and draining it) in the background.
+	 * Stop the refresh loop and pause the decorative pulse while the activity is not in the
+	 * foreground, so neither keeps running (and draining the battery) in the background.
 	 */
 	@Override
 	protected void onPause() {
 		super.onPause();
 		stopUpdateTimer();
+
+		// The pulse is only auto-stopped when the view is destroyed (onDetachedFromWindow),
+		// not on backgrounding, so pause it here for the same reason we stop the timer.
+		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
+		progressBar.pausePulseAnimation();
 	}
 
 	/**
