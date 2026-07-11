@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Custom layout for BatteryRangeSliderPreference: a two-thumb RangeSlider (left = critical,
+     right = warning) with a colored, always-on value caption under each end. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:clickable="false"
+    android:focusable="false"
+    android:minHeight="64dp"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp">
+
+    <TextView
+        android:id="@android:id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+        android:textColor="?android:attr/textColorPrimary"
+        tools:text="Battery Alert Levels" />
+
+    <com.google.android.material.slider.RangeSlider
+        android:id="@+id/battery_range_slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:stepSize="1"
+        android:valueFrom="10"
+        android:valueTo="50"
+        app:labelBehavior="floating" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/battery_range_critical_caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:textColor="@color/circular_progress_default_progress_alert"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="Critical 20%" />
+
+        <TextView
+            android:id="@+id/battery_range_warning_caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:textColor="@color/circular_progress_default_progress_warning"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="Warning 40%" />
+
+    </LinearLayout>
+
+</LinearLayout>

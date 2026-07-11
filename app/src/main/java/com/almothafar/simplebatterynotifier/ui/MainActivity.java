@@ -15,13 +15,17 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 import com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment;
+import com.almothafar.simplebatterynotifier.ui.preference.BatteryRangeSliderHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.slider.RangeSlider;
 import com.google.android.material.snackbar.Snackbar;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
@@ -32,6 +36,8 @@ import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar;
+
+import java.util.List;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -56,6 +62,7 @@ public class MainActivity extends BaseActivity {
 
 	// UI elements
 	private MaterialButton batteryInsightsButton;
+	private RangeSlider thresholdSlider;
 
 	// Self-reposting refresh loop, bound to the foreground lifecycle (started in onPostResume,
 	// stopped in onPause) so it never stacks across resumes or keeps polling in the background.
@@ -155,6 +162,9 @@ public class MainActivity extends BaseActivity {
 
 		// Set up button click listeners
 		batteryInsightsButton.setOnClickListener(v -> openBatteryInsights());
+
+		// Wire the in-fly critical/warning threshold slider (portrait home screen).
+		setupThresholdSlider();
 
 		// Best-effort: auto-fill the battery design capacity from the device on first run, so the
 		// measured health/capacity works without the user having to look up and type it in (#104).
@@ -269,6 +279,10 @@ public class MainActivity extends BaseActivity {
 		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
 		progressBar.setWarningLevel(sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
 		progressBar.setCriticalLevel(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20));
+
+		// Keep the in-fly slider in sync with values that may have changed in Settings.
+		syncThresholdSlider();
+
 		progressBar.animateProgressTo(0, batteryPercentage, new CircularProgressBar.ProgressAnimationListener() {
 
 			@Override
@@ -287,6 +301,91 @@ public class MainActivity extends BaseActivity {
 				progressBar.setSubTitle(subTitle);
 			}
 		});
+	}
+
+	/**
+	 * Wire the in-fly critical/warning threshold slider on the home screen.
+	 * <p>
+	 * The control is portrait-only (absent from the landscape layout), so this no-ops when the
+	 * slider isn't present. Captions update live while dragging; the new values are persisted to the
+	 * same preference keys Settings uses — and the gauge refreshed — only when the drag ends.
+	 */
+	private void setupThresholdSlider() {
+		thresholdSlider = findViewById(R.id.thresholdSlider);
+		if (isNull(thresholdSlider)) {
+			return;
+		}
+		BatteryRangeSliderHelper.configure(thresholdSlider,
+				BatteryRangeSliderHelper.LEVEL_FROM,
+				BatteryRangeSliderHelper.LEVEL_TO,
+				BatteryRangeSliderHelper.MIN_SEPARATION);
+
+		final TextView criticalCaption = findViewById(R.id.thresholdCriticalCaption);
+		final TextView warningCaption = findViewById(R.id.thresholdWarningCaption);
+
+		thresholdSlider.addOnChangeListener((slider, value, fromUser) -> {
+			final List<Float> values = slider.getValues();
+			updateThresholdCaptions(criticalCaption, warningCaption,
+					Math.round(values.get(0)), Math.round(values.get(1)));
+		});
+
+		thresholdSlider.addOnSliderTouchListener(new RangeSlider.OnSliderTouchListener() {
+			@Override
+			public void onStartTrackingTouch(@NonNull final RangeSlider slider) {
+				// No-op: applied on release.
+			}
+
+			@Override
+			public void onStopTrackingTouch(@NonNull final RangeSlider slider) {
+				final List<Float> values = slider.getValues();
+				final int critical = Math.round(values.get(0));
+				final int warning = Math.round(values.get(1));
+
+				PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit()
+						.putInt(getString(R.string._pref_key_critical_battery_level), critical)
+						.putInt(getString(R.string._pref_key_warn_battery_level), warning)
+						.apply();
+
+				final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
+				progressBar.setCriticalLevel(critical);
+				progressBar.setWarningLevel(warning);
+				progressBar.invalidate();
+			}
+		});
+
+		syncThresholdSlider();
+	}
+
+	/**
+	 * Load the persisted critical/warning levels onto the in-fly slider and captions, clamping into
+	 * the slider's bounds so values set elsewhere (e.g. Settings) are always displayable.
+	 */
+	private void syncThresholdSlider() {
+		if (isNull(thresholdSlider)) {
+			return;
+		}
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		final int critical = prefs.getInt(getString(R.string._pref_key_critical_battery_level),
+				BatteryRangeSliderHelper.DEFAULT_CRITICAL);
+		final int warning = prefs.getInt(getString(R.string._pref_key_warn_battery_level),
+				BatteryRangeSliderHelper.DEFAULT_WARNING);
+		final int[] pair = BatteryRangeSliderHelper.clampPair(critical, warning,
+				BatteryRangeSliderHelper.LEVEL_FROM, BatteryRangeSliderHelper.LEVEL_TO,
+				BatteryRangeSliderHelper.MIN_SEPARATION);
+
+		thresholdSlider.setValues((float) pair[0], (float) pair[1]);
+		updateThresholdCaptions(findViewById(R.id.thresholdCriticalCaption),
+				findViewById(R.id.thresholdWarningCaption), pair[0], pair[1]);
+	}
+
+	private void updateThresholdCaptions(final TextView criticalCaption, final TextView warningCaption,
+	                                     final int critical, final int warning) {
+		if (nonNull(criticalCaption)) {
+			criticalCaption.setText(getString(R.string.battery_range_caption_critical, critical));
+		}
+		if (nonNull(warningCaption)) {
+			warningCaption.setText(getString(R.string.battery_range_caption_warning, warning));
+		}
 	}
 
 	/**

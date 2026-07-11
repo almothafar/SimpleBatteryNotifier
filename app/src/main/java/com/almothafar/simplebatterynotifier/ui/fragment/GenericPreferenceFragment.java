@@ -10,7 +10,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -33,7 +32,6 @@ import com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreference;
 import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreferenceDialogFragmentCompat;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.util.Set;
 
@@ -51,10 +49,6 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 		implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 	private static final String TAG = "GenericPreferenceFrag";
-
-	// Default battery level values (from pref_general.xml)
-	private static final int DEFAULT_WARNING_BATTERY_LEVEL = 40;
-	private static final int DEFAULT_CRITICAL_BATTERY_LEVEL = 20;
 
 	private RingtonePreference currentRingtonePreference;
 	private ActivityResultLauncher<Intent> ringtonePickerLauncher;
@@ -350,16 +344,14 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	/**
 	 * Update summary for SeekBarPreference
 	 * <p>
-	 * Adds percentage suffix for battery level preferences.
+	 * Adds the temperature-unit suffix for the high-temperature threshold.
 	 */
 	private void updateSeekBarPreferenceSummary(final SeekBarPreference seekBarPref) {
 		final String key = seekBarPref.getKey();
 		if (isNull(key)) {
 			return;
 		}
-		if (isBatteryLevelPreference(key)) {
-			seekBarPref.setSummary(seekBarPref.getValue() + "%");
-		} else if (key.equals(getString(R.string._pref_key_high_temperature_threshold))) {
+		if (key.equals(getString(R.string._pref_key_high_temperature_threshold))) {
 			seekBarPref.setSummary(seekBarPref.getValue() + temperatureUnitSuffix(TemperatureUtils.isFahrenheit(requireContext())));
 		}
 	}
@@ -424,17 +416,6 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 	}
 
 	/**
-	 * Check if a preference key is for battery level configuration
-	 *
-	 * @param key The preference key to check
-	 * @return true if the key is for warning or critical battery level
-	 */
-	private boolean isBatteryLevelPreference(final String key) {
-		return key.equals(getString(R.string._pref_key_warn_battery_level)) ||
-		       key.equals(getString(R.string._pref_key_critical_battery_level));
-	}
-
-	/**
 	 * Initialize summaries for all preferences
 	 * <p>
 	 * Called when the fragment is resumed to ensure all preference summaries
@@ -471,11 +452,6 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 			if (p instanceof final RingtonePreference ringtonePref) {
 				setupRingtonePreferenceListener(ringtonePref);
 			}
-
-			// Set up validation for battery level preferences
-			if (p instanceof SeekBarPreference && isBatteryLevelPreference(p.getKey())) {
-				setupBatteryLevelValidation(sharedPreferences, p);
-			}
 		}
 	}
 
@@ -495,80 +471,4 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 		});
 	}
 
-	/**
-	 * Set up validation for battery level SeekBarPreferences
-	 * <p>
-	 * Ensures warning level is always higher than critical level and vice versa.
-	 * Shows accessible error message via Snackbar if validation fails.
-	 *
-	 * @param sharedPreferences The SharedPreferences containing current values
-	 * @param pref              The battery level preference to validate
-	 */
-	private void setupBatteryLevelValidation(final SharedPreferences sharedPreferences, final Preference pref) {
-		pref.setOnPreferenceChangeListener((preference, newValue) -> {
-			if (newValue instanceof Integer) {
-				final int value = (Integer) newValue;
-				final String key = preference.getKey();
-
-				// Validate the new value
-				final String errorMessage = validateBatteryLevel(key, value, sharedPreferences);
-				if (nonNull(errorMessage)) {
-					showValidationError(errorMessage);
-					return false; // Reject the change
-				}
-
-				// Update summary with new value
-				preference.setSummary(value + "%");
-			}
-			return true;
-		});
-	}
-
-	/**
-	 * Validate battery level change
-	 * <p>
-	 * Ensures warning level is always higher than critical level.
-	 *
-	 * @param key               The preference key being changed
-	 * @param newValue          The new value to validate
-	 * @param sharedPreferences The SharedPreferences containing current values
-	 * @return Error message if validation fails, null if valid
-	 */
-	private String validateBatteryLevel(final String key, final int newValue, final SharedPreferences sharedPreferences) {
-		if (key.equals(getString(R.string._pref_key_warn_battery_level))) {
-			// Changing warning level - ensure it's higher than critical
-			final int criticalLevel = sharedPreferences.getInt(
-					getString(R.string._pref_key_critical_battery_level),
-					DEFAULT_CRITICAL_BATTERY_LEVEL);
-			if (newValue <= criticalLevel) {
-				return getString(R.string.error_warning_level_too_low, criticalLevel);
-			}
-		} else if (key.equals(getString(R.string._pref_key_critical_battery_level))) {
-			// Changing critical level - ensure it's lower than warning
-			final int warningLevel = sharedPreferences.getInt(
-					getString(R.string._pref_key_warn_battery_level),
-					DEFAULT_WARNING_BATTERY_LEVEL);
-			if (newValue >= warningLevel) {
-				return getString(R.string.error_critical_level_too_high, warningLevel);
-			}
-		}
-		return null; // Valid
-	}
-
-	/**
-	 * Show validation error message using Snackbar for accessibility
-	 * <p>
-	 * Snackbar is preferred over Toast because:
-	 * - It's accessible to TalkBack users
-	 * - It's more visible and can contain actions
-	 * - It follows Material Design guidelines
-	 *
-	 * @param message The error message to display
-	 */
-	private void showValidationError(final String message) {
-		final View view = getView();
-		if (nonNull(view)) {
-			Snackbar.make(view, message, Snackbar.LENGTH_SHORT).show();
-		}
-	}
 }

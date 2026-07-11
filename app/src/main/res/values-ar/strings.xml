@@ -50,6 +50,12 @@
 
     <string name="warn_start_level">مستوى التحذير يبدأ من</string>
     <string name="alert_start_level">المستوى الحرج يبدأ من</string>
+
+    <!-- Combined critical/warning battery range slider -->
+    <string name="battery_range_title">مستويات تنبيه البطارية</string>
+    <string name="battery_range_caption_critical">حرج %1$d%%</string>
+    <string name="battery_range_caption_warning">تحذير %1$d%%</string>
+    <string name="battery_range_summary">حرج %1$d%% • تحذير %2$d%%</string>
     <string name="temperature_unit">وحدة الحرارة</string>
     <string name="off">إطفاء</string>
     <string name="on">تشغيل</string>
@@ -102,10 +108,6 @@
     <string name="notification_charge_started_title_healthy">شحن صحي بدأ</string>
     <string name="notification_charge_started_title_regular">شحن اعتيادي بدأ</string>
     <string name="notification_charge_started_content">البطارية تشحن بواسطة %1$s</string>
-
-    <!-- Validation error messages -->
-    <string name="error_warning_level_too_low">يجب أن يكون مستوى التحذير أعلى من المستوى الحرج (%d%%)</string>
-    <string name="error_critical_level_too_high">يجب أن يكون المستوى الحرج أقل من مستوى التحذير (%d%%)</string>
 
     <!-- Accessibility -->
     <string name="battery_progress_description">البطارية عند %1$d بالمئة</string>

@@ -12,4 +12,16 @@
         <attr name="cpb_subtitleTextSize" format="integer"/>
         <attr name="cpb_strokeWidth" format="integer"/>
     </declare-styleable>
+
+    <declare-styleable name="BatteryRangeSliderPreference">
+        <!-- SharedPreferences keys the two thumbs persist to -->
+        <attr name="criticalKey" format="string"/>
+        <attr name="warningKey" format="string"/>
+        <!-- Combined track bounds and the minimum gap kept between the two thumbs -->
+        <attr name="sliderFrom" format="integer"/>
+        <attr name="sliderTo" format="integer"/>
+        <attr name="sliderMinSeparation" format="integer"/>
+        <attr name="criticalDefault" format="integer"/>
+        <attr name="warningDefault" format="integer"/>
+    </declare-styleable>
 </resources>
