@@ -10,6 +10,7 @@ import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
+import com.almothafar.simplebatterynotifier.service.BatteryRateTracker;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
@@ -64,8 +65,13 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		// Reuse the sticky intent we already read above instead of triggering a second read.
 		final BatteryDO batteryDO = SystemService.getBatteryInfo(context, batteryStatus);
 
-		// Keep the persistent foreground-service status notification live with the latest reading
-		NotificationService.updateOngoingNotification(context, batteryDO);
+		// Feed the charge/drain rate window from this broadcast (no polling timer of our own) so both the
+		// ongoing notification below and the details table reflect the latest reading (issue #108).
+		final BatteryRateTracker.BatteryRate rate = BatteryRateTracker.record(context, batteryDO);
+
+		// Keep the persistent foreground-service status notification live with the latest reading,
+		// reusing the rate just computed instead of re-parsing the persisted sample window.
+		NotificationService.updateOngoingNotification(context, batteryDO, rate);
 
 		if (batteryDO == null) {
 			// Without a real reading, don't assume a level. Previously this defaulted to 100%,

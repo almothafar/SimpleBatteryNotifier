@@ -13,6 +13,9 @@ public final class BatteryDO {
 	private int voltage;
 	private boolean present;
 	private int capacity;
+	// Instantaneous current in µA from BATTERY_PROPERTY_CURRENT_NOW; Integer.MIN_VALUE when the device
+	// doesn't report it. Sign convention varies by OEM, so callers derive direction from the status.
+	private int currentMicroAmps = Integer.MIN_VALUE;
 	private String technology;
 	private String powerSource;
 	private String health;
@@ -121,6 +124,15 @@ public final class BatteryDO {
 
 	public BatteryDO setCapacity(final int capacity) {
 		this.capacity = capacity;
+		return this;
+	}
+
+	public int getCurrentMicroAmps() {
+		return currentMicroAmps;
+	}
+
+	public BatteryDO setCurrentMicroAmps(final int currentMicroAmps) {
+		this.currentMicroAmps = currentMicroAmps;
 		return this;
 	}
 

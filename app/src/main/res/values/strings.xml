@@ -33,6 +33,11 @@
     <string name="fahrenheit_short">°F</string>
     <string name="power_source">Power Source</string>
 
+    <!-- #108: live charge/drain rate rows shown at the top of the details table -->
+    <string name="drain_rate">Drain rate</string>
+    <string name="charge_rate">Charge rate</string>
+    <string name="battery_current">Current</string>
+
     <string name="battery">On Battery</string>
     <string name="charger_ac">AC Charger</string>
     <string name="charger_usb">USB Port</string>
@@ -155,6 +160,18 @@
     <string name="notification_temperature_content">Battery is at %1$s. Reduce load and let it cool down.</string>
     <string name="notification_temperature_content_big">Your battery is at %1$s, which is above the safe range. High temperature accelerates battery wear and can be unsafe. Stop charging or heavy use (games, navigation, camera) and let the phone cool down.</string>
 
+    <!-- Charge/drain rate (#108) -->
+    <!-- %1$s is a Western-digit number (passed via String.valueOf) so it stays 0-9 in every locale (#96) -->
+    <string name="battery_rate_value">%1$s%%/h</string>
+    <!-- %1$s is a signed Western-digit number, e.g. "+900" or "−450" -->
+    <string name="battery_current_value">%1$s mA</string>
+    <string name="pref_cat_title_drain">Battery Drain</string>
+    <string name="show_rate_in_notification">Show rate in status notification</string>
+    <string name="show_rate_in_notification_summary_on">The ongoing notification shows the live drain/charge rate next to the status</string>
+    <string name="show_rate_in_notification_summary_off">The ongoing notification shows only the status label</string>
+    <string name="drain_limit">High drain limit</string>
+    <string name="drain_limit_summary">The drain rate turns amber near this limit and red at or above it. Measured in percentage points per hour.</string>
+
     <!-- Battery Insights Screen -->
     <string name="battery_insights_title">Battery Insights</string>
     <string name="battery_insights_menu">Battery Insights</string>
@@ -265,6 +282,9 @@
     <string name="_pref_key_critical_ignore_quiet_hours" translatable="false">key_critical_ignore_quiet_hours</string>
     <string name="_pref_key_notify_high_temperature" translatable="false">key_notify_high_temperature</string>
     <string name="_pref_key_high_temperature_threshold" translatable="false">key_high_temperature_threshold</string>
+    <!-- #108/#109: append the rate to the ongoing notification, and the shared "high drain" limit (%/h) -->
+    <string name="_pref_key_show_rate_in_notification" translatable="false">key_show_rate_in_notification</string>
+    <string name="_pref_key_fast_drain_limit" translatable="false">key_fast_drain_limit</string>
     <string name="_pref_key_language" translatable="false">key_language</string>
 
     <string name="_pref_value_temperatures_unit_c" translatable="false">celsius</string>

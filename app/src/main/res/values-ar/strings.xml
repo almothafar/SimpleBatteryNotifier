@@ -31,6 +31,11 @@
     <string name="fahrenheit_short">°F</string>
     <string name="power_source">مصدر الطاقة</string>
 
+    <!-- #108: صفوف معدل الشحن/الاستهلاك المباشر أعلى جدول التفاصيل -->
+    <string name="drain_rate">معدل الاستهلاك</string>
+    <string name="charge_rate">معدل الشحن</string>
+    <string name="battery_current">التيار</string>
+
     <string name="battery">على البطارية</string>
     <string name="charger_ac">مقبس طاقة</string>
     <string name="charger_usb">مدخل يو اس بي</string>
@@ -150,6 +155,16 @@
     <string name="notification_temperature_title">حرارة البطارية مرتفعة</string>
     <string name="notification_temperature_content">حرارة البطارية %1$s. قلّل الاستخدام ودعها تبرد.</string>
     <string name="notification_temperature_content_big">حرارة بطاريتك %1$s، وهي أعلى من النطاق الآمن. الحرارة العالية تسرّع تلف البطارية وقد تكون خطرة. أوقف الشحن أو الاستخدام المكثف (الألعاب، الملاحة، الكاميرا) ودع الهاتف يبرد.</string>
+
+    <!-- معدل الشحن/الاستهلاك (#108) -->
+    <string name="battery_rate_value">%1$s%%/h</string>
+    <string name="battery_current_value">%1$s mA</string>
+    <string name="pref_cat_title_drain">استهلاك البطارية</string>
+    <string name="show_rate_in_notification">إظهار المعدل في إشعار الحالة</string>
+    <string name="show_rate_in_notification_summary_on">يعرض الإشعار المستمر معدل الشحن/الاستهلاك المباشر بجانب الحالة</string>
+    <string name="show_rate_in_notification_summary_off">يعرض الإشعار المستمر تسمية الحالة فقط</string>
+    <string name="drain_limit">حد الاستهلاك المرتفع</string>
+    <string name="drain_limit_summary">يتحول معدل الاستهلاك إلى اللون الكهرماني عند الاقتراب من هذا الحد وإلى الأحمر عند بلوغه أو تجاوزه. يُقاس بنقاط مئوية في الساعة.</string>
 
     <!-- Battery Insights screen -->
     <string name="battery_insights_title">تحليلات البطارية</string>

@@ -80,8 +80,9 @@ public final class SystemService {
 		final BatteryExtras extras = extractBatteryExtras(batteryStatus);
 		final String chargerType = determineChargerType(extras.plugged, resources);
 		final int batteryCapacity = getBatteryCapacity(context);
+		final int currentMicroAmps = getInstantaneousCurrentMicroAmps(context);
 
-		return buildBatteryDataObject(extras, chargerType, batteryCapacity, resources);
+		return buildBatteryDataObject(extras, chargerType, batteryCapacity, currentMicroAmps, resources);
 	}
 
 	/**
@@ -188,6 +189,7 @@ public final class SystemService {
 	private static BatteryDO buildBatteryDataObject(final BatteryExtras extras,
 	                                                final String chargerType,
 	                                                final int batteryCapacity,
+	                                                final int currentMicroAmps,
 	                                                final Resources resources) {
 		final BatteryDO batteryDO = new BatteryDO();
 		batteryDO.setLevel(extras.level)
@@ -200,6 +202,7 @@ public final class SystemService {
 		         .setTemperature(extras.temperature)
 		         .setVoltage(extras.voltage)
 		         .setCapacity(batteryCapacity)
+		         .setCurrentMicroAmps(currentMicroAmps)
 		         .setIntHealth(extras.health);
 
 		// Determine health status and set it on the battery object
@@ -287,29 +290,44 @@ public final class SystemService {
 	/**
 	 * Estimate the current charging speed from the instantaneous current and battery voltage.
 	 * <p>
-	 * Reads {@link BatteryManager#BATTERY_PROPERTY_CURRENT_NOW} (µA) and the battery voltage
-	 * ({@link BatteryManager#EXTRA_VOLTAGE}, mV) and combines them into a {@link ChargeSpeed}. Best
-	 * sampled a moment after connection, once the current has stabilised — right at plug-in the
-	 * current reads 0 or noisy. Returns {@link ChargeSpeed#unknown()} when the device doesn't report
-	 * instantaneous current, so callers fall back to a plain "Charging" message.
+	 * Combines {@link #getInstantaneousCurrentMicroAmps(Context)} with the battery voltage
+	 * ({@link BatteryManager#EXTRA_VOLTAGE}, mV) into a {@link ChargeSpeed}. Best sampled a moment
+	 * after connection, once the current has stabilised — right at plug-in the current reads 0 or
+	 * noisy. Returns {@link ChargeSpeed#unknown()} when the device doesn't report instantaneous
+	 * current, so callers fall back to a plain "Charging" message.
 	 *
 	 * @param context The application context
 	 *
 	 * @return the estimated {@link ChargeSpeed}; never null
 	 */
 	public static ChargeSpeed getChargeSpeed(final Context context) {
-		final BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
-		if (isNull(batteryManager)) {
-			Log.w(TAG, "BatteryManager service unavailable");
-			return ChargeSpeed.unknown();
-		}
-
-		final int currentMicroAmps = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+		final int currentMicroAmps = getInstantaneousCurrentMicroAmps(context);
 
 		final Intent batteryStatus = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 		final int voltageMilliVolts = isNull(batteryStatus) ? 0 : batteryStatus.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0);
 
 		return ChargeSpeed.fromMeasurements(currentMicroAmps, voltageMilliVolts);
+	}
+
+	/**
+	 * Read the live instantaneous battery current from {@link BatteryManager#BATTERY_PROPERTY_CURRENT_NOW}
+	 * (µA), used to derive the charge/drain rate and the signed "Current" row (issue #108).
+	 * <p>
+	 * The raw value is returned unfiltered: {@code getIntProperty} yields {@link Integer#MIN_VALUE} when
+	 * the property is unsupported, and the sign convention varies by OEM. Callers gate plausibility and
+	 * derive direction from the charging status (see {@link BatteryRateTracker}).
+	 *
+	 * @param context The application context
+	 *
+	 * @return instantaneous current in µA, or {@link Integer#MIN_VALUE} when unavailable
+	 */
+	public static int getInstantaneousCurrentMicroAmps(final Context context) {
+		final BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
+		if (isNull(batteryManager)) {
+			Log.w(TAG, "BatteryManager service unavailable");
+			return Integer.MIN_VALUE;
+		}
+		return batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
 	}
 
 	/**

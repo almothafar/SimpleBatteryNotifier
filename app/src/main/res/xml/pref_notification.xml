@@ -113,6 +113,36 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:title="@string/pref_cat_title_drain"
+        app:iconSpaceReserved="false">
+
+        <!-- defaultValue/min/max must match BatteryRateTracker.DEFAULT/MIN/MAX_DRAIN_LIMIT_PPH, which
+             clamp the stored value when it is read (#108/#109). -->
+        <SeekBarPreference
+            android:defaultValue="20"
+            android:key="@string/_pref_key_fast_drain_limit"
+            android:min="5"
+            android:max="60"
+            android:summary="@string/drain_limit_summary"
+            android:title="@string/drain_limit"
+            style="@style/PreferenceSeekBar"
+            app:showSeekBarValue="true"
+            app:adjustable="true"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/_pref_key_show_rate_in_notification"
+            android:summaryOff="@string/show_rate_in_notification_summary_off"
+            android:summaryOn="@string/show_rate_in_notification_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/show_rate_in_notification"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         android:title="@string/pref_cat_title_critical"
         app:iconSpaceReserved="false">
 
