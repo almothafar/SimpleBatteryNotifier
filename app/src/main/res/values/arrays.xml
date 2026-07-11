@@ -15,4 +15,18 @@
         <item>en</item>
     </string-array>
 
+    <!-- Charge-connected notification style (issue #122). Entry labels reference localized strings;
+         the values are stable identifiers persisted by the ListPreference, so the array itself is
+         locale-independent (tools:ignore="MissingTranslation"). -->
+    <string-array name="charge_notification_style_entries" tools:ignore="MissingTranslation">
+        <item>@string/charge_notification_style_toast</item>
+        <item>@string/charge_notification_style_notification</item>
+        <item>@string/charge_notification_style_none</item>
+    </string-array>
+    <string-array name="charge_notification_style_values" tools:ignore="MissingTranslation">
+        <item>toast</item>
+        <item>notification</item>
+        <item>none</item>
+    </string-array>
+
 </resources>

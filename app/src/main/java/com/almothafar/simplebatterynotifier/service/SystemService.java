@@ -19,6 +19,7 @@ import android.util.Log;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.model.BatteryHealthStatus;
+import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -281,6 +282,34 @@ public final class SystemService {
 		final int chargeCounterUah = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
 		final int capacityPercent = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
 		return estimateFullCapacityMah(chargeCounterUah, capacityPercent);
+	}
+
+	/**
+	 * Estimate the current charging speed from the instantaneous current and battery voltage.
+	 * <p>
+	 * Reads {@link BatteryManager#BATTERY_PROPERTY_CURRENT_NOW} (µA) and the battery voltage
+	 * ({@link BatteryManager#EXTRA_VOLTAGE}, mV) and combines them into a {@link ChargeSpeed}. Best
+	 * sampled a moment after connection, once the current has stabilised — right at plug-in the
+	 * current reads 0 or noisy. Returns {@link ChargeSpeed#unknown()} when the device doesn't report
+	 * instantaneous current, so callers fall back to a plain "Charging" message.
+	 *
+	 * @param context The application context
+	 *
+	 * @return the estimated {@link ChargeSpeed}; never null
+	 */
+	public static ChargeSpeed getChargeSpeed(final Context context) {
+		final BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
+		if (isNull(batteryManager)) {
+			Log.w(TAG, "BatteryManager service unavailable");
+			return ChargeSpeed.unknown();
+		}
+
+		final int currentMicroAmps = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+
+		final Intent batteryStatus = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+		final int voltageMilliVolts = isNull(batteryStatus) ? 0 : batteryStatus.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0);
+
+		return ChargeSpeed.fromMeasurements(currentMicroAmps, voltageMilliVolts);
 	}
 
 	/**

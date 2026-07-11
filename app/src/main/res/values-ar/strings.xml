@@ -35,7 +35,6 @@
     <string name="charger_ac">مقبس طاقة</string>
     <string name="charger_usb">مدخل يو اس بي</string>
     <string name="charger_wireless">شاحن لاسلكي</string>
-    <string name="charger">شاحن</string>
 
     <string name="pref_header_general">عام</string>
     <string name="pref_header_notifications">التنبيهات والأصوات</string>
@@ -108,6 +107,24 @@
     <string name="notification_charge_started_title_healthy">شحن صحي بدأ</string>
     <string name="notification_charge_started_title_regular">شحن اعتيادي بدأ</string>
     <string name="notification_charge_started_content">البطارية تشحن بواسطة %1$s</string>
+
+    <!-- Charge-connected message (issue #122): charging speed + wired/wireless -->
+    <string name="charge_source_wired">سلكي</string>
+    <string name="charge_source_wireless">لاسلكي</string>
+    <string name="charge_tier_trickle">شحن بطيء</string>
+    <string name="charge_tier_normal">شحن عادي</string>
+    <string name="charge_tier_fast">شحن سريع</string>
+    <string name="charge_tier_super_fast">شحن فائق السرعة</string>
+    <string name="charge_tier_super_fast_plus">شحن فائق السرعة+</string>
+    <string name="charge_connected_power">%1$s · %2$s · ~%3$d واط</string>
+    <string name="charge_connected_tier">%1$s · %2$s</string>
+    <string name="charge_connected_plain">شحن %1$s</string>
+
+    <!-- "Charge notification style" preference (issue #122) -->
+    <string name="charge_notification_style_title">أسلوب تنبيه الشحن</string>
+    <string name="charge_notification_style_toast">رسالة منبثقة</string>
+    <string name="charge_notification_style_notification">إشعار</string>
+    <string name="charge_notification_style_none">بدون</string>
 
     <!-- Accessibility -->
     <string name="battery_progress_description">البطارية عند %1$d بالمئة</string>

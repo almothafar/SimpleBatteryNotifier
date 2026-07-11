@@ -34,6 +34,10 @@ No surprises. No clutter. Just simple battery notifications.
 - 📡 **Full Charge Notification**
     - Helpful if you charge your phone in **Airplane Mode** for faster charging — you’ll get reminded not to forget it there
 
+- ⚡ **Charging Speed & Type**
+    - When you plug in, see the estimated **charging speed** (tier + wattage, e.g. *Fast charging · ~18 W*) and whether it’s **wired or wireless**
+    - Pick how it’s announced: a low-clutter **Toast** (default), a full **Notification**, or **None**
+
 - 📊 **Battery Insights**
     - Estimated **battery health %**, **charge cycles**, temperature, voltage, and more
     - Enter your battery’s **design capacity** for a measured health estimate

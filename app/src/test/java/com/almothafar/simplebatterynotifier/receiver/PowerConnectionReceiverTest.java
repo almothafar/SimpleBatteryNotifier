@@ -3,10 +3,11 @@ package com.almothafar.simplebatterynotifier.receiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.BatteryManager;
+import android.os.Looper;
 
 import androidx.test.core.app.ApplicationProvider;
 
-import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 
 import org.junit.Before;
@@ -16,16 +17,24 @@ import org.mockito.MockedStatic;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import java.time.Duration;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.robolectric.Shadows.shadowOf;
 
 /**
- * Robolectric + Mockito tests for {@link PowerConnectionReceiver}: charger-type detection, the
+ * Robolectric + Mockito tests for {@link PowerConnectionReceiver}: wired/wireless detection, the
  * healthy-charge flag, plugged-state de-duplication, and the disconnect cleanup path. The
  * {@link NotificationService} static methods are mocked so we can assert what the receiver decides
  * to do from the sticky {@code ACTION_BATTERY_CHANGED} intent.
+ * <p>
+ * The charge-connected notification is dispatched a short delay after connection (the charging
+ * current is noisy right at plug-in), so tests advance the main looper by
+ * {@link PowerConnectionReceiver#CHARGE_SAMPLE_DELAY_MS} to let the deferred sample run.
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34)
@@ -38,28 +47,32 @@ public class PowerConnectionReceiverTest {
 		context = ApplicationProvider.getApplicationContext();
 		// Reset the static plugged-state so each test starts from "unknown"
 		PowerConnectionReceiver.setCurrentState(-1);
+		// Drop any sample left pending by a previous test so it can't fire mid-test.
+		PowerConnectionReceiver.cancelPendingSample();
 	}
 
 	@Test
-	public void connectedAc_sendsChargeNotificationWithAcSource() {
+	public void connectedWired_notifiesWiredCharging() {
 		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 50, 100);
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
-			ns.verify(() -> NotificationService.sendChargeNotification(any(Context.class),
-					eq(context.getString(R.string.charger_ac))));
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					any(ChargeSpeed.class), eq(false), eq(false)));
 			ns.verify(() -> NotificationService.setIsHealthy(false));
 		}
 	}
 
 	@Test
-	public void connectedWireless_sendsChargeNotificationWithWirelessSource() {
+	public void connectedWireless_notifiesWirelessCharging() {
 		publishBattery(BatteryManager.BATTERY_PLUGGED_WIRELESS, 60, 100);
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
-			ns.verify(() -> NotificationService.sendChargeNotification(any(Context.class),
-					eq(context.getString(R.string.charger_wireless))));
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					any(ChargeSpeed.class), eq(true), eq(false)));
 		}
 	}
 
@@ -69,7 +82,10 @@ public class PowerConnectionReceiverTest {
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
+			runPendingSample();
 			ns.verify(() -> NotificationService.setIsHealthy(true));
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					any(ChargeSpeed.class), eq(false), eq(true)));
 		}
 	}
 
@@ -80,7 +96,9 @@ public class PowerConnectionReceiverTest {
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
-			ns.verify(() -> NotificationService.sendChargeNotification(any(Context.class), any(String.class)), never());
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					any(ChargeSpeed.class), anyBoolean(), anyBoolean()), never());
 		}
 	}
 
@@ -91,8 +109,10 @@ public class PowerConnectionReceiverTest {
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
+			runPendingSample();
 			ns.verify(() -> NotificationService.clearNotifications(any(Context.class)));
-			ns.verify(() -> NotificationService.sendChargeNotification(any(Context.class), any(String.class)), never());
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					any(ChargeSpeed.class), anyBoolean(), anyBoolean()), never());
 		}
 	}
 
@@ -100,6 +120,13 @@ public class PowerConnectionReceiverTest {
 
 	private void receive() {
 		new PowerConnectionReceiver().onReceive(context, new Intent(Intent.ACTION_POWER_CONNECTED));
+	}
+
+	/**
+	 * Advance the main looper past the sampling delay so the deferred charge-connected task runs.
+	 */
+	private void runPendingSample() {
+		shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(PowerConnectionReceiver.CHARGE_SAMPLE_DELAY_MS));
 	}
 
 	@SuppressWarnings("deprecation")

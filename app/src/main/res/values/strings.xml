@@ -37,7 +37,6 @@
     <string name="charger_ac">AC Charger</string>
     <string name="charger_usb">USB Port</string>
     <string name="charger_wireless">Wireless Charger</string>
-    <string name="charger">Charger</string>
 
     <string name="pref_header_general">General</string>
     <string name="pref_header_notifications">Notifications &amp; Sounds</string>
@@ -111,6 +110,29 @@
     <string name="notification_charge_started_title_healthy">Healthy charging started</string>
     <string name="notification_charge_started_title_regular">Regular charging started</string>
     <string name="notification_charge_started_content">Battery charging with %1$s </string>
+
+    <!-- Charge-connected message (issue #122): reports charging speed + wired/wireless instead of
+         the old, unreliable "AC charger connected". -->
+    <string name="charge_source_wired">Wired</string>
+    <string name="charge_source_wireless">Wireless</string>
+    <string name="charge_tier_trickle">Slow charging</string>
+    <string name="charge_tier_normal">Normal charging</string>
+    <string name="charge_tier_fast">Fast charging</string>
+    <string name="charge_tier_super_fast">Super fast charging</string>
+    <string name="charge_tier_super_fast_plus">Super fast charging+</string>
+    <!-- e.g. "Wireless · Fast charging · ~18 W" (source · tier · estimated watts) -->
+    <string name="charge_connected_power">%1$s · %2$s · ~%3$d W</string>
+    <!-- e.g. "Wired · Slow charging" (source · tier, when the wattage is under 1 W) -->
+    <string name="charge_connected_tier">%1$s · %2$s</string>
+    <!-- e.g. "Wired charging" (when the charging speed can't be estimated) -->
+    <string name="charge_connected_plain">%1$s charging</string>
+
+    <!-- "Charge notification style" preference (issue #122). The summary shows the current choice
+         via useSimpleSummaryProvider, so no separate summary string is needed. -->
+    <string name="charge_notification_style_title">Charge notification style</string>
+    <string name="charge_notification_style_toast">Toast</string>
+    <string name="charge_notification_style_notification">Notification</string>
+    <string name="charge_notification_style_none">None</string>
 
     <!-- Persistent foreground-service status notification -->
     <string name="notification_status_channel_name">Battery Status</string>
@@ -226,6 +248,8 @@
     <string name="_pref_key_critical_battery_level" translatable="false">key_critical_battery_level</string>
     <string name="_pref_key_battery_level_range" translatable="false">key_battery_level_range</string>
     <string name="_pref_key_notifications_sticky" translatable="false">key_notifications_sticky</string>
+    <string name="_pref_key_charge_notification_style" translatable="false">key_charge_notification_style</string>
+    <string name="_pref_value_charge_notification_style_toast" translatable="false">toast</string>
     <string name="_pref_key_temperatures_unit" translatable="false">key_temperatures_unit</string>
     <string name="_pref_key_notifications_vibrate" translatable="false">key_notifications_vibrate</string>
     <string name="_pref_key_notifications_alert_sound_ringtone" translatable="false">key_notifications_alert_sound_ringtone</string>

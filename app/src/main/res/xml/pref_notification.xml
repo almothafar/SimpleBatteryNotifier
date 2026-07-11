@@ -5,6 +5,15 @@
         android:title="@string/pref_cat_title_notification"
         app:iconSpaceReserved="false">
 
+        <ListPreference
+            android:defaultValue="@string/_pref_value_charge_notification_style_toast"
+            android:entries="@array/charge_notification_style_entries"
+            android:entryValues="@array/charge_notification_style_values"
+            android:key="@string/_pref_key_charge_notification_style"
+            android:title="@string/charge_notification_style_title"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+
         <SwitchPreference
             android:defaultValue="true"
             android:key="@string/_pref_key_notifications_vibrate"

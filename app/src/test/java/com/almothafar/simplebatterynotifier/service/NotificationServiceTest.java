@@ -95,4 +95,33 @@ public class NotificationServiceTest {
 					NotificationService.alertsAllowedNow(withinWindow, isCritical, criticalIgnoresQuietHours));
 		}
 	}
+
+	/**
+	 * {@link NotificationService#resolveChargeStyle(String)} — normalizes the persisted charge-style
+	 * preference, defaulting a null/blank/unrecognized value to Toast (issue #122).
+	 */
+	@RunWith(Parameterized.class)
+	public static class ResolveChargeStyle {
+
+		@Parameter(0) public String label;
+		@Parameter(1) public String stored;
+		@Parameter(2) public String expected;
+
+		@Parameters(name = "{0}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{"toast kept", NotificationService.CHARGE_STYLE_TOAST, NotificationService.CHARGE_STYLE_TOAST},
+					{"notification kept", NotificationService.CHARGE_STYLE_NOTIFICATION, NotificationService.CHARGE_STYLE_NOTIFICATION},
+					{"none kept", NotificationService.CHARGE_STYLE_NONE, NotificationService.CHARGE_STYLE_NONE},
+					{"null defaults to toast", null, NotificationService.CHARGE_STYLE_TOAST},
+					{"blank defaults to toast", "", NotificationService.CHARGE_STYLE_TOAST},
+					{"unknown defaults to toast", "bogus", NotificationService.CHARGE_STYLE_TOAST},
+			});
+		}
+
+		@Test
+		public void matchesExpected() {
+			assertEquals(label, expected, NotificationService.resolveChargeStyle(stored));
+		}
+	}
 }
