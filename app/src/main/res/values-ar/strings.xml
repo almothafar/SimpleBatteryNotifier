@@ -41,12 +41,13 @@
     <string name="charger_usb">مدخل يو اس بي</string>
     <string name="charger_wireless">شاحن لاسلكي</string>
 
+    <!-- Settings root screen: the three headers (#112) -->
     <string name="pref_header_general">عام</string>
-    <string name="pref_header_notifications">التنبيهات والأصوات</string>
-    <string name="pref_header_time_settings">إعدادات الوقت</string>
-    <string name="pref_header_summary_general">إعدادات التطبيق العامة، ويمكنك تحديد المستويات</string>
-    <string name="pref_header_summary_notifications">إعدادات كيفية وصول التنبيهات، وتحديدها، والأصوات</string>
-    <string name="pref_header_summary_time_settings">إعدادات الوقت للتنبيهات</string>
+    <string name="pref_header_alerts">التنبيهات</string>
+    <string name="pref_header_behaviour">سلوك التنبيهات</string>
+    <string name="pref_header_summary_general">لغة التطبيق، ووحدة الحرارة، وإشعار الحالة</string>
+    <string name="pref_header_summary_alerts">ما الذي يُنبَّه له — مستويات البطارية، اكتمال الشحن، الحرارة، الاستهلاك السريع، الشحن</string>
+    <string name="pref_header_summary_behaviour">كيف تُصدر التنبيهات صوتاً وكيف تظهر ومتى يُسمح بها — وضع الصامت، الاهتزاز، ساعات الهدوء</string>
 
     <string name="pref_title_ringtone">الرنين</string>
     <string name="pref_ringtone_silent">صامت</string>
@@ -62,19 +63,21 @@
     <string name="temperature_unit">وحدة الحرارة</string>
     <string name="off">إطفاء</string>
     <string name="on">تشغيل</string>
-    <string name="notification_is_sticky">التنبيهات ثابتة</string>
-    <string name="notification_is_not_sticky">التنبيهات غير ثابتة</string>
-    <string name="sticky_notification">تنبيه ثابت</string>
-    <string name="notifications_apply_silent_mode_summary_off">صوت التنبيه سيسمع حتى لو في وضعية الصامت</string>
-    <string name="notifications_apply_silent_mode_summary_on">وضعية الصامت لن يتم تجاهلها ولن تسمع التنبيهات في وضعية صامت</string>
-    <string name="notifications_apply_silent_mode">تفعيل وضعية صامت</string>
-    <string name="notifications_time_range_summary_off">التنبيه الصوتي في أي وقت من اليوم</string>
-    <string name="notifications_time_range_summary_on">التنبيه الصوتي محدود بفترة محددة في اليوم</string>
-    <string name="notifications_time_range">وقت محدد للتنبيهات</string>
-    <string name="notifications_time_range_start">وقت البداية للتنبيه</string>
-    <string name="notifications_time_range_end">وقت النهاية للتنبيه</string>
-    <string name="notifications_vibrate_summary_off">التنبيه بالرجاج مفعل</string>
-    <string name="notifications_vibrate_summary_on">التنبيه بالرجاج معطل</string>
+    <string name="notification_is_sticky">لا يمكن إزالة إشعارات التنبيه بالسحب</string>
+    <string name="notification_is_not_sticky">يمكن إزالة إشعارات التنبيه بشكل طبيعي</string>
+    <string name="sticky_notification">إشعارات ثابتة</string>
+    <!-- Reworded from "Apply Silent Mode" (#112): same key and meaning (ON = respect silent/DnD) -->
+    <string name="mute_alerts_in_silent_mode_summary_off">تُصدر التنبيهات صوتاً حتى عندما يكون الهاتف في وضع الصامت أو عدم الإزعاج</string>
+    <string name="mute_alerts_in_silent_mode_summary_on">تبقى التنبيهات صامتة عندما يكون الهاتف في وضع الصامت أو عدم الإزعاج</string>
+    <string name="mute_alerts_in_silent_mode">كتم التنبيهات في وضع الصامت</string>
+    <string name="notifications_time_range_summary_off">يمكن أن تُصدر التنبيهات صوتاً في أي وقت من اليوم</string>
+    <string name="notifications_time_range_summary_on">تُصدر التنبيهات صوتاً فقط بين الوقتين أدناه، وتبقى صامتة خارجهما</string>
+    <string name="notifications_time_range">ساعات الهدوء</string>
+    <string name="notifications_time_range_start">التنبيهات مسموحة من</string>
+    <string name="notifications_time_range_end">التنبيهات مسموحة حتى</string>
+    <!-- Previously swapped (off said "enabled"); fixed as part of #112's wording pass -->
+    <string name="notifications_vibrate_summary_off">التنبيه بالرجاج معطل</string>
+    <string name="notifications_vibrate_summary_on">التنبيه بالرجاج مفعل</string>
     <string name="notifications_alert_sound_ringtone">صوت المستوى الحرج</string>
     <string name="notifications_warning_sound_ringtone">صوت مستوى التنبيه</string>
     <string name="notifications_full_sound_ringtone">صوت تنبيه اكتمال الشحن</string>
@@ -247,6 +250,8 @@
     <string name="about_open_source">برنامج حر ومفتوح المصدر، مرخَّص بموجب رخصة Apache 2.0.</string>
     <string name="about_disclaimer">قراءات البطارية وأرقام الصحة والشحن مصدرها جهازك وهي تقديرية — اعتبرها إرشادية لا قياسات دقيقة. يُقدَّم هذا التطبيق «كما هو» دون أي ضمان من أي نوع.</string>
     <string name="about_view_github">عرض على GitHub</string>
+    <!-- Summary of the version footer at the bottom of the Settings root screen (#113) -->
+    <string name="about_footer_hint">اضغط لمزيد من المعلومات حول التطبيق</string>
 
     <!-- App language picker -->
     <string name="pref_language_category">اللغة</string>
@@ -255,11 +260,14 @@
 
     <!-- Settings category titles -->
     <string name="pref_cat_title_display">العرض</string>
-    <string name="pref_cat_title_thresholds">حدود مستوى البطارية</string>
-    <string name="pref_cat_title_other">إعدادات أخرى</string>
-    <string name="pref_cat_title_notification">إعدادات التنبيهات</string>
+    <string name="pref_cat_title_status_notification">إشعار الحالة</string>
+    <string name="pref_cat_title_thresholds">مستويات البطارية</string>
     <string name="pref_cat_title_full_battery">البطارية الممتلئة</string>
-    <string name="pref_cat_title_warning">مستوى التحذير</string>
-    <string name="pref_cat_title_temperature">الحرارة</string>
-    <string name="pref_cat_title_critical">مستوى البطارية الحرج</string>
+    <string name="pref_cat_title_warning">تنبيه التحذير</string>
+    <string name="pref_cat_title_temperature">ارتفاع الحرارة</string>
+    <string name="pref_cat_title_critical">التنبيه الحرج</string>
+    <string name="pref_cat_title_charging">الشحن</string>
+    <string name="pref_cat_title_sound_vibration">الصوت والاهتزاز</string>
+    <string name="pref_cat_title_quiet_hours">ساعات الهدوء</string>
+    <string name="pref_cat_title_appearance">المظهر</string>
 </resources>

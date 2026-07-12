@@ -15,24 +15,32 @@
 
     <Preference
         android:fragment="com.almothafar.simplebatterynotifier.ui.fragment.GenericPreferenceFragment"
-        android:key="notifications"
-        android:summary="@string/pref_header_summary_notifications"
-        android:title="@string/pref_header_notifications"
+        android:key="alerts"
+        android:summary="@string/pref_header_summary_alerts"
+        android:title="@string/pref_header_alerts"
         app:iconSpaceReserved="false">
         <extra
             android:name="category"
-            android:value="@string/pref_category_notifications" />
+            android:value="@string/pref_category_alerts" />
     </Preference>
 
     <Preference
         android:fragment="com.almothafar.simplebatterynotifier.ui.fragment.GenericPreferenceFragment"
-        android:key="time_settings"
-        android:summary="@string/pref_header_summary_time_settings"
-        android:title="@string/pref_header_time_settings"
+        android:key="behaviour"
+        android:summary="@string/pref_header_summary_behaviour"
+        android:title="@string/pref_header_behaviour"
         app:iconSpaceReserved="false">
         <extra
             android:name="category"
-            android:value="@string/pref_category_time_settings" />
+            android:value="@string/pref_category_behaviour" />
     </Preference>
+
+    <!-- Version footer (#113). The title ("Version x.y.z") is set at runtime by
+         SettingsActivity.HeaderFragment; tapping opens the shared About dialog. -->
+    <Preference
+        android:key="@string/_pref_key_about"
+        android:persistent="false"
+        android:summary="@string/about_footer_hint"
+        app:iconSpaceReserved="false" />
 
 </PreferenceScreen>

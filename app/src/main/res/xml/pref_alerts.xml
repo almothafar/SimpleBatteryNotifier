@@ -1,61 +1,25 @@
+<!-- The "Alerts" screen (#112): WHAT to be notified about. One category per alert event, in
+     battery-lifecycle order (levels → warning → critical → full → temperature → drain → charging).
+     Cross-cutting delivery options (sound in silent mode, vibration, quiet hours, stickiness)
+     live on the "Notification behaviour" screen (pref_behaviour.xml). -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- The slider configures the warning + critical alerts directly below it -->
     <PreferenceCategory
-        android:title="@string/pref_cat_title_notification"
+        android:title="@string/pref_cat_title_thresholds"
         app:iconSpaceReserved="false">
 
-        <ListPreference
-            android:defaultValue="@string/_pref_value_charge_notification_style_toast"
-            android:entries="@array/charge_notification_style_entries"
-            android:entryValues="@array/charge_notification_style_values"
-            android:key="@string/_pref_key_charge_notification_style"
-            android:title="@string/charge_notification_style_title"
-            app:useSimpleSummaryProvider="true"
-            app:iconSpaceReserved="false" />
-
-        <SwitchPreference
-            android:defaultValue="true"
-            android:key="@string/_pref_key_notifications_vibrate"
-            android:summaryOff="@string/notifications_vibrate_summary_off"
-            android:summaryOn="@string/notifications_vibrate_summary_on"
-            android:switchTextOff="@string/off"
-            android:switchTextOn="@string/on"
-            android:title="@string/pref_title_vibrate"
-            app:iconSpaceReserved="false" />
-
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="@string/_pref_key_notifications_sticky"
-            android:summaryOff="@string/notification_is_not_sticky"
-            android:summaryOn="@string/notification_is_sticky"
-            android:switchTextOff="@string/off"
-            android:switchTextOn="@string/on"
-            android:title="@string/sticky_notification"
-            app:iconSpaceReserved="false" />
-
-    </PreferenceCategory>
-
-    <PreferenceCategory
-        android:title="@string/pref_cat_title_full_battery"
-        app:iconSpaceReserved="false">
-
-        <SwitchPreference
-            android:defaultValue="true"
-            android:key="@string/_pref_key_notify_for_full_level"
-            android:summaryOff="@string/notify_for_full_level_summary_off"
-            android:summaryOn="@string/notify_for_full_level_summary_on"
-            android:switchTextOff="@string/off"
-            android:switchTextOn="@string/on"
-            android:title="@string/notify_for_full_level"
-            app:iconSpaceReserved="false" />
-
-        <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
-            android:defaultValue="content://settings/system/notification_sound"
-            android:dependency="@string/_pref_key_notify_for_full_level"
-            android:key="@string/_pref_key_notifications_full_sound_ringtone"
-            android:ringtoneType="notification"
-            android:title="@string/notifications_full_sound_ringtone"
+        <com.almothafar.simplebatterynotifier.ui.preference.BatteryRangeSliderPreference
+            android:key="@string/_pref_key_battery_level_range"
+            android:persistent="false"
+            app:criticalKey="@string/_pref_key_critical_battery_level"
+            app:warningKey="@string/_pref_key_warn_battery_level"
+            app:sliderFrom="10"
+            app:sliderTo="50"
+            app:sliderMinSeparation="5"
+            app:criticalDefault="20"
+            app:warningDefault="40"
             app:iconSpaceReserved="false" />
 
     </PreferenceCategory>
@@ -80,6 +44,53 @@
             android:key="@string/_pref_key_notifications_warning_sound_ringtone"
             android:ringtoneType="notification"
             android:title="@string/notifications_warning_sound_ringtone"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/pref_cat_title_critical"
+        app:iconSpaceReserved="false">
+
+        <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
+            android:defaultValue="content://settings/system/notification_sound"
+            android:key="@string/_pref_key_notifications_alert_sound_ringtone"
+            android:ringtoneType="notification"
+            android:title="@string/notifications_alert_sound_ringtone"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="@string/_pref_key_notify_every_tick"
+            android:summaryOff="@string/notify_every_tick_summary_off"
+            android:summaryOn="@string/notify_every_tick_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/notify_every_tick"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/pref_cat_title_full_battery"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/_pref_key_notify_for_full_level"
+            android:summaryOff="@string/notify_for_full_level_summary_off"
+            android:summaryOn="@string/notify_for_full_level_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/notify_for_full_level"
+            app:iconSpaceReserved="false" />
+
+        <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
+            android:defaultValue="content://settings/system/notification_sound"
+            android:dependency="@string/_pref_key_notify_for_full_level"
+            android:key="@string/_pref_key_notifications_full_sound_ringtone"
+            android:ringtoneType="notification"
+            android:title="@string/notifications_full_sound_ringtone"
             app:iconSpaceReserved="false" />
 
     </PreferenceCategory>
@@ -168,47 +179,21 @@
             app:adjustable="true"
             app:iconSpaceReserved="false" />
 
-        <SwitchPreference
-            android:defaultValue="true"
-            android:key="@string/_pref_key_show_rate_in_notification"
-            android:summaryOff="@string/show_rate_in_notification_summary_off"
-            android:summaryOn="@string/show_rate_in_notification_summary_on"
-            android:switchTextOff="@string/off"
-            android:switchTextOn="@string/on"
-            android:title="@string/show_rate_in_notification"
-            app:iconSpaceReserved="false" />
-
     </PreferenceCategory>
 
+    <!-- Charging announcements (#122/#127). Future charging alerts (e.g. #123 slow-charge
+         warning) belong in this category too. -->
     <PreferenceCategory
-        android:title="@string/pref_cat_title_critical"
+        android:title="@string/pref_cat_title_charging"
         app:iconSpaceReserved="false">
 
-        <com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference
-            android:defaultValue="content://settings/system/notification_sound"
-            android:key="@string/_pref_key_notifications_alert_sound_ringtone"
-            android:ringtoneType="notification"
-            android:title="@string/notifications_alert_sound_ringtone"
-            app:iconSpaceReserved="false" />
-
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="@string/_pref_key_notify_every_tick"
-            android:summaryOff="@string/notify_every_tick_summary_off"
-            android:summaryOn="@string/notify_every_tick_summary_on"
-            android:switchTextOff="@string/off"
-            android:switchTextOn="@string/on"
-            android:title="@string/notify_every_tick"
-            app:iconSpaceReserved="false" />
-
-        <SwitchPreference
-            android:defaultValue="true"
-            android:key="@string/_pref_key_critical_ignore_quiet_hours"
-            android:summaryOff="@string/critical_ignore_quiet_hours_summary_off"
-            android:summaryOn="@string/critical_ignore_quiet_hours_summary_on"
-            android:switchTextOff="@string/off"
-            android:switchTextOn="@string/on"
-            android:title="@string/critical_ignore_quiet_hours"
+        <ListPreference
+            android:defaultValue="@string/_pref_value_charge_notification_style_toast"
+            android:entries="@array/charge_notification_style_entries"
+            android:entryValues="@array/charge_notification_style_values"
+            android:key="@string/_pref_key_charge_notification_style"
+            android:title="@string/charge_notification_style_title"
+            app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
 
     </PreferenceCategory>

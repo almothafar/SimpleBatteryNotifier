@@ -87,7 +87,7 @@ public final class NotificationService {
 	private static final String ZEN_MODE = "zen_mode";
 	private static final int ZEN_MODE_IMPORTANT_INTERRUPTIONS = 1;
 
-	// Charge-connected notification style (values persisted by the ListPreference in pref_notification.xml).
+	// Charge-connected notification style (values persisted by the ListPreference in pref_alerts.xml).
 	// Toast is the default so plugging in stays low-clutter (issue #122).
 	static final String CHARGE_STYLE_TOAST = "toast";
 	static final String CHARGE_STYLE_NOTIFICATION = "notification";
@@ -842,7 +842,7 @@ public final class NotificationService {
 	 * @return true if alerts are allowed at the current time
 	 */
 	private static boolean isWithinNotificationWindow(final Context context, final SharedPreferences prefs) {
-		// Default ON to match the toggle's XML default (pref_time_settings.xml). Reading false here let a
+		// Default ON to match the toggle's XML default (pref_behaviour.xml). Reading false here let a
 		// fresh install that never opened Time Settings alert around the clock, so quiet hours silently
 		// did nothing (issue #111). Now quiet hours apply by default (06:30–23:30).
 		final boolean limitedTime = prefs.getBoolean(context.getString(R.string._pref_key_notifications_time_range), true);

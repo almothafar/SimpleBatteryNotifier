@@ -1,0 +1,93 @@
+<!-- The "Notification behaviour" screen (#112): HOW alerts sound and appear, and WHEN they are
+     allowed. These options apply to all alerts; the per-event settings (toggles, thresholds,
+     sounds) live on the "Alerts" screen (pref_alerts.xml). -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="@string/pref_cat_title_sound_vibration"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="@string/_pref_key_notifications_apply_silent_mode"
+            android:summaryOff="@string/mute_alerts_in_silent_mode_summary_off"
+            android:summaryOn="@string/mute_alerts_in_silent_mode_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/mute_alerts_in_silent_mode"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/_pref_key_notifications_vibrate"
+            android:summaryOff="@string/notifications_vibrate_summary_off"
+            android:summaryOn="@string/notifications_vibrate_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/pref_title_vibrate"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/pref_cat_title_quiet_hours"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/_pref_key_notifications_time_range"
+            android:summaryOff="@string/notifications_time_range_summary_off"
+            android:summaryOn="@string/notifications_time_range_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/notifications_time_range"
+            app:iconSpaceReserved="false" />
+
+        <com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreference
+            android:dependency="@string/_pref_key_notifications_time_range"
+            android:defaultValue="@string/_pref_value_notifications_time_range_start"
+            android:key="@string/_pref_key_notifications_time_range_start"
+            android:title="@string/notifications_time_range_start"
+            app:iconSpaceReserved="false" />
+
+        <com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreference
+            android:dependency="@string/_pref_key_notifications_time_range"
+            android:defaultValue="@string/_pref_value_notifications_time_range_end"
+            android:key="@string/_pref_key_notifications_time_range_end"
+            android:title="@string/notifications_time_range_end"
+            app:iconSpaceReserved="false" />
+
+        <!-- Moved next to the quiet-hours window it overrides (#112); previously sat under the
+             Critical category on another screen. Greyed out while quiet hours are off, when it
+             has no effect (the stored value and alert logic are untouched by the dependency). -->
+        <SwitchPreference
+            android:defaultValue="true"
+            android:dependency="@string/_pref_key_notifications_time_range"
+            android:key="@string/_pref_key_critical_ignore_quiet_hours"
+            android:summaryOff="@string/critical_ignore_quiet_hours_summary_off"
+            android:summaryOn="@string/critical_ignore_quiet_hours_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/critical_ignore_quiet_hours"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/pref_cat_title_appearance"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="@string/_pref_key_notifications_sticky"
+            android:summaryOff="@string/notification_is_not_sticky"
+            android:summaryOn="@string/notification_is_sticky"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/sticky_notification"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

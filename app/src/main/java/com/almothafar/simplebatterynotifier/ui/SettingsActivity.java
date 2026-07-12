@@ -139,6 +139,17 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
 		@Override
 		public void onCreatePreferences(final Bundle savedInstanceState, final String rootKey) {
 			setPreferencesFromResource(R.xml.pref_headers_root, rootKey);
+
+			// Version footer (#113): show the running app version at the bottom of the root
+			// screen; tapping it opens the shared About dialog (same one as the main menu, #136).
+			final Preference about = findPreference(getString(R.string._pref_key_about));
+			if (nonNull(about)) {
+				about.setTitle(getString(R.string.about_version, AboutDialog.appVersionName(requireContext())));
+				about.setOnPreferenceClickListener(pref -> {
+					AboutDialog.show(requireActivity());
+					return true;
+				});
+			}
 		}
 	}
 }

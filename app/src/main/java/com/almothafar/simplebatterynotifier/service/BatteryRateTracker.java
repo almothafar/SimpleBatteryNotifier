@@ -61,7 +61,7 @@ public final class BatteryRateTracker {
 	static final int MAX_PLAUSIBLE_RATE_PPH = 500;
 
 	// The "red / high drain" limit shared with the fast-drain alert (#109): default and accepted range.
-	// MIN/MAX must match the slider bounds (android:min/android:max) in pref_notification.xml; they are
+	// MIN/MAX must match the slider bounds (android:min/android:max) in pref_alerts.xml; they are
 	// enforced when the preference is read, so an out-of-range stored value can't skew the red line.
 	public static final int DEFAULT_DRAIN_LIMIT_PPH = 20;
 	public static final int MIN_DRAIN_LIMIT_PPH = 5;
@@ -363,7 +363,7 @@ public final class BatteryRateTracker {
 	/**
 	 * Clamps a stored drain limit to the accepted range, so a corrupt or out-of-range preference value
 	 * can't skew the red line here or the fast-drain trigger in #109. The bounds mirror the slider's
-	 * {@code android:min}/{@code android:max} in {@code pref_notification.xml}. Pure so it is unit-testable.
+	 * {@code android:min}/{@code android:max} in {@code pref_alerts.xml}. Pure so it is unit-testable.
 	 *
 	 * @param stored the raw persisted limit in %/h
 	 *
