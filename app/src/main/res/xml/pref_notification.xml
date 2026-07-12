@@ -141,6 +141,9 @@
             app:adjustable="true"
             app:iconSpaceReserved="false" />
 
+        <!-- defaultValue/min/max of both timing sliders must match FastDrainDetector's
+             DEFAULT/MIN/MAX_SUSTAINED_MINUTES and DEFAULT/MIN/MAX_REMINDER_MINUTES, which clamp
+             the stored values when they are read (#109). -->
         <SeekBarPreference
             android:defaultValue="5"
             android:dependency="@string/_pref_key_notify_fast_drain"

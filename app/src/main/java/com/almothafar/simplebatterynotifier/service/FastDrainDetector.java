@@ -32,14 +32,26 @@ public final class FastDrainDetector {
 	private static final String PREF_STREAK_START = "_fast_drain_streak_start";
 	private static final String PREF_ALERTED = "_fast_drain_alerted";
 	private static final String PREF_LAST_REMINDER = "_fast_drain_last_reminder";
+	private static final String PREF_LAST_SEEN_ABOVE = "_fast_drain_last_seen_above";
 
-	// Defaults (all user-tunable), matching the settings XML.
+	// Defaults and accepted ranges (user-tunable), matching the settings XML min/max — enforced when the
+	// preferences are read, so a corrupt/out-of-range value can't turn this into a spike alarm.
 	static final int DEFAULT_SUSTAINED_MINUTES = 5;
+	static final int MIN_SUSTAINED_MINUTES = 1;
+	static final int MAX_SUSTAINED_MINUTES = 30;
 	static final int DEFAULT_REMINDER_MINUTES = 15;
+	static final int MIN_REMINDER_MINUTES = 5;
+	static final int MAX_REMINDER_MINUTES = 60;
+
+	// How long the streak survives without a fresh above-limit observation. The rate itself is smoothed
+	// over BatteryRateTracker.WINDOW_MS, so continuity beyond that window is unknowable — after a longer
+	// gap (process death, doze, unusable rate) the "sustained" claim has lapsed and the episode restarts,
+	// rather than instantly alerting with a wildly inflated "for the last N minutes".
+	static final long MAX_OBSERVATION_GAP_MS = BatteryRateTracker.WINDOW_MS;
 
 	private static final long MS_PER_MINUTE = 60_000L;
 
-	private static final FastDrainState CLEARED = new FastDrainState(0, false, 0);
+	private static final FastDrainState CLEARED = new FastDrainState(0, false, 0, 0);
 
 	private FastDrainDetector() {
 		// Utility class - prevent instantiation
@@ -70,15 +82,22 @@ public final class FastDrainDetector {
 		}
 
 		final int limit = BatteryRateTracker.getDrainLimitPercentPerHour(context);
-		final long sustainedMs = minutesPref(prefs, context, R.string._pref_key_fast_drain_sustained_minutes, DEFAULT_SUSTAINED_MINUTES);
-		final long reminderGapMs = minutesPref(prefs, context, R.string._pref_key_fast_drain_reminder_minutes, DEFAULT_REMINDER_MINUTES);
+		final long sustainedMs = minutesPref(prefs, context, R.string._pref_key_fast_drain_sustained_minutes,
+				DEFAULT_SUSTAINED_MINUTES, MIN_SUSTAINED_MINUTES, MAX_SUSTAINED_MINUTES);
+		final long reminderGapMs = minutesPref(prefs, context, R.string._pref_key_fast_drain_reminder_minutes,
+				DEFAULT_REMINDER_MINUTES, MIN_REMINDER_MINUTES, MAX_REMINDER_MINUTES);
 		final boolean activelyUsed = SystemService.isActivelyUsed(context);
 		final long now = System.currentTimeMillis();
 
-		final FastDrainDecision decision = decide(loadState(prefs), rate.hasRate(), rate.percentPerHour(),
+		final FastDrainState previous = loadState(prefs);
+		final FastDrainDecision decision = decide(previous, rate.hasRate(), rate.percentPerHour(),
 				limit, sustainedMs, reminderGapMs, activelyUsed, now);
 
-		saveState(prefs, decision.newState());
+		// Persist only on change: the common case (discharging below the limit) re-decides CLEARED on
+		// every broadcast, and rewriting identical state would churn SharedPreferences for nothing.
+		if (!decision.newState().equals(previous)) {
+			saveState(prefs, decision.newState());
+		}
 		if (decision.shouldNotify()) {
 			final int elapsedMinutes = Math.max(1, Math.round(decision.elapsedMs() / (float) MS_PER_MINUTE));
 			NotificationService.sendFastDrainNotification(context, rate.percentPerHour(), limit, elapsedMinutes);
@@ -90,7 +109,10 @@ public final class FastDrainDetector {
 	 * <ul>
 	 *   <li><b>Rate unavailable</b> (#108 can't produce a %/h yet — warm-up, or an unsupported device):
 	 *       the alert <em>sleeps</em>. No notification, and the streak is left intact so a brief data gap
-	 *       doesn't reset it. Fail-quiet = no false alarms.</li>
+	 *       doesn't reset it. Fail-quiet = no false alarms. Continuity is bounded, though: if the rate
+	 *       hasn't been observed at/above the limit for {@link #MAX_OBSERVATION_GAP_MS}, the streak has
+	 *       lapsed and the next above-limit reading starts a fresh episode instead of instantly alerting
+	 *       with a duration built on unobserved time.</li>
 	 *   <li><b>Rate below the limit</b>: the drain has calmed → re-arm the episode (clear the streak and
 	 *       the alerted flag), so a later flare-up warns again (hysteresis).</li>
 	 *   <li><b>Rate at/above the limit</b>: start the streak if new; once it has been sustained for the
@@ -119,10 +141,16 @@ public final class FastDrainDetector {
 			return new FastDrainDecision(false, CLEARED, 0); // calmed — re-arm the episode
 		}
 
-		final long start = state.streakStart() == 0 ? nowMillis : state.streakStart();
+		// Continuity: the sleep above keeps the streak through a brief data gap, but after a long one
+		// (process death, doze) the "sustained" claim has lapsed — start a fresh episode instead of
+		// alerting immediately with an inflated duration built on unobserved time.
+		final boolean lapsed = state.streakStart() != 0
+				&& nowMillis - state.lastSeenAbove() > MAX_OBSERVATION_GAP_MS;
+
+		final long start = (state.streakStart() == 0 || lapsed) ? nowMillis : state.streakStart();
 		final long elapsed = nowMillis - start;
-		boolean alerted = state.alerted();
-		long lastReminder = state.lastReminder();
+		boolean alerted = !lapsed && state.alerted();
+		long lastReminder = lapsed ? 0 : state.lastReminder();
 		boolean notify = false;
 
 		if (elapsed >= sustainedMs) {
@@ -135,19 +163,36 @@ public final class FastDrainDetector {
 				lastReminder = nowMillis;
 			}
 		}
-		return new FastDrainDecision(notify, new FastDrainState(start, alerted, lastReminder), elapsed);
+		return new FastDrainDecision(notify, new FastDrainState(start, alerted, lastReminder, nowMillis), elapsed);
 	}
 
-	private static long minutesPref(final SharedPreferences prefs, final Context context,
-	                                final int keyRes, final int defaultMinutes) {
-		return prefs.getInt(context.getString(keyRes), defaultMinutes) * MS_PER_MINUTE;
+	private static long minutesPref(final SharedPreferences prefs, final Context context, final int keyRes,
+	                                final int defaultMinutes, final int minMinutes, final int maxMinutes) {
+		return clampMinutesToMs(prefs.getInt(context.getString(keyRes), defaultMinutes), minMinutes, maxMinutes);
+	}
+
+	/**
+	 * Clamps a stored minutes preference to its slider range and converts to millis. Mirrors
+	 * {@link BatteryRateTracker#clampDrainLimit}: the slider constrains UI input, but a corrupt or
+	 * out-of-range stored value (e.g. 0 sustained minutes) would otherwise defeat the sustained-window
+	 * requirement and fire on a momentary spike. Pure so it is unit-testable.
+	 *
+	 * @param storedMinutes the raw persisted value in minutes
+	 * @param minMinutes    the slider's minimum
+	 * @param maxMinutes    the slider's maximum
+	 *
+	 * @return the clamped duration in milliseconds
+	 */
+	static long clampMinutesToMs(final int storedMinutes, final int minMinutes, final int maxMinutes) {
+		return Math.max(minMinutes, Math.min(maxMinutes, storedMinutes)) * MS_PER_MINUTE;
 	}
 
 	private static FastDrainState loadState(final SharedPreferences prefs) {
 		return new FastDrainState(
 				prefs.getLong(PREF_STREAK_START, 0),
 				prefs.getBoolean(PREF_ALERTED, false),
-				prefs.getLong(PREF_LAST_REMINDER, 0));
+				prefs.getLong(PREF_LAST_REMINDER, 0),
+				prefs.getLong(PREF_LAST_SEEN_ABOVE, 0));
 	}
 
 	private static void saveState(final SharedPreferences prefs, final FastDrainState state) {
@@ -155,6 +200,7 @@ public final class FastDrainDetector {
 		     .putLong(PREF_STREAK_START, state.streakStart())
 		     .putBoolean(PREF_ALERTED, state.alerted())
 		     .putLong(PREF_LAST_REMINDER, state.lastReminder())
+		     .putLong(PREF_LAST_SEEN_ABOVE, state.lastSeenAbove())
 		     .apply();
 	}
 
@@ -173,11 +219,13 @@ public final class FastDrainDetector {
 	/**
 	 * Persisted streak/hysteresis state.
 	 *
-	 * @param streakStart  when the rate first reached the limit this episode (0 = no active streak)
-	 * @param alerted      whether the first alert has fired this episode
-	 * @param lastReminder when the last (re)notification was sent
+	 * @param streakStart   when the rate first reached the limit this episode (0 = no active streak)
+	 * @param alerted       whether the first alert has fired this episode
+	 * @param lastReminder  when the last (re)notification was sent
+	 * @param lastSeenAbove when the rate was last observed at/above the limit; a gap longer than
+	 *                      {@link #MAX_OBSERVATION_GAP_MS} lapses the streak (continuity unknowable)
 	 */
-	record FastDrainState(long streakStart, boolean alerted, long lastReminder) {
+	record FastDrainState(long streakStart, boolean alerted, long lastReminder, long lastSeenAbove) {
 	}
 
 	/**
