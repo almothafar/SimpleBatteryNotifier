@@ -231,6 +231,7 @@
     <string name="developed_by">Developed by</string>
     <string name="developer_name">Al-Mothafar Al-Hasan</string>
     <string name="developer_link" translatable="false">github.com/almothafar</string>
+    <string name="developer_handle" translatable="false">@almothafar</string>
 
     <!-- Shown after the user grants the notification permission -->
     <string name="notifications_enabled_toast">Thank you! Notifications are now enabled.</string>
