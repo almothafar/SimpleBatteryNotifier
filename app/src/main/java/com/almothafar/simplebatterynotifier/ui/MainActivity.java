@@ -15,7 +15,6 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment;
@@ -105,7 +104,7 @@ public class MainActivity extends BaseActivity {
 			return true;
 		}
 		if (id == R.id.action_about) {
-			showAboutDialog();
+			AboutDialog.show(this);
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -464,38 +463,6 @@ public class MainActivity extends BaseActivity {
 	}
 
 	/**
-	 * Show the "About the app" dialog: what the app is, the current version, developer credit,
-	 * the open-source license, and a short accuracy/warranty note.
-	 */
-	private void showAboutDialog() {
-		final View content = getLayoutInflater().inflate(R.layout.dialog_about, null);
-
-		final TextView versionView = content.findViewById(R.id.aboutVersion);
-		versionView.setText(getString(R.string.about_version, appVersionName()));
-
-		final TextView developerView = content.findViewById(R.id.aboutDeveloper);
-		developerView.setText(getString(R.string.about_developer, getString(R.string.developer_name)));
-
-		new MaterialAlertDialogBuilder(this)
-				.setView(content)
-				.setPositiveButton(android.R.string.ok, null)
-				.setNeutralButton(R.string.about_view_github, (dialog, which) -> openProjectPage())
-				.show();
-	}
-
-	/**
-	 * Open the project's GitHub page in a browser.
-	 */
-	private void openProjectPage() {
-		final Uri uri = Uri.parse(getString(R.string.about_github_url));
-		try {
-			startActivity(new Intent(Intent.ACTION_VIEW, uri));
-		} catch (ActivityNotFoundException e) {
-			Toast.makeText(this, R.string.no_browser_found, Toast.LENGTH_SHORT).show();
-		}
-	}
-
-	/**
 	 * Show the feedback chooser: report on GitHub, or email the developer.
 	 */
 	private void showFeedbackChooser() {
@@ -534,7 +501,7 @@ public class MainActivity extends BaseActivity {
 	private void emailDeveloper() {
 		final Intent intent = new Intent(Intent.ACTION_SENDTO,
 				Uri.fromParts("mailto", getString(R.string.feedback_support_email), null));
-		intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.feedback_email_subject, appVersionName()));
+		intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.feedback_email_subject, AboutDialog.appVersionName(this)));
 		intent.putExtra(Intent.EXTRA_TEXT, deviceInfoBlock());
 		try {
 			startActivity(intent);
@@ -544,25 +511,11 @@ public class MainActivity extends BaseActivity {
 	}
 
 	/**
-	 * The app's version name (e.g. "2.0.71"), or an empty string if it can't be read.
-	 */
-	private String appVersionName() {
-		try {
-			return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-		} catch (PackageManager.NameNotFoundException e) {
-			// The app can always resolve its own package, so this is effectively unreachable;
-			// log it rather than swallow silently, and degrade to an empty version string.
-			Log.w(TAG, "Unable to read app version name", e);
-			return "";
-		}
-	}
-
-	/**
 	 * A short diagnostic block appended to a feedback email so reports carry the essentials.
 	 */
 	private String deviceInfoBlock() {
 		return "\n\n---\n"
-				+ "App: " + appVersionName() + "\n"
+				+ "App: " + AboutDialog.appVersionName(this) + "\n"
 				+ "Device: " + Build.MANUFACTURER + " " + Build.MODEL + "\n"
 				+ "Android: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")";
 	}

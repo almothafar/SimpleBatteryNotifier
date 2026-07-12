@@ -31,36 +31,19 @@
 
     </PreferenceCategory>
 
+    <!-- The ongoing status notification's content — not an alert, so it lives here (#112) -->
     <PreferenceCategory
-        android:title="@string/pref_cat_title_thresholds"
-        app:iconSpaceReserved="false">
-
-        <com.almothafar.simplebatterynotifier.ui.preference.BatteryRangeSliderPreference
-            android:key="@string/_pref_key_battery_level_range"
-            android:persistent="false"
-            app:criticalKey="@string/_pref_key_critical_battery_level"
-            app:warningKey="@string/_pref_key_warn_battery_level"
-            app:sliderFrom="10"
-            app:sliderTo="50"
-            app:sliderMinSeparation="5"
-            app:criticalDefault="20"
-            app:warningDefault="40"
-            app:iconSpaceReserved="false" />
-
-    </PreferenceCategory>
-
-    <PreferenceCategory
-        android:title="@string/pref_cat_title_other"
+        android:title="@string/pref_cat_title_status_notification"
         app:iconSpaceReserved="false">
 
         <SwitchPreference
-            android:defaultValue="false"
-            android:key="@string/_pref_key_notifications_apply_silent_mode"
-            android:summaryOff="@string/notifications_apply_silent_mode_summary_off"
-            android:summaryOn="@string/notifications_apply_silent_mode_summary_on"
+            android:defaultValue="true"
+            android:key="@string/_pref_key_show_rate_in_notification"
+            android:summaryOff="@string/show_rate_in_notification_summary_off"
+            android:summaryOn="@string/show_rate_in_notification_summary_on"
             android:switchTextOff="@string/off"
             android:switchTextOn="@string/on"
-            android:title="@string/notifications_apply_silent_mode"
+            android:title="@string/show_rate_in_notification"
             app:iconSpaceReserved="false" />
 
     </PreferenceCategory>

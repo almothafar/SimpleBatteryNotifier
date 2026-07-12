@@ -120,11 +120,11 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 				if (category.equals(getString(R.string.pref_category_general))) {
 					setPreferencesFromResource(R.xml.pref_general, rootKey);
 					configureLanguagePreference();
-				} else if (category.equals(getString(R.string.pref_category_notifications))) {
-					setPreferencesFromResource(R.xml.pref_notification, rootKey);
+				} else if (category.equals(getString(R.string.pref_category_alerts))) {
+					setPreferencesFromResource(R.xml.pref_alerts, rootKey);
 					configureTemperatureThreshold();
-				} else if (category.equals(getString(R.string.pref_category_time_settings))) {
-					setPreferencesFromResource(R.xml.pref_time_settings, rootKey);
+				} else if (category.equals(getString(R.string.pref_category_behaviour))) {
+					setPreferencesFromResource(R.xml.pref_behaviour, rootKey);
 				}
 			}
 		}

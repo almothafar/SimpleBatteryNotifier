@@ -43,12 +43,13 @@
     <string name="charger_usb">USB Port</string>
     <string name="charger_wireless">Wireless Charger</string>
 
+    <!-- Settings root screen: the three headers (#112). Each summary describes what's inside. -->
     <string name="pref_header_general">General</string>
-    <string name="pref_header_notifications">Notifications &amp; Sounds</string>
-    <string name="pref_header_time_settings">Notification Time Settings</string>
-    <string name="pref_header_summary_general">General app settings, and you can set the levels here</string>
-    <string name="pref_header_summary_notifications">Settings for how to get your notifications, what you want to notify, and sounds</string>
-    <string name="pref_header_summary_time_settings">When to get notifications</string>
+    <string name="pref_header_alerts">Alerts</string>
+    <string name="pref_header_behaviour">Notification Behaviour</string>
+    <string name="pref_header_summary_general">App language, temperature unit, and the status notification</string>
+    <string name="pref_header_summary_alerts">What to be notified about — battery levels, full charge, temperature, fast drain, charging</string>
+    <string name="pref_header_summary_behaviour">How alerts sound and appear, and when they are allowed — silent mode, vibration, quiet hours</string>
 
     <string name="pref_title_ringtone">Ringtone</string>
     <string name="pref_ringtone_silent">Silent</string>
@@ -65,17 +66,20 @@
     <string name="temperature_unit">Temperature Unit</string>
     <string name="off">OFF</string>
     <string name="on">ON</string>
-    <string name="notification_is_sticky">Notification is Sticky</string>
-    <string name="notification_is_not_sticky">Notification is not Sticky</string>
-    <string name="sticky_notification">Sticky Notification</string>
-    <string name="notifications_apply_silent_mode_summary_off">Notification sound will play even if phone in silent mode</string>
-    <string name="notifications_apply_silent_mode_summary_on">Silent mode will not be ignored, and you will NOT hear notification sound if phone in silent mode</string>
-    <string name="notifications_apply_silent_mode">Apply Silent Mode</string>
-    <string name="notifications_time_range_summary_off">Notification sounds any moment of a Day</string>
-    <string name="notifications_time_range_summary_on">Notification sounds only within specific time in a Day</string>
-    <string name="notifications_time_range">Limited Notifications Time Range</string>
-    <string name="notifications_time_range_start">Notify Start Time</string>
-    <string name="notifications_time_range_end">Notify End Time</string>
+    <string name="notification_is_sticky">Alert notifications can\'t be swiped away</string>
+    <string name="notification_is_not_sticky">Alert notifications can be dismissed normally</string>
+    <string name="sticky_notification">Sticky notifications</string>
+    <!-- Reworded from "Apply Silent Mode" (#112): same key and meaning (ON = respect silent/DnD),
+         the label now says what ON does. -->
+    <string name="mute_alerts_in_silent_mode_summary_off">Alert sounds play even while the phone is in silent mode or Do Not Disturb</string>
+    <string name="mute_alerts_in_silent_mode_summary_on">Alerts stay silent while the phone is in silent mode or Do Not Disturb</string>
+    <string name="mute_alerts_in_silent_mode">Mute alerts in silent mode</string>
+    <!-- The toggle stores "limit alerts to the window below"; the quiet hours are its complement -->
+    <string name="notifications_time_range_summary_off">Alerts can sound at any time of day</string>
+    <string name="notifications_time_range_summary_on">Alerts sound only between the times below, and stay quiet outside them</string>
+    <string name="notifications_time_range">Quiet hours</string>
+    <string name="notifications_time_range_start">Alerts allowed from</string>
+    <string name="notifications_time_range_end">Alerts allowed until</string>
     <string name="notifications_vibrate_summary_off">Notifications Vibration Disabled</string>
     <string name="notifications_vibrate_summary_on">Notifications Vibration Enabled</string>
     <string name="notifications_alert_sound_ringtone">Critical Level Sound</string>
@@ -259,6 +263,8 @@
     <string name="about_disclaimer">Battery readings, health and charging figures come from your device and are estimates — treat them as guidance, not exact measurements. This app is provided “as is”, without warranty of any kind.</string>
     <string name="about_view_github">View on GitHub</string>
     <string name="about_github_url" translatable="false">https://github.com/almothafar/SimpleBatteryNotifier</string>
+    <!-- Summary of the version footer at the bottom of the Settings root screen (#113) -->
+    <string name="about_footer_hint">Tap for more about this app</string>
 
     <!-- App language picker -->
     <string name="pref_language_category">Language</string>
@@ -270,21 +276,26 @@
 
     <!-- Settings category titles -->
     <string name="pref_cat_title_display">Display</string>
-    <string name="pref_cat_title_thresholds">Battery Level Thresholds</string>
-    <string name="pref_cat_title_other">Other Settings</string>
-    <string name="pref_cat_title_notification">Notification Settings</string>
+    <string name="pref_cat_title_status_notification">Status Notification</string>
+    <string name="pref_cat_title_thresholds">Battery Levels</string>
     <string name="pref_cat_title_full_battery">Full Battery</string>
-    <string name="pref_cat_title_warning">Warning Level</string>
-    <string name="pref_cat_title_temperature">Temperature</string>
-    <string name="pref_cat_title_critical">Critical Battery Level</string>
+    <string name="pref_cat_title_warning">Warning Alert</string>
+    <string name="pref_cat_title_temperature">High Temperature</string>
+    <string name="pref_cat_title_critical">Critical Alert</string>
+    <string name="pref_cat_title_charging">Charging</string>
+    <string name="pref_cat_title_sound_vibration">Sound &amp; Vibration</string>
+    <string name="pref_cat_title_quiet_hours">Quiet Hours</string>
+    <string name="pref_cat_title_appearance">Appearance</string>
 
     <!-- Below this line to the end of file is for coding not for labeling.
          These are internal identifiers/defaults, not user copy: marked translatable="false"
          so the MissingTranslation lint gate does not expect them in values-ar. -->
     <string name="extra_category" translatable="false">category</string>
     <string name="pref_category_general" translatable="false">pref_category_general</string>
-    <string name="pref_category_notifications" translatable="false">pref_category_notifications</string>
-    <string name="pref_category_time_settings" translatable="false">pref_category_time_settings</string>
+    <string name="pref_category_alerts" translatable="false">pref_category_alerts</string>
+    <string name="pref_category_behaviour" translatable="false">pref_category_behaviour</string>
+    <!-- Root-screen version footer (#113); not a stored preference -->
+    <string name="_pref_key_about" translatable="false">key_about</string>
 
     <string name="_pref_key_warn_battery_level" translatable="false">key_warn_battery_level</string>
     <string name="_pref_key_critical_battery_level" translatable="false">key_critical_battery_level</string>
