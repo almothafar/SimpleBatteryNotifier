@@ -4,9 +4,9 @@
     android:id="@+id/developerSignatureLayout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:gravity="center"
-    android:paddingTop="8dp"
+    android:paddingTop="4dp"
     android:paddingBottom="4dp"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
@@ -18,7 +18,7 @@
         android:text="@string/developed_by"
         android:textSize="11sp"
         android:textColor="@color/battery_details_label_color"
-        android:layout_marginBottom="2dp" />
+        android:layout_marginEnd="5dp" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -27,14 +27,23 @@
         android:textSize="12sp"
         android:textStyle="bold"
         android:textColor="@color/title_bar_background_color"
-        android:layout_marginBottom="2dp" />
+        android:layout_marginEnd="8dp" />
+
+    <ImageView
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginEnd="3dp"
+        android:layout_marginBottom="1dp"
+        android:src="@drawable/ic_github"
+        android:importantForAccessibility="no" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/developer_link"
-        android:textSize="11sp"
-        android:textColor="@color/title_bar_background_color"
-        android:textStyle="italic" />
+        android:text="@string/developer_handle"
+        android:textSize="12sp"
+        android:textStyle="italic"
+        android:textColor="@color/title_bar_background_color" />
 
 </LinearLayout>
