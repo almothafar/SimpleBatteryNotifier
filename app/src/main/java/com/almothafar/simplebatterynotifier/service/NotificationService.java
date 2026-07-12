@@ -328,43 +328,16 @@ public final class NotificationService {
 	 * @param rawTenthsC Battery temperature in tenths of a degree Celsius (as reported by BatteryManager)
 	 */
 	public static void sendTemperatureNotification(final Context context, final int rawTenthsC) {
-		if (lacksNotificationPermission(context)) {
-			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, temperature alert not sent");
-			return;
-		}
-
-		createNotificationChannels(context);
-
-		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final String temperature = TemperatureUtils.format(context, rawTenthsC);
-
-		// A high-temperature warning is not a critical battery alert, so it respects quiet hours (#111).
-		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
-		final String channelId = channelFor(withinWindow, CHANNEL_ID_TEMPERATURE);
-
-		final Notification.Builder builder = new Notification.Builder(context, channelId)
-				.setSmallIcon(R.drawable.ic_stat_temperature_hot)
-				.setTicker(context.getString(R.string.notification_temperature_ticker))
-				.setContentTitle(context.getString(R.string.notification_temperature_title))
-				.setContentText(context.getString(R.string.notification_temperature_content, temperature))
-				.setWhen(System.currentTimeMillis())
-				.setLargeIcon(getLauncherIcon(context))
-				.setContentIntent(createMainActivityIntent(context))
-				.setVisibility(Notification.VISIBILITY_PUBLIC)
-				.setStyle(new Notification.BigTextStyle()
-						          .bigText(context.getString(R.string.notification_temperature_content_big, temperature)));
-
-		final NotificationManager manager = getNotificationManager(context);
-		if (nonNull(manager)) {
-			manager.notify(TEMPERATURE_NOTIFICATION_ID, builder.build());
-		}
-
-		final String sound = prefs.getString(
-				context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
-				context.getString(R.string._default_notification_sound_uri));
-		if (withinWindow) {
-			playAlarm(context, sound, shouldIgnoreSilentMode(context, prefs), isVibrationEnabled(context, prefs));
-		}
+		sendQuietHoursAwareAlert(context, new AlertSpec(
+				"temperature",
+				CHANNEL_ID_TEMPERATURE,
+				TEMPERATURE_NOTIFICATION_ID,
+				R.drawable.ic_stat_temperature_hot,
+				context.getString(R.string.notification_temperature_ticker),
+				context.getString(R.string.notification_temperature_title),
+				context.getString(R.string.notification_temperature_content, temperature),
+				context.getString(R.string.notification_temperature_content_big, temperature)));
 	}
 
 	/**
@@ -383,38 +356,62 @@ public final class NotificationService {
 	 */
 	public static void sendFastDrainNotification(final Context context, final int ratePph,
 	                                             final int limitPph, final int elapsedMinutes) {
+		// Western digits in every locale (#96) via String.valueOf.
+		final String rate = String.valueOf(ratePph);
+		final String limit = String.valueOf(limitPph);
+		final String minutes = String.valueOf(elapsedMinutes);
+		final String content = context.getString(R.string.notification_fast_drain_content, rate, minutes, limit);
+
+		sendQuietHoursAwareAlert(context, new AlertSpec(
+				"fast-drain",
+				CHANNEL_ID_FAST_DRAIN,
+				FAST_DRAIN_NOTIFICATION_ID,
+				R.drawable.ic_stat_device_battery_charging_20,
+				context.getString(R.string.notification_fast_drain_ticker),
+				context.getString(R.string.notification_fast_drain_title),
+				content,
+				content));
+	}
+
+	/**
+	 * Send an alert on its own channel and notification ID, honouring quiet hours, silent-mode and
+	 * vibrate preferences.
+	 * <p>
+	 * The single home of the quiet-hours dance shared by the temperature (#18/#111) and fast-drain
+	 * (#109) alerts: rerouting to the silent channel outside the notification window, and gating the
+	 * alarm sound/vibration on the window — so a quiet-hours fix can't be applied to one alert and
+	 * missed on another. Both alerts reuse the critical-alert ringtone preference, as before.
+	 *
+	 * @param context The application context
+	 * @param spec    What to show: channel, id, icon and text content
+	 */
+	private static void sendQuietHoursAwareAlert(final Context context, final AlertSpec spec) {
 		if (lacksNotificationPermission(context)) {
-			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, fast-drain alert not sent");
+			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, " + spec.logName() + " alert not sent");
 			return;
 		}
 
 		createNotificationChannels(context);
 
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-		// A fast-drain warning is not a critical battery alert, so it respects quiet hours (#111).
+		// These are not critical battery alerts, so they respect quiet hours (#111).
 		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
-		final String channelId = channelFor(withinWindow, CHANNEL_ID_FAST_DRAIN);
-
-		// Western digits in every locale (#96) via String.valueOf.
-		final String rate = String.valueOf(ratePph);
-		final String limit = String.valueOf(limitPph);
-		final String minutes = String.valueOf(elapsedMinutes);
+		final String channelId = channelFor(withinWindow, spec.audibleChannelId());
 
 		final Notification.Builder builder = new Notification.Builder(context, channelId)
-				.setSmallIcon(R.drawable.ic_stat_device_battery_charging_20)
-				.setTicker(context.getString(R.string.notification_fast_drain_ticker))
-				.setContentTitle(context.getString(R.string.notification_fast_drain_title))
-				.setContentText(context.getString(R.string.notification_fast_drain_content, rate, minutes, limit))
+				.setSmallIcon(spec.iconRes())
+				.setTicker(spec.ticker())
+				.setContentTitle(spec.title())
+				.setContentText(spec.content())
 				.setWhen(System.currentTimeMillis())
 				.setLargeIcon(getLauncherIcon(context))
 				.setContentIntent(createMainActivityIntent(context))
 				.setVisibility(Notification.VISIBILITY_PUBLIC)
-				.setStyle(new Notification.BigTextStyle()
-						          .bigText(context.getString(R.string.notification_fast_drain_content, rate, minutes, limit)));
+				.setStyle(new Notification.BigTextStyle().bigText(spec.bigContent()));
 
 		final NotificationManager manager = getNotificationManager(context);
 		if (nonNull(manager)) {
-			manager.notify(FAST_DRAIN_NOTIFICATION_ID, builder.build());
+			manager.notify(spec.notificationId(), builder.build());
 		}
 
 		final String sound = prefs.getString(
@@ -423,6 +420,23 @@ public final class NotificationService {
 		if (withinWindow) {
 			playAlarm(context, sound, shouldIgnoreSilentMode(context, prefs), isVibrationEnabled(context, prefs));
 		}
+	}
+
+	/**
+	 * Everything an own-channel alert needs to display (reduces parameter count, like
+	 * {@link NotificationConfig}).
+	 *
+	 * @param logName          short name used in log messages (e.g. "temperature")
+	 * @param audibleChannelId the alert's audible channel; rerouted to the silent channel in quiet hours
+	 * @param notificationId   the alert's own notification id, so it never replaces another alert
+	 * @param iconRes          small icon resource
+	 * @param ticker           ticker text
+	 * @param title            content title
+	 * @param content          collapsed content text
+	 * @param bigContent       expanded (BigTextStyle) content text
+	 */
+	private record AlertSpec(String logName, String audibleChannelId, int notificationId, int iconRes,
+	                         String ticker, String title, String content, String bigContent) {
 	}
 
 	/**
