@@ -39,8 +39,61 @@
             android:layout_height="160dp"
             tools:cpb_subtitle="subtitle"
             tools:cpb_title="Title"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="-2dp"
             android:layout_marginBottom="-10dp" />
+    </LinearLayout>
+
+    <!-- In-fly critical/warning threshold adjuster, placed directly under the gauge it controls.
+         Mirrors the Settings range slider and writes the same preference keys, so changes here
+         update the gauge immediately. -->
+    <LinearLayout
+        android:id="@+id/thresholdSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <com.google.android.material.slider.RangeSlider
+            android:id="@+id/thresholdSlider"
+            style="@style/Widget.App.RangeSlider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="1"
+            android:valueFrom="10"
+            android:valueTo="50" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-6dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/thresholdCriticalCaption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="start"
+                android:textColor="@color/circular_progress_default_progress_alert"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/thresholdWarningCaption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/circular_progress_default_progress_warning"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
     <androidx.fragment.app.FragmentContainerView
@@ -59,56 +112,9 @@
         android:orientation="vertical"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:paddingTop="16dp"
+        android:paddingTop="8dp"
         android:paddingBottom="@dimen/content_navigation_bar_padding"
         android:background="@android:color/white">
-
-        <!-- In-fly critical/warning threshold adjuster. Mirrors the Settings range slider and
-             writes the same preference keys, so changes here update the gauge immediately. -->
-        <TextView
-            android:id="@+id/thresholdTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/battery_range_title"
-            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-            android:textColor="@color/default_text_color" />
-
-        <com.google.android.material.slider.RangeSlider
-            android:id="@+id/thresholdSlider"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:stepSize="1"
-            android:valueFrom="10"
-            android:valueTo="50"
-            app:labelBehavior="floating" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/thresholdCriticalCaption"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="start"
-                android:textColor="@color/circular_progress_default_progress_alert"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/thresholdWarningCaption"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="end"
-                android:textColor="@color/circular_progress_default_progress_warning"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-        </LinearLayout>
 
         <!-- Battery Insights Button - Material3 -->
         <com.google.android.material.button.MaterialButton

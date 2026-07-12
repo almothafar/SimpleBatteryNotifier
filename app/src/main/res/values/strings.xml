@@ -58,7 +58,6 @@
     <string name="alert_start_level">Critical Level Start From</string>
 
     <!-- Combined critical/warning battery range slider -->
-    <string name="battery_range_title">Battery Alert Levels</string>
     <string name="battery_range_caption_critical">Critical %1$d%%</string>
     <string name="battery_range_caption_warning">Warning %1$d%%</string>
     <string name="battery_range_summary">Critical %1$d%% • Warning %2$d%%</string>

@@ -38,7 +38,6 @@
         <com.almothafar.simplebatterynotifier.ui.preference.BatteryRangeSliderPreference
             android:key="@string/_pref_key_battery_level_range"
             android:persistent="false"
-            android:title="@string/battery_range_title"
             app:criticalKey="@string/_pref_key_critical_battery_level"
             app:warningKey="@string/_pref_key_warn_battery_level"
             app:sliderFrom="10"

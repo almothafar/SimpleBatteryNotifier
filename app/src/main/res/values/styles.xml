@@ -67,4 +67,20 @@
         <item name="android:minHeight">64dp</item>
         <item name="seekBarIncrement">1</item>
     </style>
+
+    <!-- Shared look for the critical/warning RangeSlider (Home + Settings) so size/color tweaks
+         live in one place. Material 1.14's slider defaults to tall bar thumbs and draws a tick dot
+         per step (40 dots over 10-50), which looks noisy; here we hide the ticks, use a compact
+         round thumb snug to the track, drop the floating bubble (the captions show the values),
+         and keep a comfortable touch target. -->
+    <style name="Widget.App.RangeSlider" parent="Widget.Material3.Slider">
+        <item name="labelBehavior">gone</item>
+        <item name="tickVisible">false</item>
+        <item name="thumbWidth">16dp</item>
+        <item name="thumbHeight">16dp</item>
+        <item name="thumbTrackGapSize">0dp</item>
+        <item name="trackHeight">4dp</item>
+        <item name="trackStopIndicatorSize">0dp</item>
+        <item name="minTouchTargetSize">40dp</item>
+    </style>
 </resources>
