@@ -164,7 +164,19 @@
     <string name="show_rate_in_notification_summary_on">يعرض الإشعار المستمر معدل الشحن/الاستهلاك المباشر بجانب الحالة</string>
     <string name="show_rate_in_notification_summary_off">يعرض الإشعار المستمر تسمية الحالة فقط</string>
     <string name="drain_limit">حد الاستهلاك المرتفع</string>
-    <string name="drain_limit_summary">يتحول معدل الاستهلاك إلى اللون الكهرماني عند الاقتراب من هذا الحد وإلى الأحمر عند بلوغه أو تجاوزه. يُقاس بنقاط مئوية في الساعة.</string>
+    <string name="drain_limit_summary">يتحول معدل الاستهلاك إلى اللون الكهرماني عند الاقتراب من هذا الحد وإلى الأحمر عند بلوغه أو تجاوزه، ويُطلق تنبيه الاستهلاك السريع عند بقائه عند الحد. يُقاس بنقاط مئوية في الساعة.</string>
+
+    <!-- تنبيه الاستهلاك السريع (#109) -->
+    <string name="notify_fast_drain">تنبيه الاستهلاك السريع</string>
+    <string name="notify_fast_drain_summary_on">ينبهك عندما تستمر البطارية في الاستهلاك أسرع من حدّك — الأكثر فائدة عندما يكون الهاتف في جيبك</string>
+    <string name="notify_fast_drain_summary_off">تنبيهات الاستهلاك السريع معطّلة</string>
+    <string name="fast_drain_sustained_minutes">التنبيه بعد (دقائق)</string>
+    <string name="fast_drain_reminder_minutes">التذكير أثناء القفل (دقائق)</string>
+    <string name="notification_fast_drain_channel_name">استهلاك سريع للبطارية</string>
+    <string name="notification_fast_drain_channel_description">ينبّه عندما تُستهلك البطارية بسرعة غير طبيعية</string>
+    <string name="notification_fast_drain_ticker">البطارية تُستهلك بسرعة</string>
+    <string name="notification_fast_drain_title">البطارية تُستهلك بسرعة</string>
+    <string name="notification_fast_drain_content">يفقد نحو %1$s%% في الساعة خلال آخر %2$s دقيقة (حدّك: %3$s%%/h). قد يكون أحد التطبيقات يستهلك طاقة كبيرة.</string>
 
     <!-- Battery Insights screen -->
     <string name="battery_insights_title">تحليلات البطارية</string>

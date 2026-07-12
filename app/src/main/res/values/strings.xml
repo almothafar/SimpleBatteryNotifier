@@ -170,7 +170,20 @@
     <string name="show_rate_in_notification_summary_on">The ongoing notification shows the live drain/charge rate next to the status</string>
     <string name="show_rate_in_notification_summary_off">The ongoing notification shows only the status label</string>
     <string name="drain_limit">High drain limit</string>
-    <string name="drain_limit_summary">The drain rate turns amber near this limit and red at or above it. Measured in percentage points per hour.</string>
+    <string name="drain_limit_summary">The drain rate turns amber near this limit and red at or above it, and the fast-drain alert fires when it stays there. Measured in percentage points per hour.</string>
+
+    <!-- Fast-drain alert (#109) -->
+    <string name="notify_fast_drain">Fast-drain alert</string>
+    <string name="notify_fast_drain_summary_on">Warns you when the battery keeps draining faster than your limit — most useful while it\'s in your pocket</string>
+    <string name="notify_fast_drain_summary_off">Fast-drain alerts are disabled</string>
+    <string name="fast_drain_sustained_minutes">Alert after (minutes)</string>
+    <string name="fast_drain_reminder_minutes">Reminder while locked (minutes)</string>
+    <string name="notification_fast_drain_channel_name">Fast Battery Drain</string>
+    <string name="notification_fast_drain_channel_description">Warns when the battery is draining abnormally fast</string>
+    <string name="notification_fast_drain_ticker">Battery draining fast</string>
+    <string name="notification_fast_drain_title">Battery draining fast</string>
+    <!-- %1$s rate, %2$s minutes, %3$s limit — all Western-digit numbers (String.valueOf) for every locale (#96) -->
+    <string name="notification_fast_drain_content">Losing ~%1$s%% per hour for the last %2$s minutes (your limit: %3$s%%/h). Something may be using a lot of power.</string>
 
     <!-- Battery Insights Screen -->
     <string name="battery_insights_title">Battery Insights</string>
@@ -285,6 +298,10 @@
     <!-- #108/#109: append the rate to the ongoing notification, and the shared "high drain" limit (%/h) -->
     <string name="_pref_key_show_rate_in_notification" translatable="false">key_show_rate_in_notification</string>
     <string name="_pref_key_fast_drain_limit" translatable="false">key_fast_drain_limit</string>
+    <!-- #109: fast-drain alert enable + timing -->
+    <string name="_pref_key_notify_fast_drain" translatable="false">key_notify_fast_drain</string>
+    <string name="_pref_key_fast_drain_sustained_minutes" translatable="false">key_fast_drain_sustained_minutes</string>
+    <string name="_pref_key_fast_drain_reminder_minutes" translatable="false">key_fast_drain_reminder_minutes</string>
     <string name="_pref_key_language" translatable="false">key_language</string>
 
     <string name="_pref_value_temperatures_unit_c" translatable="false">celsius</string>
