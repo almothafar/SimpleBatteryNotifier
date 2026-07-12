@@ -56,7 +56,6 @@
     <string name="alert_start_level">المستوى الحرج يبدأ من</string>
 
     <!-- Combined critical/warning battery range slider -->
-    <string name="battery_range_title">مستويات تنبيه البطارية</string>
     <string name="battery_range_caption_critical">حرج %1$d%%</string>
     <string name="battery_range_caption_warning">تحذير %1$d%%</string>
     <string name="battery_range_summary">حرج %1$d%% • تحذير %2$d%%</string>

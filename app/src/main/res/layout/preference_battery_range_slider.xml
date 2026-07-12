@@ -9,33 +9,25 @@
     android:orientation="vertical"
     android:clickable="false"
     android:focusable="false"
-    android:minHeight="64dp"
+    android:minHeight="48dp"
     android:paddingStart="16dp"
     android:paddingEnd="16dp"
-    android:paddingTop="12dp"
-    android:paddingBottom="12dp">
-
-    <TextView
-        android:id="@android:id/title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-        android:textColor="?android:attr/textColorPrimary"
-        tools:text="Battery Alert Levels" />
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
     <com.google.android.material.slider.RangeSlider
         android:id="@+id/battery_range_slider"
+        style="@style/Widget.App.RangeSlider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
         android:stepSize="1"
         android:valueFrom="10"
-        android:valueTo="50"
-        app:labelBehavior="floating" />
+        android:valueTo="50" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="-6dp"
         android:orientation="horizontal">
 
         <TextView
@@ -45,7 +37,7 @@
             android:layout_weight="1"
             android:gravity="start"
             android:textColor="@color/circular_progress_default_progress_alert"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             tools:text="Critical 20%" />
 
@@ -56,7 +48,7 @@
             android:layout_weight="1"
             android:gravity="end"
             android:textColor="@color/circular_progress_default_progress_warning"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             tools:text="Warning 40%" />
 
