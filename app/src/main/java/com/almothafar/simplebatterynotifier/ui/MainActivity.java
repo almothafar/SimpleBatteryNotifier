@@ -15,6 +15,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment;
@@ -101,6 +102,10 @@ public class MainActivity extends BaseActivity {
 		}
 		if (id == R.id.action_feedback) {
 			showFeedbackChooser();
+			return true;
+		}
+		if (id == R.id.action_about) {
+			showAboutDialog();
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -456,6 +461,38 @@ public class MainActivity extends BaseActivity {
 	private void openBatteryInsights() {
 		final Intent intent = new Intent(this, BatteryInsightsActivity.class);
 		startActivity(intent);
+	}
+
+	/**
+	 * Show the "About the app" dialog: what the app is, the current version, developer credit,
+	 * the open-source license, and a short accuracy/warranty note.
+	 */
+	private void showAboutDialog() {
+		final View content = getLayoutInflater().inflate(R.layout.dialog_about, null);
+
+		final TextView versionView = content.findViewById(R.id.aboutVersion);
+		versionView.setText(getString(R.string.about_version, appVersionName()));
+
+		final TextView developerView = content.findViewById(R.id.aboutDeveloper);
+		developerView.setText(getString(R.string.about_developer, getString(R.string.developer_name)));
+
+		new MaterialAlertDialogBuilder(this)
+				.setView(content)
+				.setPositiveButton(android.R.string.ok, null)
+				.setNeutralButton(R.string.about_view_github, (dialog, which) -> openProjectPage())
+				.show();
+	}
+
+	/**
+	 * Open the project's GitHub page in a browser.
+	 */
+	private void openProjectPage() {
+		final Uri uri = Uri.parse(getString(R.string.about_github_url));
+		try {
+			startActivity(new Intent(Intent.ACTION_VIEW, uri));
+		} catch (ActivityNotFoundException e) {
+			Toast.makeText(this, R.string.no_browser_found, Toast.LENGTH_SHORT).show();
+		}
 	}
 
 	/**
