@@ -115,9 +115,6 @@ public final class NotificationService {
 	 */
 	private static WeakReference<Bitmap> cachedLauncherIcon;
 
-	// Thread-safe healthy charge state
-	private static volatile boolean isHealthyCharge;
-
 	private NotificationService() {
 		// Utility class - prevent instantiation
 	}
@@ -164,13 +161,12 @@ public final class NotificationService {
 	 *   <li>{@link #CHARGE_STYLE_NONE} — nothing at all.</li>
 	 * </ul>
 	 *
-	 * @param context   The application context
-	 * @param speed     The estimated charging speed (may be {@link ChargeSpeed#unknown()})
-	 * @param wireless  true when charging over a wireless charger, false when wired
-	 * @param isHealthy true when charging started at a low battery level ("healthy" charge)
+	 * @param context  The application context
+	 * @param speed    The estimated charging speed (may be {@link ChargeSpeed#unknown()})
+	 * @param wireless true when charging over a wireless charger, false when wired
 	 */
 	public static void notifyChargeConnected(final Context context, final ChargeSpeed speed,
-	                                         final boolean wireless, final boolean isHealthy) {
+	                                         final boolean wireless) {
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final String style = resolveChargeStyle(prefs.getString(
 				context.getString(R.string._pref_key_charge_notification_style), CHARGE_STYLE_TOAST));
@@ -186,7 +182,7 @@ public final class NotificationService {
 			return;
 		}
 
-		postChargeNotification(context, content, isHealthy);
+		postChargeNotification(context, content);
 	}
 
 	/**
@@ -277,11 +273,10 @@ public final class NotificationService {
 	 * Plugging in during quiet hours shouldn't ding: shown on the silent channel outside the window
 	 * instead of the audible full-battery channel (issue #111).
 	 *
-	 * @param context   The application context
-	 * @param content   The charge message to display
-	 * @param isHealthy true when charging started at a low battery level ("healthy" charge)
+	 * @param context The application context
+	 * @param content The charge message to display
 	 */
-	private static void postChargeNotification(final Context context, final String content, final boolean isHealthy) {
+	private static void postChargeNotification(final Context context, final String content) {
 		if (lacksNotificationPermission(context)) {
 			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, notification not sent");
 			return;
@@ -289,15 +284,9 @@ public final class NotificationService {
 
 		createNotificationChannels(context);
 
-		final String title = isHealthy
-		                     ? context.getString(R.string.notification_charge_started_title_healthy)
-		                     : context.getString(R.string.notification_charge_started_title_regular);
-
+		final String title = context.getString(R.string.notification_charge_started_title);
 		final String ticker = title.concat(", ").concat(content);
-
-		final int iconRes = isHealthy
-		                    ? R.drawable.ic_stat_device_battery_charging_20
-		                    : R.drawable.ic_stat_device_battery_charging_50;
+		final int iconRes = R.drawable.ic_stat_device_battery_charging_50;
 
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
@@ -520,17 +509,6 @@ public final class NotificationService {
 		if (nonNull(manager)) {
 			manager.notify(ONGOING_NOTIFICATION_ID, buildOngoingNotification(context, batteryDO, rate));
 		}
-	}
-
-	/**
-	 * Set healthy charge mode
-	 * <p>
-	 * Thread-safe setter for the healthy charge state flag.
-	 *
-	 * @param healthy true if charging in healthy mode
-	 */
-	public static void setIsHealthy(final boolean healthy) {
-		isHealthyCharge = healthy;
 	}
 
 	/**
@@ -1120,9 +1098,7 @@ public final class NotificationService {
 					this.iconRes = R.drawable.ic_stat_device_battery_charging_full;
 					this.alarmSound = prefs.getString(context.getString(R.string._pref_key_notifications_full_sound_ringtone), defaultSound);
 					this.ticker = context.getString(R.string.notification_full_level_ticker);
-					this.title = isHealthyCharge
-					             ? context.getString(R.string.notification_full_level_title_healthy)
-					             : context.getString(R.string.notification_full_level_title_regular);
+					this.title = context.getString(R.string.notification_full_level_title);
 					this.content = context.getString(R.string.notification_full_level_content);
 					this.bigContent = context.getString(R.string.notification_full_level_content_big);
 				}

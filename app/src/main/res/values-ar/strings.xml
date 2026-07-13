@@ -2,11 +2,6 @@
     <string name="app_name">منبه البطارية البسيط</string>
     <string name="action_settings">الإعدادات</string>
     <string name="title_activity_settings">الإعدادات</string>
-    <string name="charger_connected">الشاحن موصول</string>
-    <string name="charger_connected_ac">AC charger connected</string>
-    <string name="charger_connected_usb">USB charger connected</string>
-    <string name="charger_connected_wireless">Wireless charger connected</string>
-    <string name="charger_disconnected">Charger Disconnected</string>
     <string name="charging">تشحن</string>
     <string name="discharging">تستهلك</string>
     <string name="not_charging">لا تشحن</string>
@@ -97,23 +92,21 @@
     <string name="critical_ignore_quiet_hours_summary_on">البطارية المنخفضة جداً تنبّهك حتى أثناء ساعات الهدوء</string>
     <string name="critical_ignore_quiet_hours_summary_off">التنبيهات الحرجة تبقى صامتة أثناء ساعات الهدوء</string>
 
-    <string name="notification_critical_ticker">مستوى حرج للبطارية أقل من %1$d%%</string>
-    <string name="notification_critical_title">وقت الشحن الصحي</string>
-    <string name="notification_critical_content">البطارية على وشك النفاذ (%1$d%%)</string>
-    <string name="notification_critical_content_big">البطارية في مستوى حرج وأقل من (%1$d%%)، حان الوقت لشحن الهاتف</string>
-    <string name="notification_warning_ticker">البطارية في منتصف الطريق، أقل من %1$d%%</string>
-    <string name="notification_warning_title">اقتصد في الاستخدام</string>
-    <string name="notification_warning_content">تحتاج فقط للانتباه للبطارية (%1$d%%)</string>
-    <string name="notification_warning_content_big">مستوى البطارية %1$d%%. لا تحتاج للشاحن بعد، لكن انتبه لاستهلاك البطارية</string>
-    <string name="notification_full_level_ticker">البطارية تم شحنها بالكامل، بإمكانك فصل الشاحن</string>
-    <string name="notification_full_level_title_healthy">الشحن الصحي اكتمل</string>
-    <string name="notification_full_level_title_regular">الشحن الاعتيادي اكتمل</string>
-    <string name="notification_full_level_content">استخدم هاتفك بحرية الآن</string>
-    <string name="notification_full_level_content_big">بإمكانك استخدام الهاتف الآن، ولا يضر إن أبقيت الشاحن، لا تخف لن تصاب البطارية بالتخمة 😋</string>
+    <!-- Alert copy reworked in #114: neutral titles and 20-80% guidance -->
+    <string name="notification_critical_ticker">البطارية منخفضة جداً — أقل من %1$d%%</string>
+    <string name="notification_critical_title">البطارية منخفضة جداً</string>
+    <string name="notification_critical_content">البطارية على وشك النفاد (%1$d%%)</string>
+    <string name="notification_critical_content_big">مستوى البطارية أقل من المستوى الحرج (%1$d%%) — حان وقت الشحن.</string>
+    <string name="notification_warning_ticker">البطارية أقل من %1$d%%</string>
+    <string name="notification_warning_title">البطارية بدأت تنخفض</string>
+    <string name="notification_warning_content">البطارية عند %1$d%% — انتبه لاستهلاكك</string>
+    <string name="notification_warning_content_big">مستوى البطارية %1$d%%. لا حاجة للشحن الآن — لكن حين يتيسّر لك، الشحن قبل أن تنخفض البطارية كثيراً أرفق بها.</string>
+    <string name="notification_full_level_ticker">اكتمل شحن البطارية — يمكنك فصل الشاحن الآن</string>
+    <string name="notification_full_level_title">اكتمل شحن البطارية</string>
+    <string name="notification_full_level_content">يمكنك فصل الشاحن الآن</string>
+    <string name="notification_full_level_content_big">اكتمل الشحن — يمكنك فصل الشاحن الآن. تتقادم البطاريات أسرع ما يكون عند إبقائها على 100%، لذا فصل الشاحن قريباً (والبقاء تقريباً بين 20% و80% في الاستخدام اليومي) يساعد بطاريتك على أن تدوم أطول.</string>
 
-    <string name="notification_charge_started_title_healthy">شحن صحي بدأ</string>
-    <string name="notification_charge_started_title_regular">شحن اعتيادي بدأ</string>
-    <string name="notification_charge_started_content">البطارية تشحن بواسطة %1$s</string>
+    <string name="notification_charge_started_title">بدأ الشحن</string>
 
     <!-- Charge-connected message (issue #122): charging speed + wired/wireless -->
     <string name="charge_source_wired">سلكي</string>
@@ -203,13 +196,15 @@
     <string name="clear">مسح</string>
     <string name="error_design_capacity_range">أدخل سعة بين %1$d و %2$d mAh</string>
     <string name="health_basis_measured">مقاسة من السعة المقدّرة</string>
-    <string name="health_basis_estimated">مقدّرة من دورات الشحن</string>
+    <!-- #114: cycle-based estimate labelled by its source -->
+    <string name="health_basis_estimated_os">مقدّرة من دورات الشحن (كما يبلغ عنها أندرويد)</string>
+    <string name="health_basis_estimated_tracked">مقدّرة من الدورات المتتبَّعة منذ التثبيت — التآكل الفعلي قد يكون أعلى</string>
     <!-- #94 unreliable battery-reading copy (drafted by Claude — pending maintainer review) -->
     <string name="battery_reading_unreliable_cd">لماذا قد تكون قراءة البطارية غير موثوقة</string>
     <string name="battery_reading_unreliable_dialog_title">قد تكون قراءة البطارية غير موثوقة</string>
     <string name="battery_reading_unreliable_dialog_message" formatted="false">يُبلّغ هذا الجهاز عن سعة شحن كاملة لا تُطابق السعة المقدّرة التي أدخلتها، لذا لا يمكن الوثوق بالسعة المقاسة — ولا بنسبة الصحة المبنية عليها.\n\nغالباً ما يكون هذا خللاً في عتاد بطارية الهاتف (إذ تُبلّغ بعض المعالجات عن عدّاد الشحن بصورة غير صحيحة)، وليس مشكلة في بطاريتك.\n\nلكن قد يعني ذلك أيضاً أنّ البطارية بدأت تتلف فعلاً. انتبه لهذه العلامات:\n\n• ينطفئ الهاتف أو يُعيد التشغيل تحت الحِمل الثقيل رغم وجود شحن كافٍ\n• ينخفض المستوى فجأة قرب النهاية، فيسلك مستوى 20% وكأنه 2%\n• ينفد الشحن أسرع بكثير من ذي قبل\n\nإذا لاحظت هذه العلامات، ففكّر في استبدال البطارية.</string>
     <string name="how_it_works">كيف يعمل</string>
-    <string name="how_battery_health_works" formatted="false" tools:ignore="TypographyDashes">تُقدَّر صحة البطارية بناءً على دورات الشحن. تُحتسب دورة شحن عندما تُشحن بطاريتك من 20% أو أقل إلى 95% أو أكثر. يبدأ هذا التتبع عند أول استخدام لهذا التطبيق.\n\nتقديرات الصحة:\n• 0–300 دورة: ممتازة (95–100%)\n• 300-500 دورة: جيدة (85-95%)\n• 500-800 دورة: مقبولة (70-85%)\n• 800+ دورة: ضعيفة (&lt;70%)</string>
+    <string name="how_battery_health_works" formatted="false" tools:ignore="TypographyDashes">تُعرض صحة البطارية من أفضل أساس متاح:\n\n• مقاسة — عند إدخال السعة المقدّرة لبطاريتك، تكون الصحة هي السعة الكاملة المقاسة مقسومة على السعة المقدّرة. الأساس الأدق.\n• دورات الشحن (كما يبلغ عنها أندرويد) — بعض الأجهزة تبلغ عن عدد دورات البطارية طوال عمرها؛ عندها تُقدَّر الصحة من منحنى تآكل نموذجي لبطاريات الليثيوم.\n• دورات الشحن (المتتبَّعة بواسطة هذا التطبيق) — خلاف ذلك تُحتسب الدورات من الشحن الموصول منذ تثبيت التطبيق (100 نقطة مئوية = دورة واحدة)، لذا على هاتف أقدم من التطبيق تُقلِّل من التآكل الفعلي.\n\nتستخدم التقديرات المبنية على الدورات منحنى عاماً — العمر الفعلي للدورات يختلف حسب المصنّع والخلية، سواء كانت التسمية Li-ion أو Li-Po:\n• 0–300 دورة: ممتازة (95–100%)\n• 300–500 دورة: جيدة (85–95%)\n• 500–800 دورة: مقبولة (70–85%)\n• 800+ دورة: ضعيفة (&lt;70%)\n\nنصيحة: تدوم بطاريات الليثيوم أطول عند إبقائها تقريباً بين 20% و80% وبعيداً عن الحرارة — الشحن المعتاد إلى 100% والتفريغ العميق كلاهما يزيد التآكل.</string>
     <string name="developed_by">طوّره</string>
     <!-- Proper name — transliteration; maintainer to confirm or keep Latin -->
     <string name="developer_name">المظفّر الحسن</string>

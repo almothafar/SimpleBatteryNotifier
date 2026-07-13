@@ -133,8 +133,15 @@ public class BatteryInsightsActivity extends BaseActivity {
 		healthStatusText.setText(BatteryHealthTracker.labelResId(grade));
 		healthStatusText.setTextColor(getHealthColor(grade));
 
-		// Tell the user whether the figure is measured (honest) or a cycle-based estimate
-		healthBasisText.setText(measured ? R.string.health_basis_measured : R.string.health_basis_estimated);
+		// Tell the user what the figure is based on. The cycle-based estimate distinguishes OS-reported
+		// cycles (whole battery life) from cycles this app tracked since install, which understate real
+		// wear on a phone older than the app (#114).
+		final int basisRes = measured
+		                     ? R.string.health_basis_measured
+		                     : BatteryHealthTracker.isCycleCountFromOs(this)
+		                       ? R.string.health_basis_estimated_os
+		                       : R.string.health_basis_estimated_tracked;
+		healthBasisText.setText(basisRes);
 
 		healthDescriptionText.setText(BatteryHealthTracker.describeHealthGrade(this, grade));
 	}
