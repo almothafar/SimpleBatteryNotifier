@@ -35,7 +35,7 @@ import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
-import com.almothafar.simplebatterynotifier.ui.widget.BatteryGaugeView;
+import com.almothafar.simplebatterynotifier.ui.widget.HorseshoeProgressBar;
 
 import java.util.List;
 
@@ -192,8 +192,8 @@ public class MainActivity extends BaseActivity {
 		startUpdateTimer();
 
 		// Resume the motion paused in onPause(); restarts only what the battery state still
-		// warrants (charging/discharging wave or critical breathing).
-		final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+		// warrants (charging/discharging wave, full pulse, or critical breathing).
+		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
 		gauge.resumeAnimations();
 	}
 
@@ -208,7 +208,7 @@ public class MainActivity extends BaseActivity {
 
 		// Motion is only auto-stopped when the view is destroyed (onDetachedFromWindow),
 		// not on backgrounding, so pause it here for the same reason we stop the timer.
-		final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
 		gauge.pauseAnimations();
 	}
 
@@ -262,7 +262,7 @@ public class MainActivity extends BaseActivity {
 	 * Runs on the main thread via {@link #handler}.
 	 */
 	private void refreshBatteryUi() {
-		final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
 		fillBatteryInfo();
 		gauge.setLevel(batteryPercentage);
 		gauge.setTitle(batteryPercentage + "%");
@@ -270,7 +270,7 @@ public class MainActivity extends BaseActivity {
 
 		// Drive the gauge motion: charging wave, full-on-charger idle pulse, or discharge wave.
 		if (nonNull(batteryDO)) {
-			gauge.setPowerState(powerStateOf(batteryDO.getStatus()));
+			gauge.setFlow(flowOf(batteryDO.getStatus()));
 		}
 
 		final FragmentManager fragmentManager = getSupportFragmentManager();
@@ -283,17 +283,17 @@ public class MainActivity extends BaseActivity {
 	}
 
 	/**
-	 * Map the OS battery status onto the gauge's three power states: charging animates forward,
-	 * full-on-charger idles with a periodic pulse, anything else counts as running on battery.
+	 * Map the OS battery status onto the gauge's three flow states: charging fills (wave forward),
+	 * full-on-charger idles with a periodic pulse, anything else counts as draining.
 	 */
-	private static BatteryGaugeView.Power powerStateOf(final int batteryStatus) {
+	private static HorseshoeProgressBar.Flow flowOf(final int batteryStatus) {
 		switch (batteryStatus) {
 			case BatteryManager.BATTERY_STATUS_CHARGING:
-				return BatteryGaugeView.Power.CHARGING;
+				return HorseshoeProgressBar.Flow.FILLING;
 			case BatteryManager.BATTERY_STATUS_FULL:
-				return BatteryGaugeView.Power.FULL;
+				return HorseshoeProgressBar.Flow.FULL;
 			default:
-				return BatteryGaugeView.Power.ON_BATTERY;
+				return HorseshoeProgressBar.Flow.DRAINING;
 		}
 	}
 
@@ -304,7 +304,7 @@ public class MainActivity extends BaseActivity {
 		fillBatteryInfo();
 		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 
-		final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
 		gauge.setThresholds(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20),
 				sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
 
@@ -360,7 +360,7 @@ public class MainActivity extends BaseActivity {
 						.putInt(getString(R.string._pref_key_warn_battery_level), warning)
 						.apply();
 
-				final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+				final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
 				gauge.setThresholds(critical, warning);
 			}
 		});

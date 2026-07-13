@@ -32,7 +32,7 @@
         android:background="@color/top_background_color"
         android:id="@+id/percentageLayout">
 
-        <com.almothafar.simplebatterynotifier.ui.widget.BatteryGaugeView
+        <com.almothafar.simplebatterynotifier.ui.widget.HorseshoeProgressBar
             android:id="@+id/batteryPercentage"
             style="@style/Widget.App.BatteryGauge"
             android:layout_width="wrap_content"
