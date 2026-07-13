@@ -1,6 +1,8 @@
 /*
- * Simple Battery Notifier
- * Copyright (C) 2016-2026 Al-Mothafar Al-Hasan
+ * HorseshoeProgressBar - an animated horseshoe-shaped progress gauge for Android.
+ * Part of Simple Battery Notifier <https://github.com/almothafar/SimpleBatteryNotifier>.
+ *
+ * Copyright (C) 2016-2026 Al-Mothafar Al-Hasan <https://github.com/almothafar>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +16,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * If you copy this class into another project, keep this header intact - it is the
+ * license and attribution notice for the file. GPLv3 applies to derivative works.
  */
 
 package com.almothafar.simplebatterynotifier.ui.widget;
