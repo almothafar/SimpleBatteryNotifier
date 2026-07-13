@@ -2,11 +2,6 @@
     <string name="app_name">Simple Battery Notifier</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_settings">Settings</string>
-    <string name="charger_connected">Charger connected</string>
-    <string name="charger_connected_ac">AC charger connected</string>
-    <string name="charger_connected_usb">USB charger connected</string>
-    <string name="charger_connected_wireless">Wireless charger connected</string>
-    <string name="charger_disconnected">Charger Disconnected</string>
     <string name="charging">Charging</string>
     <string name="discharging">Discharging</string>
     <string name="not_charging">Not Charging</string>
@@ -101,23 +96,22 @@
     <string name="critical_ignore_quiet_hours_summary_on">A critically low battery still alerts during quiet hours</string>
     <string name="critical_ignore_quiet_hours_summary_off">Critical alerts stay silent during quiet hours</string>
 
-    <string name="notification_critical_ticker">Your battery in critical level and below %1$d%%</string>
-    <string name="notification_critical_title">Healthy charge time</string>
-    <string name="notification_critical_content">Battery almost run out of power (%1$d%%)</string>
-    <string name="notification_critical_content_big">Your battery level is below critical level (%1$d%%), its time to connect your charger</string>
-    <string name="notification_warning_ticker">Your battery in midway and below %1$d%%</string>
-    <string name="notification_warning_title">Watch your usage</string>
-    <string name="notification_warning_content">You just need to watch your usage (%1$d%%)</string>
-    <string name="notification_warning_content_big">Battery level is at %1$d%%. You just need to watch your usage for your smartphone, but still no need for charger now</string>
-    <string name="notification_full_level_ticker">Your battery fully charged, you can disconnect your charger</string>
-    <string name="notification_full_level_title_healthy">Healthy charge completed</string>
-    <string name="notification_full_level_title_regular">Regular charge completed</string>
-    <string name="notification_full_level_content">You can use your phone</string>
-    <string name="notification_full_level_content_big">You can use your phone, you may disconnect your charger, or keep it and don\'t worry the battery will not get indigestion 😋</string>
+    <!-- Alert copy reworked in #114: neutral titles (the "healthy/regular" flip is retired) and
+         guidance aligned with the 20-80% advice instead of encouraging staying at 100%. -->
+    <string name="notification_critical_ticker">Battery critically low — below %1$d%%</string>
+    <string name="notification_critical_title">Battery critically low</string>
+    <string name="notification_critical_content">Battery almost empty (%1$d%%)</string>
+    <string name="notification_critical_content_big">Your battery is below the critical level (%1$d%%) — time to plug in.</string>
+    <string name="notification_warning_ticker">Battery below %1$d%%</string>
+    <string name="notification_warning_title">Battery getting low</string>
+    <string name="notification_warning_content">Battery at %1$d%% — keep an eye on your usage</string>
+    <string name="notification_warning_content_big">Battery level is at %1$d%%. No need to charge yet — but when it\'s convenient, plugging in before the battery runs very low is easiest on it.</string>
+    <string name="notification_full_level_ticker">Battery fully charged — you can unplug now</string>
+    <string name="notification_full_level_title">Battery fully charged</string>
+    <string name="notification_full_level_content">You can unplug your charger now</string>
+    <string name="notification_full_level_content_big">Charge complete — you can unplug now. Batteries age fastest when kept at 100%, so unplugging soon (and staying roughly between 20% and 80% day to day) helps the battery last longer.</string>
 
-    <string name="notification_charge_started_title_healthy">Healthy charging started</string>
-    <string name="notification_charge_started_title_regular">Regular charging started</string>
-    <string name="notification_charge_started_content">Battery charging with %1$s </string>
+    <string name="notification_charge_started_title">Charging started</string>
 
     <!-- Charge-connected message (issue #122): reports charging speed + wired/wireless instead of
          the old, unreliable "AC charger connected". -->
@@ -212,7 +206,10 @@
     <string name="clear">Clear</string>
     <string name="error_design_capacity_range">Enter a capacity between %1$d and %2$d mAh</string>
     <string name="health_basis_measured">Measured from rated capacity</string>
-    <string name="health_basis_estimated">Estimated from charge cycles</string>
+    <!-- #114: the cycle-based estimate is labelled by its source. OS-reported cycles cover the
+         battery's whole life; app-tracked cycles start at install, so they understate real wear. -->
+    <string name="health_basis_estimated_os">Estimated from charge cycles (reported by Android)</string>
+    <string name="health_basis_estimated_tracked">Estimated from cycles tracked since install — real wear may be higher</string>
 
     <!-- #94: shown when the device's charge counter is too inaccurate to trust the capacity/health reading.
          Shared by the home Capacity row ("Unknown" + info icon) and the insights health figure (warning icon). -->
@@ -230,7 +227,7 @@
     <string name="battery_health_desc_fair">Your battery shows moderate wear. You may notice slightly reduced battery life.</string>
     <string name="battery_health_desc_poor">Your battery has significant wear. Consider battery replacement if experiencing poor performance.</string>
     <string name="how_it_works">How It Works</string>
-    <string name="how_battery_health_works" formatted="false" tools:ignore="TypographyDashes">Battery health is estimated based on charge cycles. A charge cycle counts when your battery charges from 20% or below to 95% or above. This tracking starts when you first use this app.\n\nHealth estimates:\n• 0–300 cycles: Excellent (95–100%)\n• 300-500 cycles: Good (85-95%)\n• 500-800 cycles: Fair (70-85%)\n• 800+ cycles: Poor (&lt;70%)</string>
+    <string name="how_battery_health_works" formatted="false" tools:ignore="TypographyDashes">Battery health is shown from the best available basis:\n\n• Measured — when you set your battery\'s rated capacity, health is the measured full capacity divided by the rated capacity. The most accurate basis.\n• Charge cycles (reported by Android) — some devices report the battery\'s lifetime cycle count; health is then estimated from a typical lithium-ion wear curve.\n• Charge cycles (tracked by this app) — otherwise, cycles are counted from the charge delivered since the app was installed (100 percentage-points = 1 cycle), so on a phone older than the app it understates real wear.\n\nCycle-based estimates use a generic curve — real cycle life varies by manufacturer and cell, whether the label says Li-ion or Li-Po:\n• 0–300 cycles: Excellent (95–100%)\n• 300–500 cycles: Good (85–95%)\n• 500–800 cycles: Fair (70–85%)\n• 800+ cycles: Poor (&lt;70%)\n\nTip: lithium batteries last longest kept roughly between 20% and 80% and away from heat — habitually charging to 100% and deep discharges both add wear.</string>
     <string name="developed_by">Developed by</string>
     <string name="developer_name">Al-Mothafar Al-Hasan</string>
     <string name="developer_link" translatable="false">github.com/almothafar</string>

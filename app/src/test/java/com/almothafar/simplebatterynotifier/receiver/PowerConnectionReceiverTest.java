@@ -27,8 +27,8 @@ import static org.mockito.Mockito.never;
 import static org.robolectric.Shadows.shadowOf;
 
 /**
- * Robolectric + Mockito tests for {@link PowerConnectionReceiver}: wired/wireless detection, the
- * healthy-charge flag, plugged-state de-duplication, and the disconnect cleanup path. The
+ * Robolectric + Mockito tests for {@link PowerConnectionReceiver}: wired/wireless detection,
+ * plugged-state de-duplication, and the disconnect cleanup path. The
  * {@link NotificationService} static methods are mocked so we can assert what the receiver decides
  * to do from the sticky {@code ACTION_BATTERY_CHANGED} intent.
  * <p>
@@ -59,8 +59,7 @@ public class PowerConnectionReceiverTest {
 			receive();
 			runPendingSample();
 			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
-					any(ChargeSpeed.class), eq(false), eq(false)));
-			ns.verify(() -> NotificationService.setIsHealthy(false));
+					any(ChargeSpeed.class), eq(false)));
 		}
 	}
 
@@ -72,20 +71,19 @@ public class PowerConnectionReceiverTest {
 			receive();
 			runPendingSample();
 			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
-					any(ChargeSpeed.class), eq(true), eq(false)));
+					any(ChargeSpeed.class), eq(true)));
 		}
 	}
 
 	@Test
-	public void connectedAtLowBattery_marksChargeHealthy() {
+	public void connectedAtLowBattery_notifiesLikeAnyOtherLevel() {
 		publishBattery(BatteryManager.BATTERY_PLUGGED_USB, 10, 100);
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
 			runPendingSample();
-			ns.verify(() -> NotificationService.setIsHealthy(true));
 			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
-					any(ChargeSpeed.class), eq(false), eq(true)));
+					any(ChargeSpeed.class), eq(false)));
 		}
 	}
 
@@ -98,7 +96,7 @@ public class PowerConnectionReceiverTest {
 			receive();
 			runPendingSample();
 			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
-					any(ChargeSpeed.class), anyBoolean(), anyBoolean()), never());
+					any(ChargeSpeed.class), anyBoolean()), never());
 		}
 	}
 
@@ -112,7 +110,7 @@ public class PowerConnectionReceiverTest {
 			runPendingSample();
 			ns.verify(() -> NotificationService.clearNotifications(any(Context.class)));
 			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
-					any(ChargeSpeed.class), anyBoolean(), anyBoolean()), never());
+					any(ChargeSpeed.class), anyBoolean()), never());
 		}
 	}
 

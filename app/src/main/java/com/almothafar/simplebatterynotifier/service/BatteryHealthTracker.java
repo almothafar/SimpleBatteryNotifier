@@ -195,6 +195,26 @@ public class BatteryHealthTracker {
 	}
 
 	/**
+	 * Whether the effective cycle count comes from the OS ({@code EXTRA_CYCLE_COUNT}, Android 14+)
+	 * rather than this app's own tracking.
+	 * <p>
+	 * The distinction matters for honesty (#114): the OS count covers the battery's whole life, while
+	 * the app-tracked estimate only counts charge delivered since the app was installed — on an older
+	 * phone it starts at zero and therefore understates real wear. The insights screen labels the
+	 * health basis differently for the two sources.
+	 *
+	 * @param context Application context
+	 *
+	 * @return true when the OS reports a cycle count for this device
+	 */
+	public static boolean isCycleCountFromOs(final Context context) {
+		if (isNull(context)) {
+			return false;
+		}
+		return SystemService.getChargeCycleCount(context) > 0;
+	}
+
+	/**
 	 * Gets the number of debug-injected charge cycles (0 in normal use). Tracked separately from real
 	 * cycles so {@link #resetDebugData} can clear them without touching genuine tracking.
 	 *

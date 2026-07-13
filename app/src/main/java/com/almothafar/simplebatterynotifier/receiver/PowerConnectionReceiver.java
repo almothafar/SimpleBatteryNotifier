@@ -30,11 +30,6 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	private static final String TAG = PowerConnectionReceiver.class.getSimpleName();
 
 	/**
-	 * Battery percentage threshold for healthy charging (charge when battery is low)
-	 */
-	private static final int HEALTHY_CHARGE_THRESHOLD = 20;
-
-	/**
 	 * Delay before sampling the charging current, giving it time to stabilise after plug-in.
 	 * Package-visible so tests can advance the main looper by exactly this amount.
 	 */
@@ -103,18 +98,15 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	/**
 	 * Handle charger connected event.
 	 * <p>
-	 * Records whether this is a "healthy" charge (started at low battery), determines wired vs
-	 * wireless, and schedules the speed sample + notification for a short delay later.
+	 * Determines wired vs wireless and schedules the speed sample + notification for a short delay
+	 * later. (The old "healthy charge" flag — plugged in at low battery — was retired in #114:
+	 * starting low isn't a virtue under modern 20-80% guidance, so the titles no longer flip on it.)
 	 *
 	 * @param context      The application context
 	 * @param pluggedState The type of charger plugged in
 	 * @param percentage   Current battery percentage
 	 */
 	private void handleChargerConnected(final Context context, final int pluggedState, final int percentage) {
-		// Determine if this is a "healthy" charge (starting at low battery level)
-		final boolean isHealthyCharge = percentage <= HEALTHY_CHARGE_THRESHOLD;
-		NotificationService.setIsHealthy(isHealthyCharge);
-
 		final boolean wireless = pluggedState == BatteryManager.BATTERY_PLUGGED_WIRELESS;
 		final Context appContext = context.getApplicationContext();
 
@@ -125,11 +117,10 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 				return;
 			}
 			final ChargeSpeed speed = SystemService.getChargeSpeed(appContext);
-			NotificationService.notifyChargeConnected(appContext, speed, wireless, isHealthyCharge);
+			NotificationService.notifyChargeConnected(appContext, speed, wireless);
 		});
 
-		Log.i(TAG, String.format("Charger connected (Battery: %d%%, Wireless: %s, Healthy: %s)",
-				percentage, wireless, isHealthyCharge));
+		Log.i(TAG, String.format("Charger connected (Battery: %d%%, Wireless: %s)", percentage, wireless));
 	}
 
 	/**
