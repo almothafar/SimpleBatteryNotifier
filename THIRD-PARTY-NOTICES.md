@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Simple Battery Notifier is licensed under the GNU GPL v3 (see [LICENSE](LICENSE)).
+Simple Battery Notifier is licensed under the GNU GPL v3 (see [LICENSE.md](LICENSE.md)).
 It includes third-party code that is provided under its own license, listed below.
 
 ## circular_progress_bar

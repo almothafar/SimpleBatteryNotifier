@@ -3,7 +3,7 @@
 [![Android CI](https://github.com/almothafar/SimpleBatteryNotifier/workflows/Android%20CI/badge.svg)](https://github.com/almothafar/SimpleBatteryNotifier/actions)
 [![Android](https://img.shields.io/badge/Android-8.0%2B%20(API%2026%2B)-green?logo=android)](https://developer.android.com/about/versions/oreo)
 [![Java](https://img.shields.io/badge/Java-25-orange?logo=openjdk)](https://openjdk.org/)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.md)
 
 A lightweight Android app to keep you informed about your battery status — without heavy resource usage or unnecessary "power saver" bloat.
 
@@ -126,7 +126,7 @@ Before submitting:
 ---
 
 ## 📄 License
-Licensed under the **GNU General Public License v3.0** — see the [LICENSE](LICENSE) file.
+Licensed under the **GNU General Public License v3.0** — see the [LICENSE.md](LICENSE.md) file.
 
 This is free, open-source software: you may use, study, modify, and share it, **including commercially**. The one condition is copyleft — if you distribute this app or a derivative of it, you must keep it open source under GPLv3 and make your source code available. Closed-source / proprietary forks are not permitted.
 

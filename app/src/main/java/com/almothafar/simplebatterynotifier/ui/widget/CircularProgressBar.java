@@ -12,7 +12,7 @@
  * copy of the Apache License 2.0 is provided in licenses/Apache-2.0.txt and the
  * attribution is recorded in THIRD-PARTY-NOTICES.md. Apache 2.0 is compatible
  * with the GNU GPL v3, so the modifications and the combined work are licensed
- * under the GNU GPL v3 (see the project LICENSE).
+ * under the GNU GPL v3 (see the project LICENSE.md).
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
