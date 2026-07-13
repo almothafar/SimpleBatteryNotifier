@@ -383,10 +383,38 @@ public class BatteryDetailsFragment extends Fragment {
 			valuesMap.put(rateLabel, BatteryRateTracker.formatRateValue(view.getContext(), rate.percentPerHour()));
 			rateValueColor = rateColor(view.getContext(), rate);
 		}
+		addTimeToFullRow(view, rate);
 		if (rate.hasCurrent()) {
 			valuesMap.put(getResources().getString(R.string.battery_current),
 					BatteryRateTracker.formatCurrentValue(view.getContext(), rate.currentMilliAmps()));
 		}
+	}
+
+	/**
+	 * Adds the estimated time-to-full row directly below the charge rate it is derived from (#124). Shown
+	 * only while charging, with a trustworthy rate, and below the taper top (level &lt; 99%) — hidden
+	 * otherwise, so the user never sees a garbage "0m" or a wildly optimistic figure right as the charge
+	 * tapers. The estimate is a rough linear projection (see
+	 * {@link BatteryRateTracker#estimateMinutesToFull}); precision is a non-goal — the OS owns the accurate
+	 * number. Reuses the already-computed {@code rate}; only the level is read here.
+	 *
+	 * @param view The fragment view
+	 * @param rate The already-computed rate for this refresh
+	 */
+	private void addTimeToFullRow(final View view, final BatteryRateTracker.BatteryRate rate) {
+		if (!rate.charging() || !rate.hasRate()) {
+			return;
+		}
+		final int level = Math.round(batteryDO.getBatteryPercentage());
+		if (level >= 99) {
+			return;
+		}
+		final int minutes = BatteryRateTracker.estimateMinutesToFull(level, rate.percentPerHour());
+		if (minutes <= 0) {
+			return;
+		}
+		valuesMap.put(getResources().getString(R.string.time_to_full),
+				BatteryRateTracker.formatTimeToFull(view.getContext(), minutes));
 	}
 
 	/**

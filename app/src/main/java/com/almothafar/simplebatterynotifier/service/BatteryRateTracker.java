@@ -412,6 +412,45 @@ public final class BatteryRateTracker {
 	}
 
 	/**
+	 * Estimated minutes until full from the smoothed charge rate (#124): a capacity-free linear projection,
+	 * {@code (100 − level) / ratePercentPerHour} hours, so it works even where the charge counter is
+	 * unreliable (Kirin). Deliberately simple — it does <b>not</b> model the charge-curve taper above ~80%,
+	 * so it overshoots near full; precision is a non-goal (the OS owns the accurate figure). Callers gate on
+	 * charging + a trustworthy rate + a level below the taper top before showing it. Pure so it is testable.
+	 *
+	 * @param level              current battery level (0-100)
+	 * @param ratePercentPerHour smoothed charge-rate magnitude in %/h
+	 *
+	 * @return estimated minutes to full, or 0 when not computable (non-positive rate, or already at/above full)
+	 */
+	public static int estimateMinutesToFull(final int level, final int ratePercentPerHour) {
+		if (ratePercentPerHour <= 0 || level >= 100) {
+			return 0;
+		}
+		final int remaining = 100 - level;
+		return (int) Math.round(remaining * 60.0 / ratePercentPerHour);
+	}
+
+	/**
+	 * Formats a time-to-full estimate as a compact {@code "~1h 20m"} / {@code "~45m"}, with Western digits
+	 * in every locale (#96). The units stay Latin (h/m), matching {@code battery_rate_value} and
+	 * {@code design_capacity_value}.
+	 *
+	 * @param context      Application context
+	 * @param totalMinutes estimated minutes to full (from {@link #estimateMinutesToFull}); must be &gt; 0
+	 *
+	 * @return the formatted duration string
+	 */
+	public static String formatTimeToFull(final Context context, final int totalMinutes) {
+		final int hours = totalMinutes / 60;
+		final int minutes = totalMinutes % 60;
+		if (hours > 0) {
+			return context.getString(R.string.time_to_full_value_hm, String.valueOf(hours), String.valueOf(minutes));
+		}
+		return context.getString(R.string.time_to_full_value_m, String.valueOf(minutes));
+	}
+
+	/**
 	 * Serializes a window to a compact string ("t:level:currentUa" joined by ';'). Pure and testable.
 	 *
 	 * @param window samples oldest-first

@@ -32,6 +32,8 @@
     <string name="drain_rate">Drain rate</string>
     <string name="charge_rate">Charge rate</string>
     <string name="battery_current">Current</string>
+    <!-- #124: estimated time to full, shown below the charge rate while charging -->
+    <string name="time_to_full">Time to full</string>
 
     <string name="battery">On Battery</string>
     <string name="charger_ac">AC Charger</string>
@@ -162,6 +164,10 @@
     <string name="battery_rate_value">%1$s%%/h</string>
     <!-- %1$s is a signed Western-digit number, e.g. "+900" or "−450" -->
     <string name="battery_current_value">%1$s mA</string>
+    <!-- #124: time-to-full duration. %1$s hours, %2$s minutes — Western-digit numbers (String.valueOf);
+         the h/m units stay Latin like the other rate values (#96). -->
+    <string name="time_to_full_value_hm">~%1$sh %2$sm</string>
+    <string name="time_to_full_value_m">~%1$sm</string>
     <string name="pref_cat_title_drain">Battery Drain</string>
     <string name="show_rate_in_notification">Show rate in status notification</string>
     <string name="show_rate_in_notification_summary_on">The ongoing notification shows the live drain/charge rate next to the status</string>
