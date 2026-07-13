@@ -247,7 +247,7 @@
     <string name="about_description">تطبيق خفيف يُبقيك على اطّلاع على حالة بطاريتك — تنبيهات عند المستويين التحذيري والحرج، وإشعارات اكتمال الشحن وارتفاع الحرارة، وسرعة الشحن، ومعلومات عن صحة البطارية. بلا حشو ولا حيل «توفير طاقة» — مجرّد تنبيهات بطارية بسيطة.</string>
     <!-- %1$s is the developer name -->
     <string name="about_developer">طوّره %1$s</string>
-    <string name="about_open_source">برنامج حر ومفتوح المصدر، مرخَّص بموجب رخصة Apache 2.0.</string>
+    <string name="about_open_source">برنامج حر ومفتوح المصدر، مرخَّص بموجب رخصة جنو العمومية العامة الإصدار 3.</string>
     <string name="about_disclaimer">قراءات البطارية وأرقام الصحة والشحن مصدرها جهازك وهي تقديرية — اعتبرها إرشادية لا قياسات دقيقة. يُقدَّم هذا التطبيق «كما هو» دون أي ضمان من أي نوع.</string>
     <string name="about_view_github">عرض على GitHub</string>
     <!-- Summary of the version footer at the bottom of the Settings root screen (#113) -->

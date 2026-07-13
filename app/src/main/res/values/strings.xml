@@ -259,7 +259,7 @@
     <string name="about_description">A lightweight app that keeps you informed about your battery — alerts at warning and critical levels, full-charge and high-temperature notifications, charging speed, and battery health insights. No bloat, no “power saver” gimmicks — just simple battery notifications.</string>
     <!-- %1$s is the developer name -->
     <string name="about_developer">Developed by %1$s</string>
-    <string name="about_open_source">Free and open-source software, licensed under the Apache License 2.0.</string>
+    <string name="about_open_source">Free and open-source software, licensed under the GNU General Public License v3.0.</string>
     <string name="about_disclaimer">Battery readings, health and charging figures come from your device and are estimates — treat them as guidance, not exact measurements. This app is provided “as is”, without warranty of any kind.</string>
     <string name="about_view_github">View on GitHub</string>
     <string name="about_github_url" translatable="false">https://github.com/almothafar/SimpleBatteryNotifier</string>
