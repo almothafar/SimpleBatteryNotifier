@@ -104,7 +104,7 @@
     <string name="notification_full_level_ticker">اكتمل شحن البطارية — يمكنك فصل الشاحن الآن</string>
     <string name="notification_full_level_title">اكتمل شحن البطارية</string>
     <string name="notification_full_level_content">يمكنك فصل الشاحن الآن</string>
-    <string name="notification_full_level_content_big">اكتمل الشحن — يمكنك فصل الشاحن الآن. تتقادم البطاريات أسرع ما يكون عند إبقائها على 100%، لذا فصل الشاحن قريباً (والبقاء تقريباً بين 20% و80% في الاستخدام اليومي) يساعد بطاريتك على أن تدوم أطول.</string>
+    <string name="notification_full_level_content_big" formatted="false">اكتمل الشحن — يمكنك فصل الشاحن الآن. تتقادم البطاريات أسرع ما يكون عند إبقائها على 100%، لذا فصل الشاحن قريباً (والبقاء تقريباً بين 20% و80% في الاستخدام اليومي) يساعد بطاريتك على أن تدوم أطول.</string>
 
     <string name="notification_charge_started_title">بدأ الشحن</string>
 

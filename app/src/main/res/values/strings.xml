@@ -109,7 +109,7 @@
     <string name="notification_full_level_ticker">Battery fully charged — you can unplug now</string>
     <string name="notification_full_level_title">Battery fully charged</string>
     <string name="notification_full_level_content">You can unplug your charger now</string>
-    <string name="notification_full_level_content_big">Charge complete — you can unplug now. Batteries age fastest when kept at 100%, so unplugging soon (and staying roughly between 20% and 80% day to day) helps the battery last longer.</string>
+    <string name="notification_full_level_content_big" formatted="false">Charge complete — you can unplug now. Batteries age fastest when kept at 100%, so unplugging soon (and staying roughly between 20% and 80% day to day) helps the battery last longer.</string>
 
     <string name="notification_charge_started_title">Charging started</string>
 
