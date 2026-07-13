@@ -132,8 +132,6 @@ This is free, open-source software: you may use, study, modify, and share it, **
 
 Copyright © 2024–2026 Al-Mothafar Al-Hasan
 
-**Acknowledgements:** the battery gauge (`CircularProgressBar`) is derived from [circular_progress_bar](https://github.com/ylyc/circular_progress_bar) by Leon Cheng, used under the Apache License 2.0 — see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
-
 ---
 
 ## 🏆 Code Quality

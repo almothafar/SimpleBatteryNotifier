@@ -35,7 +35,7 @@ import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
-import com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar;
+import com.almothafar.simplebatterynotifier.ui.widget.HorseshoeProgressBar;
 
 import java.util.List;
 
@@ -191,10 +191,10 @@ public class MainActivity extends BaseActivity {
 
 		startUpdateTimer();
 
-		// Resume the pulse paused in onPause(); restarts only if the battery state still
-		// warrants it (charging or critical).
-		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-		progressBar.resumePulseAnimation();
+		// Resume the motion paused in onPause(); restarts only what the battery state still
+		// warrants (charging/discharging wave, full pulse, or critical breathing).
+		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
+		gauge.resumeAnimations();
 	}
 
 	/**
@@ -206,10 +206,10 @@ public class MainActivity extends BaseActivity {
 		super.onPause();
 		stopUpdateTimer();
 
-		// The pulse is only auto-stopped when the view is destroyed (onDetachedFromWindow),
+		// Motion is only auto-stopped when the view is destroyed (onDetachedFromWindow),
 		// not on backgrounding, so pause it here for the same reason we stop the timer.
-		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-		progressBar.pausePulseAnimation();
+		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
+		gauge.pauseAnimations();
 	}
 
 	/**
@@ -262,16 +262,15 @@ public class MainActivity extends BaseActivity {
 	 * Runs on the main thread via {@link #handler}.
 	 */
 	private void refreshBatteryUi() {
-		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
+		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
 		fillBatteryInfo();
-		progressBar.setProgress(batteryPercentage);
-		progressBar.setTitle(batteryPercentage + "%");
-		progressBar.setSubTitle(subTitle);
+		gauge.setLevel(batteryPercentage);
+		gauge.setTitle(batteryPercentage + "%");
+		gauge.setStatusText(subTitle);
 
-		// Update charging animation based on battery status
+		// Drive the gauge motion: charging wave, full-on-charger idle pulse, or discharge wave.
 		if (nonNull(batteryDO)) {
-			final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
-			progressBar.setCharging(isCharging);
+			gauge.setFlow(flowOf(batteryDO.getStatus()));
 		}
 
 		final FragmentManager fragmentManager = getSupportFragmentManager();
@@ -284,36 +283,37 @@ public class MainActivity extends BaseActivity {
 	}
 
 	/**
+	 * Map the OS battery status onto the gauge's three flow states: charging fills (wave forward),
+	 * full-on-charger idles with a periodic pulse, anything else counts as draining.
+	 */
+	private static HorseshoeProgressBar.Flow flowOf(final int batteryStatus) {
+		switch (batteryStatus) {
+			case BatteryManager.BATTERY_STATUS_CHARGING:
+				return HorseshoeProgressBar.Flow.FILLING;
+			case BatteryManager.BATTERY_STATUS_FULL:
+				return HorseshoeProgressBar.Flow.FULL;
+			default:
+				return HorseshoeProgressBar.Flow.DRAINING;
+		}
+	}
+
+	/**
 	 * Initialize first values and animate the progress bar
 	 */
 	private void initializeFirstValues() {
 		fillBatteryInfo();
 		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 
-		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-		progressBar.setWarningLevel(sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
-		progressBar.setCriticalLevel(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20));
+		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
+		gauge.setThresholds(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20),
+				sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
 
 		// Keep the in-fly slider in sync with values that may have changed in Settings.
 		syncThresholdSlider();
 
-		progressBar.animateProgressTo(0, batteryPercentage, new CircularProgressBar.ProgressAnimationListener() {
-
-			@Override
-			public void onAnimationStart() {
-				// Animation started
-			}
-
-			@Override
-			public void onAnimationFinish() {
-				// Animation finished
-			}
-
-			@Override
-			public void onAnimationProgress(final int progress) {
-				progressBar.setTitle(progress + "%");
-				progressBar.setSubTitle(subTitle);
-			}
+		gauge.animateLevelTo(batteryPercentage, progress -> {
+			gauge.setTitle(progress + "%");
+			gauge.setStatusText(subTitle);
 		});
 	}
 
@@ -360,10 +360,8 @@ public class MainActivity extends BaseActivity {
 						.putInt(getString(R.string._pref_key_warn_battery_level), warning)
 						.apply();
 
-				final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-				progressBar.setCriticalLevel(critical);
-				progressBar.setWarningLevel(warning);
-				progressBar.invalidate();
+				final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
+				gauge.setThresholds(critical, warning);
 			}
 		});
 

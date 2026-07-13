@@ -18,21 +18,18 @@
 
     <style name="Widget" />
 
-    <style name="Widget.ProgressBar.CircularProgressBar" parent="Widget">
-        <item name="android:indeterminateOnly">false</item>
-        <item name="android:adjustViewBounds">true</item>
-        <item name="cpb_progressColor">@color/circular_progress_default_progress</item>
-        <item name="cpb_hasShadow">true</item>
-        <item name="cpb_strokeWidth">30</item>
-        <item name="cpb_titleColor">@color/circular_progress_default_title</item>
-        <item name="cpb_titleTextSize">48</item>
-        <item name="cpb_subtitleColor">@color/circular_progress_default_subtitle</item>
-        <item name="cpb_subtitleTextSize">20</item>
-    </style>
-
-    <style name="Widget.ProgressBar.Holo.CircularProgressBar" parent="Widget.ProgressBar.CircularProgressBar">
-        <item name="cpb_hasShadow">false</item>
-        <item name="cpb_strokeWidth">5</item>
+    <style name="Widget.App.BatteryGauge" parent="Widget">
+        <item name="gaugeShowShadow">true</item>
+        <item name="gaugeStrokeWidth">30dp</item>
+        <item name="gaugeTrackColor">@color/circular_progress_default_background</item>
+        <item name="gaugeLevelColor">@color/circular_progress_default_progress</item>
+        <item name="gaugeWarningColor">@color/circular_progress_default_progress_warning</item>
+        <item name="gaugeAlertColor">@color/circular_progress_default_progress_alert</item>
+        <item name="gaugeTitleColor">@color/circular_progress_default_title</item>
+        <item name="gaugeTitleTextSize">48dp</item>
+        <item name="gaugeStatusColor">@color/circular_progress_default_subtitle</item>
+        <item name="gaugeStatusTextSize">20dp</item>
+        <item name="gaugeLevelDescription">@string/battery_progress_description</item>
     </style>
 
     <!-- Toolbar style for Material3 -->
