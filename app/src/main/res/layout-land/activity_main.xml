@@ -1,5 +1,4 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:circular="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -17,13 +16,13 @@
         android:background="@color/top_background_color"
         android:id="@+id/percentageLayout">
 
-        <com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar
+        <com.almothafar.simplebatterynotifier.ui.widget.BatteryGaugeView
             android:id="@+id/batteryPercentage"
-            style="@style/Widget.ProgressBar.CircularProgressBar"
+            style="@style/Widget.App.BatteryGauge"
             android:layout_width="wrap_content"
             android:layout_height="200dp"
-            circular:cpb_subtitle="subtitle"
-            circular:cpb_title="Title"
+            tools:gaugeTitle="100%"
+            tools:gaugeStatusText="Charging"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="-10dp" />
     </LinearLayout>

@@ -35,7 +35,7 @@ import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
-import com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar;
+import com.almothafar.simplebatterynotifier.ui.widget.BatteryGaugeView;
 
 import java.util.List;
 
@@ -191,10 +191,10 @@ public class MainActivity extends BaseActivity {
 
 		startUpdateTimer();
 
-		// Resume the pulse paused in onPause(); restarts only if the battery state still
-		// warrants it (charging or critical).
-		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-		progressBar.resumePulseAnimation();
+		// Resume the motion paused in onPause(); restarts only what the battery state still
+		// warrants (charging/discharging wave or critical breathing).
+		final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+		gauge.resumeAnimations();
 	}
 
 	/**
@@ -206,10 +206,10 @@ public class MainActivity extends BaseActivity {
 		super.onPause();
 		stopUpdateTimer();
 
-		// The pulse is only auto-stopped when the view is destroyed (onDetachedFromWindow),
+		// Motion is only auto-stopped when the view is destroyed (onDetachedFromWindow),
 		// not on backgrounding, so pause it here for the same reason we stop the timer.
-		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-		progressBar.pausePulseAnimation();
+		final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+		gauge.pauseAnimations();
 	}
 
 	/**
@@ -262,16 +262,16 @@ public class MainActivity extends BaseActivity {
 	 * Runs on the main thread via {@link #handler}.
 	 */
 	private void refreshBatteryUi() {
-		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
+		final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
 		fillBatteryInfo();
-		progressBar.setProgress(batteryPercentage);
-		progressBar.setTitle(batteryPercentage + "%");
-		progressBar.setSubTitle(subTitle);
+		gauge.setLevel(batteryPercentage);
+		gauge.setTitle(batteryPercentage + "%");
+		gauge.setStatusText(subTitle);
 
-		// Update charging animation based on battery status
+		// Update the wave direction based on battery status
 		if (nonNull(batteryDO)) {
 			final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
-			progressBar.setCharging(isCharging);
+			gauge.setCharging(isCharging);
 		}
 
 		final FragmentManager fragmentManager = getSupportFragmentManager();
@@ -290,30 +290,16 @@ public class MainActivity extends BaseActivity {
 		fillBatteryInfo();
 		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 
-		final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-		progressBar.setWarningLevel(sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
-		progressBar.setCriticalLevel(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20));
+		final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+		gauge.setThresholds(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20),
+				sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
 
 		// Keep the in-fly slider in sync with values that may have changed in Settings.
 		syncThresholdSlider();
 
-		progressBar.animateProgressTo(0, batteryPercentage, new CircularProgressBar.ProgressAnimationListener() {
-
-			@Override
-			public void onAnimationStart() {
-				// Animation started
-			}
-
-			@Override
-			public void onAnimationFinish() {
-				// Animation finished
-			}
-
-			@Override
-			public void onAnimationProgress(final int progress) {
-				progressBar.setTitle(progress + "%");
-				progressBar.setSubTitle(subTitle);
-			}
+		gauge.animateLevelTo(batteryPercentage, progress -> {
+			gauge.setTitle(progress + "%");
+			gauge.setStatusText(subTitle);
 		});
 	}
 
@@ -360,10 +346,8 @@ public class MainActivity extends BaseActivity {
 						.putInt(getString(R.string._pref_key_warn_battery_level), warning)
 						.apply();
 
-				final CircularProgressBar progressBar = findViewById(R.id.batteryPercentage);
-				progressBar.setCriticalLevel(critical);
-				progressBar.setWarningLevel(warning);
-				progressBar.invalidate();
+				final BatteryGaugeView gauge = findViewById(R.id.batteryPercentage);
+				gauge.setThresholds(critical, warning);
 			}
 		});
 

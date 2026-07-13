@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="CircularProgressBar">
-        <attr name="cpb_hasShadow" format="boolean"/>
-        <attr name="cpb_progressColor" format="color"/>
-        <attr name="cpb_backgroundColor" format="color"/>
-        <attr name="cpb_title" format="string"/>
-        <attr name="cpb_titleColor" format="color"/>
-        <attr name="cpb_subtitle" format="string"/>
-        <attr name="cpb_titleTextSize" format="integer"/>
-        <attr name="cpb_subtitleColor" format="color"/>
-        <attr name="cpb_subtitleTextSize" format="integer"/>
-        <attr name="cpb_strokeWidth" format="integer"/>
+    <declare-styleable name="BatteryGaugeView">
+        <attr name="gaugeStrokeWidth" format="dimension"/>
+        <attr name="gaugeTrackColor" format="color"/>
+        <attr name="gaugeTitle" format="string"/>
+        <attr name="gaugeTitleColor" format="color"/>
+        <attr name="gaugeTitleTextSize" format="dimension"/>
+        <attr name="gaugeStatusText" format="string"/>
+        <attr name="gaugeStatusColor" format="color"/>
+        <attr name="gaugeStatusTextSize" format="dimension"/>
+        <attr name="gaugeShowShadow" format="boolean"/>
     </declare-styleable>
 
     <declare-styleable name="BatteryRangeSliderPreference">

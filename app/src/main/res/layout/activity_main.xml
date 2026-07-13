@@ -32,13 +32,13 @@
         android:background="@color/top_background_color"
         android:id="@+id/percentageLayout">
 
-        <com.almothafar.simplebatterynotifier.ui.widget.CircularProgressBar
+        <com.almothafar.simplebatterynotifier.ui.widget.BatteryGaugeView
             android:id="@+id/batteryPercentage"
-            style="@style/Widget.ProgressBar.CircularProgressBar"
+            style="@style/Widget.App.BatteryGauge"
             android:layout_width="wrap_content"
             android:layout_height="160dp"
-            tools:cpb_subtitle="subtitle"
-            tools:cpb_title="Title"
+            tools:gaugeTitle="100%"
+            tools:gaugeStatusText="Charging"
             android:layout_marginTop="-2dp"
             android:layout_marginBottom="-10dp" />
     </LinearLayout>
