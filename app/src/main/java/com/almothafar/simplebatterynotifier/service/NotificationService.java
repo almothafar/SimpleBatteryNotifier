@@ -1001,6 +1001,15 @@ public final class NotificationService {
 		if (!showRate) {
 			return statusLabel;
 		}
+		// While charging, humans think in charger speed, not %/h — show the estimated tier + wattage when we
+		// can (#125). The ChargeSpeed read (CURRENT_NOW × voltage) is charging-only, so the discharging path
+		// below is untouched; it falls through to the %/h → mA → plain chain when the speed can't be estimated.
+		if (rate.charging()) {
+			final String chargingSpeed = chargingSpeedSegment(context);
+			if (nonNull(chargingSpeed)) {
+				return chargingSpeed;
+			}
+		}
 		if (rate.hasRate()) {
 			return statusLabel + " " + BatteryRateTracker.formatRateValue(context, rate.percentPerHour());
 		}
@@ -1008,6 +1017,30 @@ public final class NotificationService {
 			return statusLabel + " " + BatteryRateTracker.formatCurrentValue(context, rate.currentMilliAmps());
 		}
 		return statusLabel;
+	}
+
+	/**
+	 * The charging-speed segment for the ongoing status notification — the estimated tier and wattage, e.g.
+	 * "Fast charging · ~18 W", or just the tier ("Slow charging") when the wattage rounds below 1 W (#125).
+	 * The tier label already reads as "… charging", so it replaces the plain "Charging" status word rather
+	 * than being appended to it. Returns null when the speed can't be estimated (e.g. a device that doesn't
+	 * report {@code CURRENT_NOW}), so the caller falls back to the %/h → mA → plain chain.
+	 *
+	 * @param context The application context
+	 * @return the formatted charging-speed segment, or null when the charge speed is unknown
+	 */
+	private static String chargingSpeedSegment(final Context context) {
+		final ChargeSpeed speed = SystemService.getChargeSpeed(context);
+		if (!speed.isKnown()) {
+			return null;
+		}
+		final String tierLabel = context.getString(tierLabelRes(speed.getTier()));
+		final int watts = speed.getWatts();
+		if (watts < 1) {
+			return tierLabel; // sub-watt (e.g. trickle): "~0 W" would read as an error
+		}
+		// %2$s via String.valueOf keeps the wattage in Western digits (0-9) in every locale (#96).
+		return context.getString(R.string.notification_status_charge_power, tierLabel, String.valueOf(watts));
 	}
 
 	/**

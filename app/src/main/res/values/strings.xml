@@ -130,6 +130,10 @@
     <string name="charge_connected_tier">%1$s · %2$s</string>
     <!-- e.g. "Wired charging" (when the charging speed can't be estimated) -->
     <string name="charge_connected_plain">%1$s charging</string>
+    <!-- #125: ongoing status notification while charging — tier + estimated watts (no wired/wireless
+         source needed here), e.g. "Fast charging · ~18 W". %2$s is Western-digit (String.valueOf), 0-9
+         in every locale (#96). -->
+    <string name="notification_status_charge_power">%1$s · ~%2$s W</string>
 
     <!-- "Charge notification style" preference (issue #122). The summary shows the current choice
          via useSimpleSummaryProvider, so no separate summary string is needed. -->
