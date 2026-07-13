@@ -48,11 +48,18 @@ import static java.util.Objects.nonNull;
  * warning level, warning color between the two, alert color at or below critical. Decorative motion
  * depends on the battery state:
  * <ul>
- *   <li><b>Charging</b> — a soft highlight "wave" travels along the lit arc from its start to the
- *       level tip, suggesting energy flowing in.</li>
- *   <li><b>Discharging</b> — the same wave, slower and reversed (tip back to start).</li>
- *   <li><b>Critical (not charging)</b> — the whole gauge breathes (subtle scale + glow) instead.</li>
+ *   <li><b>Charging</b> — the whole gauge breathes gently (subtle scale + glow).</li>
+ *   <li><b>Critical (not charging)</b> — the same breathing, faster and with a stronger glow.</li>
+ *   <li><b>Otherwise</b> — completely still, so an idle or full battery costs nothing to show.</li>
  * </ul>
+ * <p>
+ * <b>Optional wave mode</b> ({@link #setWaveEnabled(boolean)}, off by default): replaces the
+ * charging breath with a soft highlight "wave" traveling along the lit arc — start to tip while
+ * charging (energy flowing in), slower tip to start while discharging. Waves redraw the view on
+ * every animation frame, and this view sits on a software layer (arc shadows need one), so the
+ * mode has a real, continuous CPU cost while visible. It exists as a documented capability for
+ * screens that want it; the home gauge deliberately leaves it off.
+ * <p>
  * All motion is paused/resumed by the host activity via {@link #pauseAnimations()} /
  * {@link #resumeAnimations()} so nothing keeps invalidating while the screen is in the background.
  * <p>
@@ -75,10 +82,12 @@ public class BatteryGaugeView extends View {
 	private static final long WAVE_TRIP_DISCHARGING_MS = 8000;
 	private static final int WAVE_HIGHLIGHT_COLOR = 0x8CFFFFFF;
 
-	/** Critical breathing: gentle shrink plus a glow that follows the breath. */
-	private static final long BREATH_CYCLE_MS = 1500;
+	/** Breathing: gentle shrink plus a glow that follows the breath; critical is faster and brighter. */
+	private static final long BREATH_CYCLE_CHARGING_MS = 2000;
+	private static final long BREATH_CYCLE_CRITICAL_MS = 1500;
 	private static final float BREATH_MIN_SCALE = 0.95f;
-	private static final int BREATH_MAX_GLOW_ALPHA = 60;
+	private static final int BREATH_GLOW_ALPHA_CHARGING = 40;
+	private static final int BREATH_GLOW_ALPHA_CRITICAL = 60;
 	private static final float GLOW_EXTRA_STROKE_DP = 8f;
 
 	/** The track ring is drawn slightly wider than the level ring, framing it. */
@@ -93,6 +102,7 @@ public class BatteryGaugeView extends View {
 	private int criticalLevel = 20;
 	private int warningLevel = 40;
 	private boolean charging;
+	private boolean waveEnabled;
 	private String title = "";
 	private String statusText = "";
 
@@ -124,7 +134,7 @@ public class BatteryGaugeView extends View {
 	private float breathScale = 1f;
 	private int glowAlpha;
 
-	private enum Motion { NONE, WAVE_FORWARD, WAVE_REVERSE, BREATH }
+	private enum Motion { NONE, WAVE_FORWARD, WAVE_REVERSE, BREATH_CHARGING, BREATH_CRITICAL }
 
 	private Motion motion = Motion.NONE;
 
@@ -179,12 +189,25 @@ public class BatteryGaugeView extends View {
 		invalidate();
 	}
 
-	/** Flip the wave direction (and critical-breathing eligibility) for the charging state. */
+	/** Flip the charging state; motion (breath, or wave direction in wave mode) follows it. */
 	public void setCharging(final boolean charging) {
 		if (this.charging == charging) {
 			return;
 		}
 		this.charging = charging;
+		refreshMotion();
+		invalidate();
+	}
+
+	/**
+	 * Opt into the traveling-highlight wave (see the class doc for the CPU trade-off). Off by
+	 * default: without it, charging breathes, critical breathes faster, everything else is still.
+	 */
+	public void setWaveEnabled(final boolean waveEnabled) {
+		if (this.waveEnabled == waveEnabled) {
+			return;
+		}
+		this.waveEnabled = waveEnabled;
 		refreshMotion();
 		invalidate();
 	}
@@ -257,7 +280,7 @@ public class BatteryGaugeView extends View {
 	protected void onDraw(@NonNull final Canvas canvas) {
 		super.onDraw(canvas);
 
-		final boolean breathing = motion == Motion.BREATH && breathScale != 1f;
+		final boolean breathing = isBreathing() && breathScale != 1f;
 		if (breathing) {
 			canvas.save();
 			canvas.scale(breathScale, breathScale, getWidth() / 2f, getHeight() / 2f);
@@ -274,7 +297,7 @@ public class BatteryGaugeView extends View {
 			levelPaint.clearShadowLayer();
 		}
 
-		if (motion == Motion.BREATH && glowAlpha > 0) {
+		if (isBreathing() && glowAlpha > 0) {
 			glowPaint.setColor(ringColor);
 			glowPaint.setAlpha(glowAlpha);
 			canvas.drawArc(ring, ARC_START, litSweep, false, glowPaint);
@@ -364,8 +387,11 @@ public class BatteryGaugeView extends View {
 			case WAVE_REVERSE:
 				startWave(WAVE_TRIP_DISCHARGING_MS, true);
 				break;
-			case BREATH:
-				startBreath();
+			case BREATH_CHARGING:
+				startBreath(BREATH_CYCLE_CHARGING_MS, BREATH_GLOW_ALPHA_CHARGING);
+				break;
+			case BREATH_CRITICAL:
+				startBreath(BREATH_CYCLE_CRITICAL_MS, BREATH_GLOW_ALPHA_CRITICAL);
 				break;
 			case NONE:
 				break;
@@ -377,12 +403,12 @@ public class BatteryGaugeView extends View {
 			return Motion.NONE;
 		}
 		if (charging) {
-			return Motion.WAVE_FORWARD;
+			return waveEnabled ? Motion.WAVE_FORWARD : Motion.BREATH_CHARGING;
 		}
 		if (level <= criticalLevel) {
-			return Motion.BREATH;
+			return Motion.BREATH_CRITICAL;
 		}
-		return Motion.WAVE_REVERSE;
+		return waveEnabled ? Motion.WAVE_REVERSE : Motion.NONE;
 	}
 
 	private void startWave(final long tripMillis, final boolean reversed) {
@@ -398,16 +424,16 @@ public class BatteryGaugeView extends View {
 		motionAnimator.start();
 	}
 
-	private void startBreath() {
+	private void startBreath(final long cycleMillis, final int maxGlowAlpha) {
 		motionAnimator = ValueAnimator.ofFloat(BREATH_MIN_SCALE, 1f);
-		motionAnimator.setDuration(BREATH_CYCLE_MS);
+		motionAnimator.setDuration(cycleMillis);
 		motionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
 		motionAnimator.setRepeatCount(ValueAnimator.INFINITE);
 		motionAnimator.setRepeatMode(ValueAnimator.REVERSE);
 		motionAnimator.addUpdateListener(animation -> {
 			breathScale = (float) animation.getAnimatedValue();
 			final float depth = (breathScale - BREATH_MIN_SCALE) / (1f - BREATH_MIN_SCALE);
-			glowAlpha = (int) (depth * BREATH_MAX_GLOW_ALPHA);
+			glowAlpha = (int) (depth * maxGlowAlpha);
 			invalidate();
 		});
 		motionAnimator.start();
@@ -426,6 +452,10 @@ public class BatteryGaugeView extends View {
 
 	private boolean isWaving() {
 		return motion == Motion.WAVE_FORWARD || motion == Motion.WAVE_REVERSE;
+	}
+
+	private boolean isBreathing() {
+		return motion == Motion.BREATH_CHARGING || motion == Motion.BREATH_CRITICAL;
 	}
 
 	@Override

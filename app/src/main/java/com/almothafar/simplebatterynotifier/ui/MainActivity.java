@@ -268,7 +268,7 @@ public class MainActivity extends BaseActivity {
 		gauge.setTitle(batteryPercentage + "%");
 		gauge.setStatusText(subTitle);
 
-		// Update the wave direction based on battery status
+		// Update the charging motion (breathing pulse) based on battery status
 		if (nonNull(batteryDO)) {
 			final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
 			gauge.setCharging(isCharging);
