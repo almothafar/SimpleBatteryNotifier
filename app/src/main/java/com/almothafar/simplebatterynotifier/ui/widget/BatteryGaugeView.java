@@ -28,14 +28,15 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.SweepGradient;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.LinearInterpolator;
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import com.almothafar.simplebatterynotifier.R;
 
+import java.util.Locale;
 import java.util.function.IntConsumer;
 
 import static java.util.Objects.nonNull;
@@ -46,25 +47,27 @@ import static java.util.Objects.nonNull;
  * <p>
  * The ring color follows the user's thresholds ({@link #setThresholds(int, int)}): normal above the
  * warning level, warning color between the two, alert color at or below critical. Decorative motion
- * depends on the battery state:
+ * follows the power state ({@link #setPowerState(Power)}):
  * <ul>
- *   <li><b>Charging</b> — the whole gauge breathes gently (subtle scale + glow).</li>
- *   <li><b>Critical (not charging)</b> — the same breathing, faster and with a stronger glow.</li>
- *   <li><b>Otherwise</b> — completely still, so an idle or full battery costs nothing to show.</li>
+ *   <li>{@link Power#CHARGING} — a soft highlight "wave" travels along the lit arc from its start
+ *       to the level tip (energy flowing in), looping every ~2.4s.</li>
+ *   <li>{@link Power#ON_BATTERY} — the same wave, slower (~8s) and reversed (tip back to start);
+ *       except at or below the critical level, where the gauge breathes urgently instead.</li>
+ *   <li>{@link Power#FULL} — a single gentle pulse every ~3 seconds; between pulses the view is
+ *       completely idle (no redraws).</li>
  * </ul>
+ * Waves can be turned off wholesale with {@link #setWaveEnabled(boolean)} for battery-sensitive
+ * hosts; charging then falls back to a gentle breathing pulse and discharging goes still.
  * <p>
- * <b>Optional wave mode</b> ({@link #setWaveEnabled(boolean)}, off by default): replaces the
- * charging breath with a soft highlight "wave" traveling along the lit arc — start to tip while
- * charging (energy flowing in), slower tip to start while discharging. Waves redraw the view on
- * every animation frame, and this view sits on a software layer (arc shadows need one), so the
- * mode has a real, continuous CPU cost while visible. It exists as a documented capability for
- * screens that want it; the home gauge deliberately leaves it off.
+ * <b>Performance:</b> on Android 9+ the gauge renders fully hardware-accelerated (arc shadows are
+ * GPU-capable there); only Android 8 falls back to a software layer. Animation frames that would
+ * not change a visible pixel are skipped, and the host should call {@link #pauseAnimations()} /
+ * {@link #resumeAnimations()} from its pause/resume so nothing runs while backgrounded.
  * <p>
- * All motion is paused/resumed by the host activity via {@link #pauseAnimations()} /
- * {@link #resumeAnimations()} so nothing keeps invalidating while the screen is in the background.
- * <p>
- * This widget was written from scratch for this project (issue #144); it replaces an earlier
- * gauge that derived from a third-party library.
+ * <b>Reuse:</b> the class is self-contained — to use it in another project, copy this file plus the
+ * {@code BatteryGaugeView} declare-styleable block from {@code attrs.xml}. All colors, text sizes,
+ * and the accessibility description format are attributes with built-in defaults; nothing else in
+ * this app is referenced. Written from scratch for this project (issue #144), GPLv3 as headed above.
  */
 public class BatteryGaugeView extends View {
 
@@ -90,6 +93,19 @@ public class BatteryGaugeView extends View {
 	private static final int BREATH_GLOW_ALPHA_CRITICAL = 60;
 	private static final float GLOW_EXTRA_STROKE_DP = 8f;
 
+	/** Full-on-charger: one gentle pulse per period; the rest of the period draws nothing. */
+	private static final long IDLE_PULSE_PERIOD_MS = 3000;
+	private static final float IDLE_PULSE_ACTIVE_FRACTION = 0.35f;
+	private static final int IDLE_PULSE_GLOW_ALPHA = 40;
+
+	/** Built-in appearance defaults, all overridable via the gauge* attributes. */
+	private static final int DEFAULT_LEVEL_COLOR = 0xFF2E9CB8;
+	private static final int DEFAULT_WARNING_COLOR = 0xFFF3A712;
+	private static final int DEFAULT_ALERT_COLOR = 0xFFE23A2E;
+	private static final int DEFAULT_TRACK_COLOR = 0x338A8A8A;
+	private static final int DEFAULT_TEXT_COLOR = 0xFFFFFFFF;
+	private static final String DEFAULT_LEVEL_DESCRIPTION = "Battery at %1$d percent";
+
 	/** The track ring is drawn slightly wider than the level ring, framing it. */
 	private static final float TRACK_EXTRA_STROKE_DP = 4f;
 
@@ -97,14 +113,18 @@ public class BatteryGaugeView extends View {
 	private static final float TITLE_MAX_WIDTH_FRACTION = 0.68f;
 	private static final float STATUS_MAX_CHORD_FRACTION = 0.9f;
 
+	/** The battery's power situation, as far as the gauge cares about it. */
+	public enum Power { CHARGING, FULL, ON_BATTERY }
+
 	// What the gauge shows.
 	private int level;
 	private int criticalLevel = 20;
 	private int warningLevel = 40;
-	private boolean charging;
-	private boolean waveEnabled;
+	private Power power = Power.ON_BATTERY;
+	private boolean waveEnabled = true;
 	private String title = "";
 	private String statusText = "";
+	private String levelDescriptionFormat = DEFAULT_LEVEL_DESCRIPTION;
 
 	// How the gauge looks (resolved once from attrs/theme).
 	private float strokeWidthPx;
@@ -134,7 +154,7 @@ public class BatteryGaugeView extends View {
 	private float breathScale = 1f;
 	private int glowAlpha;
 
-	private enum Motion { NONE, WAVE_FORWARD, WAVE_REVERSE, BREATH_CHARGING, BREATH_CRITICAL }
+	private enum Motion { NONE, WAVE_FORWARD, WAVE_REVERSE, BREATH_CHARGING, BREATH_CRITICAL, PULSE_IDLE }
 
 	private Motion motion = Motion.NONE;
 
@@ -148,8 +168,11 @@ public class BatteryGaugeView extends View {
 
 	public BatteryGaugeView(final Context context, final AttributeSet attrs, final int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
-		// Arc shadows only render on a software layer; the gauge is small, so this is affordable.
-		setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+		// Hardware canvases only learned to draw arc shadows in Android 9 (Skia renderer);
+		// on Android 8 fall back to a software layer so the shadow still shows up.
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+			setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+		}
 		setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
 		resolveAppearance(attrs, defStyleAttr);
 		announceLevel();
@@ -189,19 +212,19 @@ public class BatteryGaugeView extends View {
 		invalidate();
 	}
 
-	/** Flip the charging state; motion (breath, or wave direction in wave mode) follows it. */
-	public void setCharging(final boolean charging) {
-		if (this.charging == charging) {
+	/** Tell the gauge the battery's power situation; the motion (wave/pulse/breath) follows it. */
+	public void setPowerState(final Power power) {
+		if (this.power == power) {
 			return;
 		}
-		this.charging = charging;
+		this.power = power;
 		refreshMotion();
 		invalidate();
 	}
 
 	/**
-	 * Opt into the traveling-highlight wave (see the class doc for the CPU trade-off). Off by
-	 * default: without it, charging breathes, critical breathes faster, everything else is still.
+	 * Waves are on by default; battery-sensitive hosts can turn them off, in which case charging
+	 * falls back to a gentle breathing pulse and discharging goes completely still.
 	 */
 	public void setWaveEnabled(final boolean waveEnabled) {
 		if (this.waveEnabled == waveEnabled) {
@@ -393,6 +416,9 @@ public class BatteryGaugeView extends View {
 			case BREATH_CRITICAL:
 				startBreath(BREATH_CYCLE_CRITICAL_MS, BREATH_GLOW_ALPHA_CRITICAL);
 				break;
+			case PULSE_IDLE:
+				startIdlePulse();
+				break;
 			case NONE:
 				break;
 		}
@@ -402,8 +428,11 @@ public class BatteryGaugeView extends View {
 		if (!isAttachedToWindow() || level == 0) {
 			return Motion.NONE;
 		}
-		if (charging) {
+		if (power == Power.CHARGING) {
 			return waveEnabled ? Motion.WAVE_FORWARD : Motion.BREATH_CHARGING;
+		}
+		if (power == Power.FULL) {
+			return Motion.PULSE_IDLE;
 		}
 		if (level <= criticalLevel) {
 			return Motion.BREATH_CRITICAL;
@@ -417,8 +446,42 @@ public class BatteryGaugeView extends View {
 		motionAnimator.setInterpolator(new LinearInterpolator());
 		motionAnimator.setRepeatCount(ValueAnimator.INFINITE);
 		motionAnimator.addUpdateListener(animation -> {
-			final float fraction = (float) animation.getAnimatedValue();
-			waveTravel = reversed ? 1f - fraction : fraction;
+			// Quantize the travel so animator ticks that would move the band less than a visible
+			// step are skipped instead of triggering a redraw for nothing.
+			final float quantized = Math.round((float) animation.getAnimatedValue() * 512f) / 512f;
+			final float travel = reversed ? 1f - quantized : quantized;
+			if (travel == waveTravel) {
+				return;
+			}
+			waveTravel = travel;
+			invalidate();
+		});
+		motionAnimator.start();
+	}
+
+	/**
+	 * One soft pulse per {@link #IDLE_PULSE_PERIOD_MS}: the breath happens in the first
+	 * {@link #IDLE_PULSE_ACTIVE_FRACTION} of the period and the remainder draws nothing at all —
+	 * the update listener bails out while the visuals are at rest, so a full battery sitting on
+	 * the charger costs almost nothing to display.
+	 */
+	private void startIdlePulse() {
+		motionAnimator = ValueAnimator.ofFloat(0f, 1f);
+		motionAnimator.setDuration(IDLE_PULSE_PERIOD_MS);
+		motionAnimator.setInterpolator(new LinearInterpolator());
+		motionAnimator.setRepeatCount(ValueAnimator.INFINITE);
+		motionAnimator.addUpdateListener(animation -> {
+			final float period = (float) animation.getAnimatedValue();
+			final float depth = period < IDLE_PULSE_ACTIVE_FRACTION
+					? (float) Math.sin(Math.PI * period / IDLE_PULSE_ACTIVE_FRACTION)
+					: 0f;
+			final float scale = 1f - (1f - BREATH_MIN_SCALE) * depth;
+			final int glow = (int) (depth * IDLE_PULSE_GLOW_ALPHA);
+			if (scale == breathScale && glow == glowAlpha) {
+				return;
+			}
+			breathScale = scale;
+			glowAlpha = glow;
 			invalidate();
 		});
 		motionAnimator.start();
@@ -455,7 +518,7 @@ public class BatteryGaugeView extends View {
 	}
 
 	private boolean isBreathing() {
-		return motion == Motion.BREATH_CHARGING || motion == Motion.BREATH_CRITICAL;
+		return motion == Motion.BREATH_CHARGING || motion == Motion.BREATH_CRITICAL || motion == Motion.PULSE_IDLE;
 	}
 
 	@Override
@@ -480,10 +543,6 @@ public class BatteryGaugeView extends View {
 		final Context context = getContext();
 		final float density = getResources().getDisplayMetrics().density;
 
-		normalColor = ContextCompat.getColor(context, R.color.circular_progress_default_progress);
-		warningColor = ContextCompat.getColor(context, R.color.circular_progress_default_progress_warning);
-		alertColor = ContextCompat.getColor(context, R.color.circular_progress_default_progress_alert);
-
 		final TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.BatteryGaugeView, defStyleAttr, 0);
 		try {
 			strokeWidthPx = a.getDimension(R.styleable.BatteryGaugeView_gaugeStrokeWidth, 25 * density);
@@ -491,12 +550,16 @@ public class BatteryGaugeView extends View {
 			statusBaseTextSizePx = a.getDimension(R.styleable.BatteryGaugeView_gaugeStatusTextSize, 20 * density);
 			showShadow = a.getBoolean(R.styleable.BatteryGaugeView_gaugeShowShadow, true);
 
-			trackPaint.setColor(a.getColor(R.styleable.BatteryGaugeView_gaugeTrackColor,
-					ContextCompat.getColor(context, R.color.circular_progress_default_background)));
-			titlePaint.setColor(a.getColor(R.styleable.BatteryGaugeView_gaugeTitleColor,
-					ContextCompat.getColor(context, R.color.circular_progress_default_title)));
-			statusPaint.setColor(a.getColor(R.styleable.BatteryGaugeView_gaugeStatusColor,
-					ContextCompat.getColor(context, R.color.circular_progress_default_subtitle)));
+			normalColor = a.getColor(R.styleable.BatteryGaugeView_gaugeLevelColor, DEFAULT_LEVEL_COLOR);
+			warningColor = a.getColor(R.styleable.BatteryGaugeView_gaugeWarningColor, DEFAULT_WARNING_COLOR);
+			alertColor = a.getColor(R.styleable.BatteryGaugeView_gaugeAlertColor, DEFAULT_ALERT_COLOR);
+			trackPaint.setColor(a.getColor(R.styleable.BatteryGaugeView_gaugeTrackColor, DEFAULT_TRACK_COLOR));
+			titlePaint.setColor(a.getColor(R.styleable.BatteryGaugeView_gaugeTitleColor, DEFAULT_TEXT_COLOR));
+			statusPaint.setColor(a.getColor(R.styleable.BatteryGaugeView_gaugeStatusColor, DEFAULT_TEXT_COLOR));
+
+			// Localizable "Battery at %1$d percent" template for screen readers.
+			final String description = a.getString(R.styleable.BatteryGaugeView_gaugeLevelDescription);
+			levelDescriptionFormat = nonNull(description) && !description.isEmpty() ? description : DEFAULT_LEVEL_DESCRIPTION;
 
 			// Preview text so the gauge is meaningful in the layout editor.
 			title = orEmpty(a.getString(R.styleable.BatteryGaugeView_gaugeTitle));
@@ -537,7 +600,7 @@ public class BatteryGaugeView extends View {
 	}
 
 	private void announceLevel() {
-		setContentDescription(getContext().getString(R.string.battery_progress_description, level));
+		setContentDescription(String.format(Locale.getDefault(), levelDescriptionFormat, level));
 	}
 
 	private static int clampLevel(final int value) {

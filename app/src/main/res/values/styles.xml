@@ -21,10 +21,15 @@
     <style name="Widget.App.BatteryGauge" parent="Widget">
         <item name="gaugeShowShadow">true</item>
         <item name="gaugeStrokeWidth">30dp</item>
+        <item name="gaugeTrackColor">@color/circular_progress_default_background</item>
+        <item name="gaugeLevelColor">@color/circular_progress_default_progress</item>
+        <item name="gaugeWarningColor">@color/circular_progress_default_progress_warning</item>
+        <item name="gaugeAlertColor">@color/circular_progress_default_progress_alert</item>
         <item name="gaugeTitleColor">@color/circular_progress_default_title</item>
         <item name="gaugeTitleTextSize">48dp</item>
         <item name="gaugeStatusColor">@color/circular_progress_default_subtitle</item>
         <item name="gaugeStatusTextSize">20dp</item>
+        <item name="gaugeLevelDescription">@string/battery_progress_description</item>
     </style>
 
     <!-- Toolbar style for Material3 -->

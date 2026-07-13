@@ -3,6 +3,9 @@
     <declare-styleable name="BatteryGaugeView">
         <attr name="gaugeStrokeWidth" format="dimension"/>
         <attr name="gaugeTrackColor" format="color"/>
+        <attr name="gaugeLevelColor" format="color"/>
+        <attr name="gaugeWarningColor" format="color"/>
+        <attr name="gaugeAlertColor" format="color"/>
         <attr name="gaugeTitle" format="string"/>
         <attr name="gaugeTitleColor" format="color"/>
         <attr name="gaugeTitleTextSize" format="dimension"/>
@@ -10,6 +13,8 @@
         <attr name="gaugeStatusColor" format="color"/>
         <attr name="gaugeStatusTextSize" format="dimension"/>
         <attr name="gaugeShowShadow" format="boolean"/>
+        <!-- Screen-reader template for the current level, e.g. "Battery at %1$d percent" -->
+        <attr name="gaugeLevelDescription" format="string"/>
     </declare-styleable>
 
     <declare-styleable name="BatteryRangeSliderPreference">

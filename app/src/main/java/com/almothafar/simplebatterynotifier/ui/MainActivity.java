@@ -268,10 +268,9 @@ public class MainActivity extends BaseActivity {
 		gauge.setTitle(batteryPercentage + "%");
 		gauge.setStatusText(subTitle);
 
-		// Update the charging motion (breathing pulse) based on battery status
+		// Drive the gauge motion: charging wave, full-on-charger idle pulse, or discharge wave.
 		if (nonNull(batteryDO)) {
-			final boolean isCharging = batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING;
-			gauge.setCharging(isCharging);
+			gauge.setPowerState(powerStateOf(batteryDO.getStatus()));
 		}
 
 		final FragmentManager fragmentManager = getSupportFragmentManager();
@@ -280,6 +279,21 @@ public class MainActivity extends BaseActivity {
 
 		if (nonNull(batteryDetailsFragment) && nonNull(batteryDO)) {
 			batteryDetailsFragment.updateBatteryDetails(batteryDO);
+		}
+	}
+
+	/**
+	 * Map the OS battery status onto the gauge's three power states: charging animates forward,
+	 * full-on-charger idles with a periodic pulse, anything else counts as running on battery.
+	 */
+	private static BatteryGaugeView.Power powerStateOf(final int batteryStatus) {
+		switch (batteryStatus) {
+			case BatteryManager.BATTERY_STATUS_CHARGING:
+				return BatteryGaugeView.Power.CHARGING;
+			case BatteryManager.BATTERY_STATUS_FULL:
+				return BatteryGaugeView.Power.FULL;
+			default:
+				return BatteryGaugeView.Power.ON_BATTERY;
 		}
 	}
 
