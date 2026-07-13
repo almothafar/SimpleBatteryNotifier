@@ -132,7 +132,7 @@ This is free, open-source software: you may use, study, modify, and share it, **
 
 Copyright © 2024–2026 Al-Mothafar Al-Hasan
 
-**Acknowledgements:** the battery gauge (`CircularProgressBar`) is based on [android-circular-progress-bar](https://github.com/korre/android-circular-progress-bar) by Kristoffer Matsson, used under the MIT License.
+**Acknowledgements:** the battery gauge (`CircularProgressBar`) is derived from [circular_progress_bar](https://github.com/ylyc/circular_progress_bar) by Leon Cheng, used under the Apache License 2.0 — see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ---
 

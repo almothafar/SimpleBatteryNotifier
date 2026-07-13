@@ -2,34 +2,17 @@
  * Simple Battery Notifier
  * Copyright (C) 2015-2026 Al-Mothafar Al-Hasan
  *
- * This file is based on "android-circular-progress-bar" by Kristoffer Matsson
- * (https://github.com/korre/android-circular-progress-bar), used under the MIT
- * License. The original notice is preserved below. Substantial modifications by
- * the Simple Battery Notifier author are licensed under the GNU GPL v3, and the
- * combined work is distributed under the GNU GPL v3 (see the project LICENSE).
+ * This file is derived from "circular_progress_bar" by Leon Cheng
+ * (https://github.com/ylyc/circular_progress_bar), Copyright (C) 2013 Leon Cheng,
+ * originally licensed under the Apache License, Version 2.0. This file has been
+ * modified from the original (extends ProgressBar with a 270-degree gauge, the
+ * cpb_* styleable, auto-fitting title/subtitle, pulse/glow animation, and more).
  *
- * ---------------------------------------------------------------------------
- * MIT License
- * Copyright (c) 2015 Kristoffer Matsson
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- * ---------------------------------------------------------------------------
+ * The Apache-2.0-licensed original is used in compliance with that license; a
+ * copy of the Apache License 2.0 is provided in licenses/Apache-2.0.txt and the
+ * attribution is recorded in THIRD-PARTY-NOTICES.md. Apache 2.0 is compatible
+ * with the GNU GPL v3, so the modifications and the combined work are licensed
+ * under the GNU GPL v3 (see the project LICENSE).
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
