@@ -88,6 +88,18 @@
             android:title="@string/sticky_notification"
             app:iconSpaceReserved="false" />
 
+        <!-- How the charge-connected announcement surfaces (toast / notification / none).
+             Moved here from the Alerts screen: "style" reads as appearance, so this is where
+             users look for it (#112 follow-up, maintainer decision). -->
+        <ListPreference
+            android:defaultValue="@string/_pref_value_charge_notification_style_toast"
+            android:entries="@array/charge_notification_style_entries"
+            android:entryValues="@array/charge_notification_style_values"
+            android:key="@string/_pref_key_charge_notification_style"
+            android:title="@string/charge_notification_style_title"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>
