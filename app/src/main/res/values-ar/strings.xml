@@ -121,6 +121,8 @@
     <string name="charge_connected_power">%1$s · %2$s · ~%3$d واط</string>
     <string name="charge_connected_tier">%1$s · %2$s</string>
     <string name="charge_connected_plain">شحن %1$s</string>
+    <!-- #125: إشعار الحالة أثناء الشحن — الفئة + الواط المقدّر، مثل "شحن سريع · ~18 واط" -->
+    <string name="notification_status_charge_power">%1$s · ~%2$s واط</string>
 
     <!-- "Charge notification style" preference (issue #122) -->
     <string name="charge_notification_style_title">أسلوب تنبيه الشحن</string>
