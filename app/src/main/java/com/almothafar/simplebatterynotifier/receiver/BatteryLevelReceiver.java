@@ -13,6 +13,7 @@ import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.BatteryRateTracker;
 import com.almothafar.simplebatterynotifier.service.FastDrainDetector;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
+import com.almothafar.simplebatterynotifier.service.SlowChargeDetector;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
@@ -106,6 +107,10 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 
 		// #109: warn when the (smoothed #108) drain rate stays abnormally high for a sustained time.
 		FastDrainDetector.evaluate(context, batteryDO, rate);
+
+		// #123: warn when charging power stays abnormally low for a sustained time (frayed cable, dirty
+		// port, or dying charger). Independent of the drain rate — it reads the estimated charge wattage.
+		SlowChargeDetector.evaluate(context, batteryDO);
 	}
 
 	/**

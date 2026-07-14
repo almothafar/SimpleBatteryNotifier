@@ -181,11 +181,20 @@
 
     </PreferenceCategory>
 
-    <!-- Charging announcements (#122/#127). Future charging alerts (e.g. #123 slow-charge
-         warning) belong in this category too. -->
+    <!-- Charging announcements (#122/#127) and the slow-charge warning (#123). -->
     <PreferenceCategory
         android:title="@string/pref_cat_title_charging"
         app:iconSpaceReserved="false">
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/_pref_key_notify_slow_charge"
+            android:summaryOff="@string/notify_slow_charge_summary_off"
+            android:summaryOn="@string/notify_slow_charge_summary_on"
+            android:switchTextOff="@string/off"
+            android:switchTextOn="@string/on"
+            android:title="@string/notify_slow_charge"
+            app:iconSpaceReserved="false" />
 
         <ListPreference
             android:defaultValue="@string/_pref_value_charge_notification_style_toast"
