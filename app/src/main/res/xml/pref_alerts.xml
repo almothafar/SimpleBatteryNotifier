@@ -1,7 +1,8 @@
 <!-- The "Alerts" screen (#112): WHAT to be notified about. One category per alert event, in
      battery-lifecycle order (levels → warning → critical → full → temperature → drain → charging).
      Cross-cutting delivery options (sound in silent mode, vibration, quiet hours, stickiness)
-     live on the "Notification behaviour" screen (pref_behaviour.xml). -->
+     and the charge-announcement style live on the "Notification behaviour" screen
+     (pref_behaviour.xml). -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -181,7 +182,9 @@
 
     </PreferenceCategory>
 
-    <!-- Charging announcements (#122/#127) and the slow-charge warning (#123). -->
+    <!-- Charging alerts: the #123 slow-charge warning. The charge-announcement style picker moved to
+         Notification behaviour › Appearance (#112 follow-up) — "style" reads as appearance, and that's
+         where users look for it. -->
     <PreferenceCategory
         android:title="@string/pref_cat_title_charging"
         app:iconSpaceReserved="false">
@@ -194,15 +197,6 @@
             android:switchTextOff="@string/off"
             android:switchTextOn="@string/on"
             android:title="@string/notify_slow_charge"
-            app:iconSpaceReserved="false" />
-
-        <ListPreference
-            android:defaultValue="@string/_pref_value_charge_notification_style_toast"
-            android:entries="@array/charge_notification_style_entries"
-            android:entryValues="@array/charge_notification_style_values"
-            android:key="@string/_pref_key_charge_notification_style"
-            android:title="@string/charge_notification_style_title"
-            app:useSimpleSummaryProvider="true"
             app:iconSpaceReserved="false" />
 
     </PreferenceCategory>
