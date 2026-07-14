@@ -180,6 +180,17 @@
     <string name="notification_fast_drain_title">البطارية تُستهلك بسرعة</string>
     <string name="notification_fast_drain_content">يفقد نحو %1$s%% في الساعة خلال آخر %2$s دقيقة (حدّك: %3$s%%/h). قد يكون أحد التطبيقات يستهلك طاقة كبيرة.</string>
 
+    <!-- تحذير الشحن البطيء (#123) -->
+    <string name="notify_slow_charge">تحذير الشحن البطيء</string>
+    <string name="notify_slow_charge_summary_on">ينبّهك عندما تبقى قدرة الشحن منخفضة بشكل غير طبيعي — غالباً بسبب كابل تالف أو منفذ متّسخ أو شاحن معطوب</string>
+    <string name="notify_slow_charge_summary_off">تحذيرات الشحن البطيء معطّلة</string>
+    <string name="notification_slow_charge_channel_name">الشحن البطيء</string>
+    <string name="notification_slow_charge_channel_description">ينبّه عندما تبقى قدرة الشحن منخفضة بشكل غير طبيعي</string>
+    <string name="notification_slow_charge_ticker">الشحن بطيء</string>
+    <string name="notification_slow_charge_title">الشحن بطيء</string>
+    <string name="notification_slow_charge_content">الشحن بطيء (~%1$s واط) — جرّب كابلاً آخر، أو نظّف المنفذ، أو استخدم شاحناً مختلفاً.</string>
+    <string name="notification_slow_charge_content_big">بقيت قدرة الشحن حوالي ~%1$s واط، أقل بكثير مما يقدّمه شاحن سليم. جرّب كابلاً مختلفاً، أو نظّف منفذ الشحن، أو استخدم شاحناً أو مقبساً آخر.</string>
+
     <!-- Battery Insights screen -->
     <string name="battery_insights_title">تحليلات البطارية</string>
     <string name="battery_insights_menu">تحليلات البطارية</string>

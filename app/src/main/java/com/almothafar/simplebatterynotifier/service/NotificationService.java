@@ -69,6 +69,7 @@ public final class NotificationService {
 	private static final String CHANNEL_ID_STATUS = "battery_status";
 	private static final String CHANNEL_ID_TEMPERATURE = "battery_temperature";
 	private static final String CHANNEL_ID_FAST_DRAIN = "battery_fast_drain";
+	private static final String CHANNEL_ID_SLOW_CHARGE = "battery_slow_charge";
 	// Silent, low-importance channel used to deliver an alert quietly during the user's quiet hours:
 	// the alert is still visible but makes no sound or vibration (issue #111).
 	private static final String CHANNEL_ID_ALERTS_SILENT = "battery_alerts_quiet";
@@ -82,6 +83,8 @@ public final class NotificationService {
 	private static final int TEMPERATURE_NOTIFICATION_ID = 1641989;
 	// Separate ID so a fast-drain alert doesn't replace a level or temperature alert (#109)
 	private static final int FAST_DRAIN_NOTIFICATION_ID = 1641990;
+	// Separate ID so a slow-charge warning doesn't replace any other alert (#123)
+	private static final int SLOW_CHARGE_NOTIFICATION_ID = 1641991;
 
 	// Do Not Disturb mode constants
 	private static final String ZEN_MODE = "zen_mode";
@@ -363,6 +366,43 @@ public final class NotificationService {
 	}
 
 	/**
+	 * Warn that charging power has stayed abnormally low — a likely frayed cable, dirty/loose port, or
+	 * dying charger (issue #123).
+	 * <p>
+	 * Surfaced per the user's charge-notification style (#122): a brief toast, a full quiet-hours-aware
+	 * notification on its own channel/id, or nothing when they opted out of charge feedback. The message
+	 * states the measured wattage so it explains itself; it deliberately can't tell cable from port from
+	 * brick (indistinguishable via public APIs), so it advises checking all three.
+	 *
+	 * @param context The application context
+	 * @param watts   The estimated charging power in watts
+	 */
+	public static void sendSlowChargeWarning(final Context context, final int watts) {
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final String style = resolveChargeStyle(prefs.getString(
+				context.getString(R.string._pref_key_charge_notification_style), CHARGE_STYLE_TOAST));
+		if (CHARGE_STYLE_NONE.equals(style)) {
+			return; // the user opted out of charge feedback entirely
+		}
+
+		// Western digits in every locale (#96) via String.valueOf.
+		final String content = context.getString(R.string.notification_slow_charge_content, String.valueOf(watts));
+		if (CHARGE_STYLE_TOAST.equals(style)) {
+			showChargeToast(context, content);
+			return;
+		}
+		sendQuietHoursAwareAlert(context, new AlertSpec(
+				"slow-charge",
+				CHANNEL_ID_SLOW_CHARGE,
+				SLOW_CHARGE_NOTIFICATION_ID,
+				R.drawable.ic_stat_device_battery_charging_20,
+				context.getString(R.string.notification_slow_charge_ticker),
+				context.getString(R.string.notification_slow_charge_title),
+				content,
+				context.getString(R.string.notification_slow_charge_content_big, String.valueOf(watts))));
+	}
+
+	/**
 	 * Send an alert on its own channel and notification ID, honouring quiet hours, silent-mode and
 	 * vibrate preferences.
 	 * <p>
@@ -585,6 +625,9 @@ public final class NotificationService {
 		createChannelIfNotExists(manager, CHANNEL_ID_FAST_DRAIN,
 				context.getString(R.string.notification_fast_drain_channel_name),
 				context.getString(R.string.notification_fast_drain_channel_description), Color.rgb(0xff, 0x66, 0x00), vibrate);
+		createChannelIfNotExists(manager, CHANNEL_ID_SLOW_CHARGE,
+				context.getString(R.string.notification_slow_charge_channel_name),
+				context.getString(R.string.notification_slow_charge_channel_description), Color.rgb(0xff, 0x66, 0x00), vibrate);
 		createSilentChannelIfNotExists(manager, CHANNEL_ID_STATUS,
 				context.getString(R.string.notification_status_channel_name),
 				context.getString(R.string.notification_status_channel_description));
@@ -672,6 +715,7 @@ public final class NotificationService {
 		manager.deleteNotificationChannel(CHANNEL_ID_FULL);
 		manager.deleteNotificationChannel(CHANNEL_ID_TEMPERATURE);
 		manager.deleteNotificationChannel(CHANNEL_ID_FAST_DRAIN);
+		manager.deleteNotificationChannel(CHANNEL_ID_SLOW_CHARGE);
 		createNotificationChannels(context);
 	}
 

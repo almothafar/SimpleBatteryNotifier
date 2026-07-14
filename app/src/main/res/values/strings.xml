@@ -192,6 +192,18 @@
     <!-- %1$s rate, %2$s minutes, %3$s limit — all Western-digit numbers (String.valueOf) for every locale (#96) -->
     <string name="notification_fast_drain_content">Losing ~%1$s%% per hour for the last %2$s minutes (your limit: %3$s%%/h). Something may be using a lot of power.</string>
 
+    <!-- Slow-charge warning (#123) -->
+    <string name="notify_slow_charge">Slow-charging warning</string>
+    <string name="notify_slow_charge_summary_on">Warns you when charging power stays abnormally low — a likely frayed cable, dirty port, or failing charger</string>
+    <string name="notify_slow_charge_summary_off">Slow-charging warnings are disabled</string>
+    <string name="notification_slow_charge_channel_name">Slow Charging</string>
+    <string name="notification_slow_charge_channel_description">Warns when charging power stays abnormally low</string>
+    <string name="notification_slow_charge_ticker">Charging slowly</string>
+    <string name="notification_slow_charge_title">Charging slowly</string>
+    <!-- %1$s is a Western-digit number (String.valueOf), 0-9 in every locale (#96) -->
+    <string name="notification_slow_charge_content">Charging slowly (~%1$s W) — try another cable, clean the port, or use a different charger.</string>
+    <string name="notification_slow_charge_content_big">Charging has stayed around ~%1$s W, well below what a healthy charger delivers. Try a different cable, clean the charging port, or plug into another charger or outlet.</string>
+
     <!-- Battery Insights Screen -->
     <string name="battery_insights_title">Battery Insights</string>
     <string name="battery_insights_menu">Battery Insights</string>
@@ -332,6 +344,8 @@
     <string name="_pref_key_notify_fast_drain" translatable="false">key_notify_fast_drain</string>
     <string name="_pref_key_fast_drain_sustained_minutes" translatable="false">key_fast_drain_sustained_minutes</string>
     <string name="_pref_key_fast_drain_reminder_minutes" translatable="false">key_fast_drain_reminder_minutes</string>
+    <!-- #123: slow-charge warning enable -->
+    <string name="_pref_key_notify_slow_charge" translatable="false">key_notify_slow_charge</string>
     <string name="_pref_key_language" translatable="false">key_language</string>
 
     <string name="_pref_value_temperatures_unit_c" translatable="false">celsius</string>
