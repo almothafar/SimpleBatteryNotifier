@@ -1,17 +1,23 @@
 package com.almothafar.simplebatterynotifier.service;
 
+import android.content.Context;
 import android.os.BatteryManager;
+
+import androidx.test.core.app.ApplicationProvider;
 
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryRateTracker.BatteryRate;
 import com.almothafar.simplebatterynotifier.service.BatteryRateTracker.Sample;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -249,6 +255,78 @@ public class BatteryRateTrackerTest {
 		@Test
 		public void matchesExpected() {
 			assertEquals(expected, BatteryRateTracker.amberThreshold(limit));
+		}
+	}
+
+	/**
+	 * {@link BatteryRateTracker#estimateMinutesToFull}: the capacity-free linear projection (#124) and its
+	 * not-computable guards. Boundaries: the taper-top levels (99/100), a zero/negative rate, and rounding.
+	 */
+	@RunWith(Parameterized.class)
+	public static class EstimateMinutesToFull {
+
+		@Parameter(0) public String label;
+		@Parameter(1) public int level;
+		@Parameter(2) public int ratePercentPerHour;
+		@Parameter(3) public int expectedMinutes;
+
+		@Parameters(name = "{0}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{"50% at 30%/h -> 100m", 50, 30, 100},        // 50/30 h = 1h40m
+					{"80% at 60%/h -> 20m", 80, 60, 20},          // 20/60 h
+					{"20% at 10%/h -> 480m", 20, 10, 480},        // 80/10 h = 8h
+					{"rounds to nearest minute", 55, 40, 68},     // 45/40 h = 67.5m -> 68
+					{"one point left at 60%/h -> 1m", 99, 60, 1}, // helper allows; the UI gates level >= 99
+					{"zero rate not computable", 50, 0, 0},
+					{"negative rate not computable", 50, -5, 0},
+					{"already full not computable", 100, 30, 0},
+			});
+		}
+
+		@Test
+		public void matchesExpected() {
+			assertEquals(label, expectedMinutes, BatteryRateTracker.estimateMinutesToFull(level, ratePercentPerHour));
+		}
+	}
+
+	/**
+	 * {@link BatteryRateTracker#formatTimeToFull}: the "~1h 20m" / "~45m" rendering and its Western-digit
+	 * guarantee (#96). Context-dependent (string resources), so it runs under Robolectric — unlike the pure
+	 * math above; mirrors how the other Context-backed formatters would be exercised.
+	 */
+	@RunWith(RobolectricTestRunner.class)
+	@Config(sdk = 34)
+	public static class FormatTimeToFull {
+
+		private Context context;
+
+		@Before
+		public void setUp() {
+			context = ApplicationProvider.getApplicationContext();
+		}
+
+		@Test
+		public void hoursAndMinutes() {
+			assertEquals("~1h 20m", BatteryRateTracker.formatTimeToFull(context, 80));
+		}
+
+		@Test
+		public void minutesOnly() {
+			assertEquals("~45m", BatteryRateTracker.formatTimeToFull(context, 45));
+		}
+
+		@Test
+		public void wholeHoursStillShowMinutes() {
+			assertEquals("~2h 0m", BatteryRateTracker.formatTimeToFull(context, 120));
+		}
+
+		@Test
+		@Config(qualifiers = "ar")
+		public void keepsWesternDigitsUnderArabicLocale() {
+			// values-ar keeps the "~%1$sh %2$sm" shape and String.valueOf keeps the digits 0-9 (#96), so the
+			// Arabic render is identical — a regression to %d here would surface Arabic-Indic digits.
+			assertEquals("~1h 20m", BatteryRateTracker.formatTimeToFull(context, 80));
 		}
 	}
 

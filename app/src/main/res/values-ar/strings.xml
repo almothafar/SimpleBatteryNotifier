@@ -30,6 +30,8 @@
     <string name="drain_rate">معدل الاستهلاك</string>
     <string name="charge_rate">معدل الشحن</string>
     <string name="battery_current">التيار</string>
+    <!-- #124: الوقت المقدّر حتى اكتمال الشحن -->
+    <string name="time_to_full">الوقت حتى الاكتمال</string>
 
     <string name="battery">على البطارية</string>
     <string name="charger_ac">مقبس طاقة</string>
@@ -154,6 +156,9 @@
     <!-- معدل الشحن/الاستهلاك (#108) -->
     <string name="battery_rate_value">%1$s%%/h</string>
     <string name="battery_current_value">%1$s mA</string>
+    <!-- #124: الوحدات h/m تبقى لاتينية كبقية قيم المعدل -->
+    <string name="time_to_full_value_hm">~%1$sh %2$sm</string>
+    <string name="time_to_full_value_m">~%1$sm</string>
     <string name="pref_cat_title_drain">استهلاك البطارية</string>
     <string name="show_rate_in_notification">إظهار المعدل في إشعار الحالة</string>
     <string name="show_rate_in_notification_summary_on">يعرض الإشعار المستمر معدل الشحن/الاستهلاك المباشر بجانب الحالة</string>
