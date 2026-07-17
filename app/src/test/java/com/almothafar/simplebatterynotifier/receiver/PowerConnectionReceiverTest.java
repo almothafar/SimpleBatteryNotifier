@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.robolectric.Shadows.shadowOf;
 
 /**
@@ -97,6 +98,36 @@ public class PowerConnectionReceiverTest {
 			runPendingSample();
 			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
 					any(ChargeSpeed.class), anyBoolean()), never());
+		}
+	}
+
+	@Test
+	public void repeatedBroadcastForSameState_notifiesOnlyOnce() {
+		// The dedupe updates the state atomically with the check (issue #156): the first receive
+		// claims the new state, so an immediate duplicate broadcast must be swallowed.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 50, 100);
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			receive();
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					any(ChargeSpeed.class), anyBoolean()), times(1));
+		}
+	}
+
+	@Test
+	public void stateChangeAfterDedupe_stillProcesses() {
+		// Connect, then unplug: the second broadcast differs from the recorded state, so it must
+		// pass the dedupe and run the disconnect cleanup.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 50, 100);
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			receive();
+			publishBattery(0, 50, 100); // unplugged
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.clearNotifications(any(Context.class)));
 		}
 	}
 
