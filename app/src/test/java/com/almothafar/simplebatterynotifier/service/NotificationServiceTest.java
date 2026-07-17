@@ -6,6 +6,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -125,6 +127,37 @@ public class NotificationServiceTest {
 		@Test
 		public void matchesExpected() {
 			assertEquals(label, expected, NotificationService.versionedChannelId(baseId, version));
+		}
+	}
+
+	/**
+	 * {@link NotificationService#boundOrDefaultMinutes(String, String)} — a corrupt stored
+	 * quiet-hours bound falls back to that bound's default instead of crashing the alert path
+	 * (issue #154). Runs under Robolectric because the fallback is logged.
+	 */
+	@RunWith(RobolectricTestRunner.class)
+	@Config(sdk = 34)
+	public static class BoundOrDefaultMinutes {
+
+		private static final String DEFAULT_START = "06:30";
+
+		@Test
+		public void validStoredBoundWins() {
+			assertEquals(22 * 60 + 15, NotificationService.boundOrDefaultMinutes("22:15", DEFAULT_START));
+		}
+
+		@Test
+		public void malformedStoredBoundFallsBackToDefault() {
+			assertEquals(6 * 60 + 30, NotificationService.boundOrDefaultMinutes("ab:cd", DEFAULT_START));
+			assertEquals(6 * 60 + 30, NotificationService.boundOrDefaultMinutes(null, DEFAULT_START));
+			assertEquals(6 * 60 + 30, NotificationService.boundOrDefaultMinutes("25:99", DEFAULT_START));
+		}
+
+		@Test
+		public void unparseableDefaultFloorsAtMidnightInsteadOfPropagating() {
+			// Can't happen with the real resource constants; the floor just keeps the impossible
+			// case inside the valid minutes-of-day range.
+			assertEquals(0, NotificationService.boundOrDefaultMinutes("bad", "also bad"));
 		}
 	}
 
