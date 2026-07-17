@@ -27,6 +27,11 @@ public final class ChargeSpeed {
 	// Above this the reading is implausible for a phone (e.g. a device reporting current in the wrong
 	// unit, or garbage), so we treat it as unknown rather than showing an absurd wattage.
 	static final int MAX_PLAUSIBLE_MW = 200_000;  // 200 W
+	// Below this the reading is implausible in the other direction (#152): a phone that reports CHARGING
+	// is never genuinely taking in under ~0.1 W. Kirin/HiSilicon reports CURRENT_NOW in mA instead of µA,
+	// so a real fast charge computes to ~3-4 mW — without this floor it would classify as a known Trickle
+	// tier and fire the slow-charge warning (#123) on every charge. Mirror of MAX_PLAUSIBLE_MW.
+	static final int MIN_PLAUSIBLE_MW = 100;      // 0.1 W
 
 	private final int milliwatts;
 	private final ChargeSpeedTier tier;
@@ -61,7 +66,8 @@ public final class ChargeSpeed {
 	 * <p>
 	 * Handles the awkward real-world inputs: unsupported readings ({@link Integer#MIN_VALUE}) and the
 	 * discharge-positive sign convention (the magnitude is what matters while charging). Rejects a
-	 * zero/blank current and any implausibly large result as {@link #UNKNOWN_POWER_MW}.
+	 * zero/blank current and any implausible result — too large <em>or</em> too small (#152) — as
+	 * {@link #UNKNOWN_POWER_MW}.
 	 *
 	 * @param currentMicroAmps instantaneous current in µA
 	 * @param voltageMilliVolts battery voltage in mV
@@ -76,7 +82,7 @@ public final class ChargeSpeed {
 		final long currentMagnitudeUa = Math.abs((long) currentMicroAmps);
 		// mW = µA × mV / 1e6. Use long arithmetic: µA×mV can exceed the int range (e.g. 10 A × 5 V).
 		final long milliwatts = currentMagnitudeUa * voltageMilliVolts / 1_000_000L;
-		if (milliwatts <= 0 || milliwatts > MAX_PLAUSIBLE_MW) {
+		if (milliwatts < MIN_PLAUSIBLE_MW || milliwatts > MAX_PLAUSIBLE_MW) {
 			return UNKNOWN_POWER_MW;
 		}
 		return (int) milliwatts;

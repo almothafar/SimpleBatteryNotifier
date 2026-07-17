@@ -54,6 +54,12 @@ public class ChargeSpeedTest {
 					// Boundary around the plausibility cap (200 W): equal is kept, just above is rejected.
 					{"at plausibility cap", 40_000_000, 5_000, 200_000},
 					{"just over plausibility cap", 41_000_000, 5_000, ChargeSpeed.UNKNOWN_POWER_MW},
+					// Implausibly small (#152): a charging phone never takes in under ~0.1 W — such a
+					// result is a wrong-unit misread (Kirin reports CURRENT_NOW in mA, so a real fast
+					// charge computes to ~3-4 mW), not a real trickle.
+					{"Kirin mA-unit misread (~3.8 mW)", 1_000, 3_800, ChargeSpeed.UNKNOWN_POWER_MW},
+					{"just under plausibility floor", 24_750, 4_000, ChargeSpeed.UNKNOWN_POWER_MW},
+					{"at plausibility floor", 25_000, 4_000, 100},
 			});
 		}
 
@@ -128,6 +134,16 @@ public class ChargeSpeedTest {
 			assertTrue(speed.isKnown());
 			assertEquals(ChargeSpeedTier.TRICKLE, speed.getTier());
 			assertEquals(0, speed.getWatts());
+		}
+
+		@Test
+		public void kirinMisreadCurrent_isUnknownNotTrickle() {
+			// The end-to-end #152 case: Kirin's mA-unit raw (~1000 while fast charging) used to classify
+			// as a known Trickle (~3 mW), mislabeling the tier everywhere and firing the slow-charge
+			// warning (#123) on every charge. It must read as unknown, which keeps both quiet.
+			final ChargeSpeed speed = ChargeSpeed.fromMeasurements(1_000, 3_800);
+			assertFalse(speed.isKnown());
+			assertEquals(ChargeSpeedTier.UNKNOWN, speed.getTier());
 		}
 
 		@Test
