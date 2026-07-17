@@ -94,6 +94,9 @@ public final class NotificationService {
 	private static final int FAST_DRAIN_NOTIFICATION_ID = 1641990;
 	// Separate ID so a slow-charge warning doesn't replace any other alert (#123)
 	private static final int SLOW_CHARGE_NOTIFICATION_ID = 1641991;
+	// Separate ID so "Charging started" doesn't replace a level alert (#155). The level alert is
+	// still dismissed at plug-in, but explicitly (see clearLevelAlert), not by ID collision.
+	private static final int CHARGE_CONNECTED_NOTIFICATION_ID = 1641992;
 
 	// Do Not Disturb mode constants
 	private static final String ZEN_MODE = "zen_mode";
@@ -283,7 +286,9 @@ public final class NotificationService {
 	 * Post the charge-connected message as a system notification (the "notification" style).
 	 * <p>
 	 * Plugging in during quiet hours shouldn't ding: shown on the silent channel outside the window
-	 * instead of the audible full-battery channel (issue #111).
+	 * instead of the audible full-battery channel (issue #111). Posted under its own ID so it can
+	 * never replace a level alert (#155) — the level alert's dismissal at plug-in is the explicit
+	 * {@link #clearLevelAlert} call in {@code PowerConnectionReceiver}, not an ID collision here.
 	 *
 	 * @param context The application context
 	 * @param content The charge message to display
@@ -315,7 +320,10 @@ public final class NotificationService {
 				.setVisibility(Notification.VISIBILITY_PUBLIC)
 				.setStyle(new Notification.BigTextStyle().bigText(content));
 
-		sendNotificationToSystem(context, builder.build());
+		final NotificationManager manager = getNotificationManager(context);
+		if (nonNull(manager)) {
+			manager.notify(CHARGE_CONNECTED_NOTIFICATION_ID, builder.build());
+		}
 	}
 
 	/**
@@ -478,11 +486,31 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Clear all battery notifications
+	 * Clear the charge-session notifications: the level alert and the "Charging started"
+	 * notification (#155). Called on charger disconnect, so neither a stale level alert nor a stale
+	 * "Charging started" lingers after unplug.
 	 *
 	 * @param context The application context
 	 */
 	public static void clearNotifications(final Context context) {
+		final NotificationManager manager = getNotificationManager(context);
+		if (nonNull(manager)) {
+			manager.cancel(NOTIFICATION_ID);
+			manager.cancel(CHARGE_CONNECTED_NOTIFICATION_ID);
+		}
+	}
+
+	/**
+	 * Dismiss a displayed critical/warning/full level alert.
+	 * <p>
+	 * Called when a charger is connected: charging resolves the low-battery concern, so the alert is
+	 * deliberately dismissed (#155). Previously this happened only as a side effect of the
+	 * charge-connected notification reusing the level alert's ID — and therefore only in the
+	 * "notification" charge style; now it is an explicit action in every style.
+	 *
+	 * @param context The application context
+	 */
+	public static void clearLevelAlert(final Context context) {
 		final NotificationManager manager = getNotificationManager(context);
 		if (nonNull(manager)) {
 			manager.cancel(NOTIFICATION_ID);

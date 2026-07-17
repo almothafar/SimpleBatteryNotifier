@@ -1,5 +1,17 @@
 package com.almothafar.simplebatterynotifier.service;
 
+import android.Manifest;
+import android.app.Application;
+import android.app.NotificationManager;
+import android.content.Context;
+
+import androidx.preference.PreferenceManager;
+import androidx.test.core.app.ApplicationProvider;
+
+import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
+
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
@@ -13,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
+import static org.robolectric.Shadows.shadowOf;
 
 /**
  * Unit tests for the pure logic in {@link NotificationService}: quiet hours, charge-style
@@ -158,6 +171,63 @@ public class NotificationServiceTest {
 			// Can't happen with the real resource constants; the floor just keeps the impossible
 			// case inside the valid minutes-of-day range.
 			assertEquals(0, NotificationService.boundOrDefaultMinutes("bad", "also bad"));
+		}
+	}
+
+	/**
+	 * The charge-connected notification wiring (#155): posted under its own ID so it can never
+	 * replace a critical/warning/full level alert, cleared together with the level alert on
+	 * disconnect, and the level alert's plug-in dismissal is the explicit
+	 * {@link NotificationService#clearLevelAlert} — not an ID collision.
+	 */
+	@RunWith(RobolectricTestRunner.class)
+	@Config(sdk = 34)
+	public static class ChargeConnectedWiring {
+
+		private Context context;
+		private NotificationManager manager;
+
+		@Before
+		public void setUp() {
+			context = ApplicationProvider.getApplicationContext();
+			shadowOf((Application) context).grantPermissions(Manifest.permission.POST_NOTIFICATIONS);
+			// The "notification" charge style routes notifyChargeConnected to a real system notification.
+			PreferenceManager.getDefaultSharedPreferences(context).edit()
+					.putString(context.getString(R.string._pref_key_charge_notification_style),
+							NotificationService.CHARGE_STYLE_NOTIFICATION)
+					.commit();
+			manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+		}
+
+		@Test
+		public void chargeNotification_doesNotReplaceLevelAlert() {
+			NotificationService.sendNotification(context, NotificationService.CRITICAL_TYPE);
+			NotificationService.notifyChargeConnected(context, ChargeSpeed.unknown(), false);
+
+			// Distinct IDs: both must be showing, not "Charging started" swallowing the critical alert.
+			assertEquals(2, shadowOf(manager).size());
+		}
+
+		@Test
+		public void clearNotifications_onDisconnect_removesLevelAlertAndChargeNotification() {
+			NotificationService.sendNotification(context, NotificationService.CRITICAL_TYPE);
+			NotificationService.notifyChargeConnected(context, ChargeSpeed.unknown(), false);
+
+			NotificationService.clearNotifications(context);
+
+			// Neither a stale level alert nor a stale "Charging started" survives unplug.
+			assertEquals(0, shadowOf(manager).size());
+		}
+
+		@Test
+		public void clearLevelAlert_dismissesOnlyTheLevelAlert() {
+			NotificationService.sendNotification(context, NotificationService.CRITICAL_TYPE);
+			NotificationService.notifyChargeConnected(context, ChargeSpeed.unknown(), false);
+
+			NotificationService.clearLevelAlert(context);
+
+			// The plug-in dismissal targets the level alert; "Charging started" keeps showing.
+			assertEquals(1, shadowOf(manager).size());
 		}
 	}
 
