@@ -62,7 +62,10 @@ public final class NotificationService {
 	public static final int RED_ALERT_LEVEL = 4;
 	public static final int FULL_PERCENTAGE = 95;
 	private static final String TAG = NotificationService.class.getSimpleName();
-	// Notification channels
+	// Notification channels. The six alert channels below are *base* IDs: the actual channel ID
+	// carries a version suffix (see versionedChannelId) because Android un-deletes a channel that is
+	// recreated with the same ID, restoring its old settings — which made the Vibrate toggle a no-op
+	// (issue #153). refreshAlertChannels() bumps the version so a changed setting really applies.
 	private static final String CHANNEL_ID_CRITICAL = "battery_critical";
 	private static final String CHANNEL_ID_WARNING = "battery_warning";
 	private static final String CHANNEL_ID_FULL = "battery_full";
@@ -73,6 +76,11 @@ public final class NotificationService {
 	// Silent, low-importance channel used to deliver an alert quietly during the user's quiet hours:
 	// the alert is still visible but makes no sound or vibration (issue #111).
 	private static final String CHANNEL_ID_ALERTS_SILENT = "battery_alerts_quiet";
+
+	// Current version of the alert channels' settings, stored in the default SharedPreferences.
+	// Version 1 means the original unsuffixed channel IDs, so existing installs keep their channels
+	// (and any per-channel tweaks) until the user first changes the Vibrate preference.
+	private static final String PREF_ALERT_CHANNEL_VERSION = "alert_channel_version";
 
 	// Notification settings
 	private static final long[] VIBRATION_PATTERN = {0, 500, 250, 500, 250};
@@ -294,7 +302,7 @@ public final class NotificationService {
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
 
-		final Notification.Builder builder = new Notification.Builder(context, channelFor(withinWindow, CHANNEL_ID_FULL))
+		final Notification.Builder builder = new Notification.Builder(context, channelFor(context, withinWindow, CHANNEL_ID_FULL))
 				.setSmallIcon(iconRes)
 				.setOnlyAlertOnce(true)
 				.setTicker(ticker)
@@ -425,7 +433,7 @@ public final class NotificationService {
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		// These are not critical battery alerts, so they respect quiet hours (#111).
 		final boolean withinWindow = isWithinNotificationWindow(context, prefs);
-		final String channelId = channelFor(withinWindow, spec.audibleChannelId());
+		final String channelId = channelFor(context, withinWindow, spec.audibleChannelId());
 
 		final Notification.Builder builder = new Notification.Builder(context, channelId)
 				.setSmallIcon(spec.iconRes())
@@ -613,19 +621,23 @@ public final class NotificationService {
 			return;
 		}
 
-		final boolean vibrate = PreferenceManager.getDefaultSharedPreferences(context)
-		                                          .getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final boolean vibrate = prefs.getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
+		final int version = alertChannelVersion(prefs);
 
-		createChannelIfNotExists(manager, CHANNEL_ID_CRITICAL, "Battery Critical Alerts", "Critical battery level alerts", Color.RED, vibrate);
-		createChannelIfNotExists(manager, CHANNEL_ID_WARNING, "Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00), vibrate);
-		createChannelIfNotExists(manager, CHANNEL_ID_FULL, "Battery Full", "Battery fully charged notifications", Color.GREEN, vibrate);
-		createChannelIfNotExists(manager, CHANNEL_ID_TEMPERATURE,
+		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_CRITICAL, version),
+				"Battery Critical Alerts", "Critical battery level alerts", Color.RED, vibrate);
+		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_WARNING, version),
+				"Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00), vibrate);
+		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_FULL, version),
+				"Battery Full", "Battery fully charged notifications", Color.GREEN, vibrate);
+		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_TEMPERATURE, version),
 				context.getString(R.string.notification_temperature_channel_name),
 				context.getString(R.string.notification_temperature_channel_description), Color.RED, vibrate);
-		createChannelIfNotExists(manager, CHANNEL_ID_FAST_DRAIN,
+		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_FAST_DRAIN, version),
 				context.getString(R.string.notification_fast_drain_channel_name),
 				context.getString(R.string.notification_fast_drain_channel_description), Color.rgb(0xff, 0x66, 0x00), vibrate);
-		createChannelIfNotExists(manager, CHANNEL_ID_SLOW_CHARGE,
+		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_SLOW_CHARGE, version),
 				context.getString(R.string.notification_slow_charge_channel_name),
 				context.getString(R.string.notification_slow_charge_channel_description), Color.rgb(0xff, 0x66, 0x00), vibrate);
 		createSilentChannelIfNotExists(manager, CHANNEL_ID_STATUS,
@@ -700,8 +712,11 @@ public final class NotificationService {
 	/**
 	 * Re-create the alert channels so a changed "Vibrate" preference takes effect.
 	 * <p>
-	 * Android caches a channel's settings after first creation, so the channels must be deleted
-	 * and recreated for a new vibration setting to apply. The silent status channel is untouched.
+	 * Deleting and recreating a channel under the same ID is not enough: Android un-deletes it with
+	 * its old settings (issue #153). So the old-version channels are deleted (keeping system
+	 * settings free of orphans) and the channels are recreated under the next version's IDs, which
+	 * the system treats as brand-new channels with the new vibration setting. The silent channels
+	 * are untouched.
 	 *
 	 * @param context The application context
 	 */
@@ -710,12 +725,17 @@ public final class NotificationService {
 		if (isNull(manager)) {
 			return;
 		}
-		manager.deleteNotificationChannel(CHANNEL_ID_CRITICAL);
-		manager.deleteNotificationChannel(CHANNEL_ID_WARNING);
-		manager.deleteNotificationChannel(CHANNEL_ID_FULL);
-		manager.deleteNotificationChannel(CHANNEL_ID_TEMPERATURE);
-		manager.deleteNotificationChannel(CHANNEL_ID_FAST_DRAIN);
-		manager.deleteNotificationChannel(CHANNEL_ID_SLOW_CHARGE);
+
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final int oldVersion = alertChannelVersion(prefs);
+		manager.deleteNotificationChannel(versionedChannelId(CHANNEL_ID_CRITICAL, oldVersion));
+		manager.deleteNotificationChannel(versionedChannelId(CHANNEL_ID_WARNING, oldVersion));
+		manager.deleteNotificationChannel(versionedChannelId(CHANNEL_ID_FULL, oldVersion));
+		manager.deleteNotificationChannel(versionedChannelId(CHANNEL_ID_TEMPERATURE, oldVersion));
+		manager.deleteNotificationChannel(versionedChannelId(CHANNEL_ID_FAST_DRAIN, oldVersion));
+		manager.deleteNotificationChannel(versionedChannelId(CHANNEL_ID_SLOW_CHARGE, oldVersion));
+
+		prefs.edit().putInt(PREF_ALERT_CHANNEL_VERSION, oldVersion + 1).apply();
 		createNotificationChannels(context);
 	}
 
@@ -727,7 +747,7 @@ public final class NotificationService {
 	 * @return Notification.Builder instance
 	 */
 	private static Notification.Builder createNotificationBuilder(final Context context, final NotificationConfig config) {
-		final String channelId = channelFor(config.alertsAllowed, config.channelId);
+		final String channelId = channelFor(context, config.alertsAllowed, config.channelId);
 		final Notification.Builder builder = new Notification.Builder(context, channelId).setSmallIcon(config.iconRes);
 
 		if (config.type != CRITICAL_TYPE) {
@@ -740,14 +760,44 @@ public final class NotificationService {
 	/**
 	 * The channel an alerting notification should post to: its normal audible (high-importance) channel
 	 * when alerts may sound now, or the shared silent channel during quiet hours so the alert is still
-	 * shown but makes no sound or vibration (issue #111).
+	 * shown but makes no sound or vibration (issue #111). The audible channel's base ID is resolved to
+	 * its current versioned ID (issue #153), so every posting site tracks version bumps automatically.
 	 *
-	 * @param alertsAllowed    whether alerts may sound now (inside the window, or a critical override)
-	 * @param audibleChannelId the channel to use when alerts are allowed to sound
+	 * @param context              The application context
+	 * @param alertsAllowed        whether alerts may sound now (inside the window, or a critical override)
+	 * @param audibleBaseChannelId the base channel ID to use when alerts are allowed to sound
 	 * @return the channel id to post the notification on
 	 */
-	private static String channelFor(final boolean alertsAllowed, final String audibleChannelId) {
-		return alertsAllowed ? audibleChannelId : CHANNEL_ID_ALERTS_SILENT;
+	private static String channelFor(final Context context, final boolean alertsAllowed, final String audibleBaseChannelId) {
+		if (!alertsAllowed) {
+			return CHANNEL_ID_ALERTS_SILENT;
+		}
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		return versionedChannelId(audibleBaseChannelId, alertChannelVersion(prefs));
+	}
+
+	/**
+	 * The alert-channel ID for a given settings version. Version 1 is the original unsuffixed ID;
+	 * later versions append a suffix ("battery_critical_v2", ...) so Android sees a brand-new channel
+	 * instead of un-deleting the old one with its stale settings (issue #153).
+	 *
+	 * @param baseChannelId the unversioned channel ID
+	 * @param version       the alert-channel settings version (1-based)
+	 * @return the channel ID to create and post on for that version
+	 */
+	static String versionedChannelId(final String baseChannelId, final int version) {
+		return version <= 1 ? baseChannelId : baseChannelId + "_v" + version;
+	}
+
+	/**
+	 * The current alert-channel settings version, bumped by {@link #refreshAlertChannels(Context)}
+	 * whenever the Vibrate preference changes.
+	 *
+	 * @param prefs the default SharedPreferences
+	 * @return the current version, 1 for installs that never changed the Vibrate preference
+	 */
+	private static int alertChannelVersion(final SharedPreferences prefs) {
+		return prefs.getInt(PREF_ALERT_CHANNEL_VERSION, 1);
 	}
 
 	/**
