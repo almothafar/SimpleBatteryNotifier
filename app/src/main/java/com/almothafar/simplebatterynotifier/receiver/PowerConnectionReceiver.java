@@ -13,6 +13,8 @@ import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Broadcast receiver for power connection/disconnection events.
  * <p>
@@ -37,11 +39,14 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	static final long CHARGE_SAMPLE_DELAY_MS = 2000L;
 
 	/**
-	 * Previous plugged state to prevent duplicate notifications for the same state
+	 * Previous plugged state to prevent duplicate notifications for the same state.
 	 * <p>
-	 * This static field is thread-safe via synchronized access methods.
+	 * Atomic because BroadcastReceivers can run concurrently: the dedupe must read, compare and
+	 * update in one operation ({@link AtomicInteger#getAndSet}), or two quick broadcasts could both
+	 * see the stale state and both pass (issue #156). -1 means "unknown", so the first broadcast
+	 * after process start always processes.
 	 */
-	private static int currentState = -1;
+	private static final AtomicInteger currentState = new AtomicInteger(-1);
 
 	// Main-thread handler used to sample the charging speed a short delay after connection. Static so a
 	// stale pending sample can be cancelled if the charger is unplugged (or re-plugged) during the delay.
@@ -49,15 +54,14 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	private static Runnable pendingSample;
 
 	/**
-	 * Update the current plugged state (synchronized for thread safety)
-	 * <p>
-	 * Thread safety is important because BroadcastReceivers can be called
-	 * concurrently from different threads.
+	 * Update the current plugged state without triggering a notification. Used by
+	 * {@code PowerConnectionService} to seed the state at service start, so the first broadcast
+	 * after startup doesn't announce a charger that was already plugged in.
 	 *
 	 * @param state The new plugged state
 	 */
-	public static synchronized void setCurrentState(final int state) {
-		currentState = state;
+	public static void setCurrentState(final int state) {
+		currentState.set(state);
 	}
 
 	/**
@@ -78,10 +82,11 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 		}
 
 		final int pluggedState = batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
-		if (currentState == pluggedState) {
+		// Read-compare-update in one atomic step: a check-then-act here let two quick broadcasts
+		// both pass the dedupe (issue #156).
+		if (currentState.getAndSet(pluggedState) == pluggedState) {
 			return; // Same state as before, avoid duplicate notifications
 		}
-		setCurrentState(pluggedState);
 
 		final int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
 		final int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
