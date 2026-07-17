@@ -919,13 +919,11 @@ public final class NotificationService {
 		// fresh install that never opened Time Settings alert around the clock, so quiet hours silently
 		// did nothing (issue #111). Now quiet hours apply by default (06:30–23:30).
 		final boolean limitedTime = prefs.getBoolean(context.getString(R.string._pref_key_notifications_time_range), true);
-		final String startTime = prefs.getString(
-				context.getString(R.string._pref_key_notifications_time_range_start),
-				context.getString(R.string._pref_value_notifications_time_range_start));
-		final String endTime = prefs.getString(
-				context.getString(R.string._pref_key_notifications_time_range_end),
-				context.getString(R.string._pref_value_notifications_time_range_end));
-		return isWithinTime(startTime, endTime) || !limitedTime;
+		final String defaultStartTime = context.getString(R.string._pref_value_notifications_time_range_start);
+		final String defaultEndTime = context.getString(R.string._pref_value_notifications_time_range_end);
+		final String startTime = prefs.getString(context.getString(R.string._pref_key_notifications_time_range_start), defaultStartTime);
+		final String endTime = prefs.getString(context.getString(R.string._pref_key_notifications_time_range_end), defaultEndTime);
+		return isWithinTime(startTime, endTime, defaultStartTime, defaultEndTime) || !limitedTime;
 	}
 
 	/**
@@ -970,18 +968,46 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Check if current time is within notification time range
+	 * Check if current time is within notification time range. Never throws: this runs on the
+	 * broadcast path of every alert, and a corrupt stored bound must not turn alerting into a crash
+	 * loop (issue #154) — a malformed bound falls back to that bound's default instead.
 	 *
-	 * @param startTime Start time string (HH:mm format)
-	 * @param endTime   End time string (HH:mm format)
+	 * @param startTime        Start time string (HH:mm format)
+	 * @param endTime          End time string (HH:mm format)
+	 * @param defaultStartTime Default window start, used when {@code startTime} is malformed
+	 * @param defaultEndTime   Default window end, used when {@code endTime} is malformed
 	 * @return true if current time is within range
 	 */
-	private static boolean isWithinTime(final String startTime, final String endTime) {
+	private static boolean isWithinTime(
+			final String startTime,
+			final String endTime,
+			final String defaultStartTime,
+			final String defaultEndTime) {
 		final LocalTime now = LocalTime.now();
 		final int nowMinutes = now.getHour() * 60 + now.getMinute();
-		final int startMinutes = GeneralHelper.getHour(startTime) * 60 + GeneralHelper.getMinute(startTime);
-		final int endMinutes = GeneralHelper.getHour(endTime) * 60 + GeneralHelper.getMinute(endTime);
+		final int startMinutes = boundOrDefaultMinutes(startTime, defaultStartTime);
+		final int endMinutes = boundOrDefaultMinutes(endTime, defaultEndTime);
 		return isWithinTimeRange(nowMinutes, startMinutes, endMinutes);
+	}
+
+	/**
+	 * A quiet-hours window bound as minutes since midnight, falling back to the bound's default when
+	 * the stored value is malformed (backup/restore corruption, prefs damage — issue #154). The
+	 * fallback is logged: a corrupt pref is unexpected and should be visible, just never fatal.
+	 *
+	 * @param storedTime  the persisted "HH:MM" bound
+	 * @param defaultTime the bound's default from resources, expected to always parse
+	 * @return the bound in minutes since midnight
+	 */
+	static int boundOrDefaultMinutes(final String storedTime, final String defaultTime) {
+		final int minutes = GeneralHelper.parseTimeToMinutes(storedTime);
+		if (minutes >= 0) {
+			return minutes;
+		}
+		Log.w(TAG, "Malformed quiet-hours time \"" + storedTime + "\"; using default " + defaultTime);
+		// The default is a compile-time resource constant, so this parse can't realistically fail;
+		// floor at midnight rather than propagate -1 into the range check just in case.
+		return Math.max(0, GeneralHelper.parseTimeToMinutes(defaultTime));
 	}
 
 	/**
