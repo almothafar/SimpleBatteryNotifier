@@ -7,6 +7,10 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -47,8 +51,11 @@ public class BatteryDetailsFragment extends Fragment {
 	private static final int SCROLL_HINT_BOB_COUNT = 2;       // how many bobs
 	private static final int SCROLL_HINT_REVEAL_DP = 96;      // max peek distance
 
+	// #173: the avg line under the Current value renders at this fraction of the cell's text size.
+	private static final float AVG_LINE_SIZE_RATIO = 0.8f;
+
 	private BatteryDO batteryDO;
-	private Map<String, String> valuesMap;
+	private Map<String, CharSequence> valuesMap;
 	private View viewRef;
 
 	// #94: when this device's charge counter can't be trusted, the Capacity row shows "Unknown" with a
@@ -210,7 +217,7 @@ public class BatteryDetailsFragment extends Fragment {
 	 *
 	 * @return The created table row
 	 */
-	private TableRow createTableRow(final View view, final String label, final String value,
+	private TableRow createTableRow(final View view, final String label, final CharSequence value,
 	                                final int cellPadding, final int cellPaddingTop,
 	                                final boolean valueUnreliable, final int valueColor) {
 		final TableRow row = new TableRow(view.getContext());
@@ -290,7 +297,7 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @return The created TextView
 	 */
 	private TextView createValueTextView(final View view,
-	                                     final String text,
+	                                     final CharSequence text,
 	                                     final int cellPadding,
 	                                     final int cellPaddingTop,
 	                                     final boolean unreliable,
@@ -385,8 +392,7 @@ public class BatteryDetailsFragment extends Fragment {
 		}
 		addTimeToFullRow(view, rate);
 		if (rate.hasCurrent()) {
-			valuesMap.put(getResources().getString(R.string.battery_current),
-					BatteryRateTracker.formatCurrentValue(view.getContext(), rate.currentMilliAmps()));
+			valuesMap.put(getResources().getString(R.string.battery_current), currentValueText(view, rate));
 		}
 	}
 
@@ -415,6 +421,32 @@ public class BatteryDetailsFragment extends Fragment {
 		}
 		valuesMap.put(getResources().getString(R.string.time_to_full),
 				BatteryRateTracker.formatTimeToFull(view.getContext(), minutes));
+	}
+
+	/**
+	 * The Current row's value (#173): the moment value as the headline, and — once the window has
+	 * enough data — the windowed average on its own second line, rendered smaller and in the label
+	 * colour so it reads as a quiet anchor under the ticking instant. A second line (rather than an
+	 * inline "(avg: …)") because the inline form wrapped mid-parenthesis in narrow columns, larger
+	 * font scales, and Arabic.
+	 *
+	 * @param view The fragment view
+	 * @param rate The already-computed rate for this refresh
+	 *
+	 * @return the styled value text for the Current row
+	 */
+	private CharSequence currentValueText(final View view, final BatteryRateTracker.BatteryRate rate) {
+		final String instant = BatteryRateTracker.formatCurrentValue(view.getContext(), rate.currentMilliAmps());
+		if (!rate.hasAvgCurrent()) {
+			return instant;
+		}
+		final String avgLine = BatteryRateTracker.formatAverageCurrentLine(view.getContext(), rate.avgCurrentMilliAmps());
+		final SpannableString styled = new SpannableString(instant + "\n" + avgLine);
+		final int avgStart = instant.length() + 1;
+		styled.setSpan(new RelativeSizeSpan(AVG_LINE_SIZE_RATIO), avgStart, styled.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		styled.setSpan(new ForegroundColorSpan(GeneralHelper.getColor(getResources(), R.color.battery_details_label_color)),
+				avgStart, styled.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		return styled;
 	}
 
 	/**
