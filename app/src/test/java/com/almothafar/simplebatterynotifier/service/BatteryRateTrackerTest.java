@@ -475,18 +475,18 @@ public class BatteryRateTrackerTest {
 
 		@Test
 		public void dischargingSignsNegative() {
-			assertEquals("avg: −245", BatteryRateTracker.formatAverageCurrentLine(context, -245));
+			assertEquals("avg: −245 mA", BatteryRateTracker.formatAverageCurrentLine(context, -245));
 		}
 
 		@Test
 		public void chargingSignsPositive() {
-			assertEquals("avg: +900", BatteryRateTracker.formatAverageCurrentLine(context, 900));
+			assertEquals("avg: +900 mA", BatteryRateTracker.formatAverageCurrentLine(context, 900));
 		}
 
 		@Test
 		@Config(qualifiers = "ar")
 		public void arabicLabelKeepsWesternDigits() {
-			assertEquals("المتوسط: −245", BatteryRateTracker.formatAverageCurrentLine(context, -245));
+			assertEquals("المتوسط: −245 mA", BatteryRateTracker.formatAverageCurrentLine(context, -245));
 		}
 	}
 

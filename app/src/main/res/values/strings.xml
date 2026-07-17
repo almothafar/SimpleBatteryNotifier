@@ -169,7 +169,7 @@
     <!-- %1$s is a signed Western-digit number, e.g. "+900" or "−450" -->
     <string name="battery_current_value">%1$s mA</string>
     <!-- #173: the windowed average, rendered as its own smaller line under the instant current.
-         %1$s is a signed Western-digit number ("−245") — sign repeated, unit not, for compactness -->
+         %1$s is the formatted battery_current_value ("−245 mA") -->
     <string name="battery_current_avg_line">avg: %1$s</string>
     <!-- #124: time-to-full duration. %1$s hours, %2$s minutes — Western-digit numbers (String.valueOf);
          the h/m units stay Latin like the other rate values (#96). -->
