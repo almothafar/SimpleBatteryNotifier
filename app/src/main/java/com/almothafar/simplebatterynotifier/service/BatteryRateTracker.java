@@ -452,23 +452,19 @@ public final class BatteryRateTracker {
 	}
 
 	/**
-	 * Formats the instantaneous current with its windowed average, e.g. {@code "−208 mA (avg: −245)"}
-	 * (#173): the moment value stays the headline, the average gives the number a stable anchor. The
-	 * average repeats the sign but not the unit, to keep the row compact. Western digits in every
-	 * locale (#96).
+	 * Formats the windowed-average line shown under the instantaneous current, e.g. {@code "avg: −245"}
+	 * (#173): the moment value stays the headline; this line gives it a stable anchor. The average
+	 * repeats the sign but not the unit, to stay compact. Western digits in every locale (#96). The
+	 * caller renders it as a second, smaller line (see {@code BatteryDetailsFragment}).
 	 *
-	 * @param context             Application context
-	 * @param signedMilliAmps     signed instantaneous current in mA
-	 * @param signedAvgMilliAmps  signed windowed-average current in mA
+	 * @param context            Application context
+	 * @param signedAvgMilliAmps signed windowed-average current in mA
 	 *
-	 * @return the formatted current string
+	 * @return the formatted average line
 	 */
-	public static String formatCurrentWithAverage(final Context context,
-	                                              final int signedMilliAmps,
-	                                              final int signedAvgMilliAmps) {
-		final String avgSign = signedAvgMilliAmps >= 0 ? "+" : "−";
-		return context.getString(R.string.battery_current_value_with_avg,
-				formatCurrentValue(context, signedMilliAmps), avgSign + Math.abs(signedAvgMilliAmps));
+	public static String formatAverageCurrentLine(final Context context, final int signedAvgMilliAmps) {
+		final String sign = signedAvgMilliAmps >= 0 ? "+" : "−"; // U+2212, matching formatCurrentValue
+		return context.getString(R.string.battery_current_avg_line, sign + Math.abs(signedAvgMilliAmps));
 	}
 
 	/**

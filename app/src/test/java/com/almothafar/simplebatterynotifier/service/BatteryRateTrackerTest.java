@@ -459,6 +459,38 @@ public class BatteryRateTrackerTest {
 	}
 
 	/**
+	 * {@link BatteryRateTracker#formatAverageCurrentLine}: the "avg: −245" line under the Current value
+	 * (#173) — signed like the instant, unitless for compactness, Western digits in every locale (#96).
+	 */
+	@RunWith(RobolectricTestRunner.class)
+	@Config(sdk = 34)
+	public static class FormatAverageCurrentLine {
+
+		private Context context;
+
+		@Before
+		public void setUp() {
+			context = ApplicationProvider.getApplicationContext();
+		}
+
+		@Test
+		public void dischargingSignsNegative() {
+			assertEquals("avg: −245", BatteryRateTracker.formatAverageCurrentLine(context, -245));
+		}
+
+		@Test
+		public void chargingSignsPositive() {
+			assertEquals("avg: +900", BatteryRateTracker.formatAverageCurrentLine(context, 900));
+		}
+
+		@Test
+		@Config(qualifiers = "ar")
+		public void arabicLabelKeepsWesternDigits() {
+			assertEquals("المتوسط: −245", BatteryRateTracker.formatAverageCurrentLine(context, -245));
+		}
+	}
+
+	/**
 	 * {@link BatteryRateTracker#isChargingDirection}: charging and full map to the charging direction.
 	 */
 	@RunWith(Parameterized.class)
