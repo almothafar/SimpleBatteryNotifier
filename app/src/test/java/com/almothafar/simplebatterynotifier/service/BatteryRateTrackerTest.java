@@ -485,8 +485,10 @@ public class BatteryRateTrackerTest {
 
 		@Test
 		@Config(qualifiers = "ar")
-		public void arabicLabelKeepsWesternDigits() {
-			assertEquals("المتوسط: −245 mA", BatteryRateTracker.formatAverageCurrentLine(context, -245));
+		public void arabicKeepsLatinAvgLabel() {
+			// Deliberately identical to English (maintainer decision): the line is Latin-heavy already
+			// (sign + mA), so a lone Arabic word would just break the text direction. Revisit later.
+			assertEquals("avg: −245 mA", BatteryRateTracker.formatAverageCurrentLine(context, -245));
 		}
 	}
 
