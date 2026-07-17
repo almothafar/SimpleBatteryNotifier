@@ -57,6 +57,11 @@ public final class BatteryRateTracker {
 
 	// A phone never sources/sinks more than a few amps; anything past this is a bad/units-wrong reading.
 	static final int MAX_PLAUSIBLE_CURRENT_MA = 15000;
+	// Floor for the *displayed* current (#152): below this the reading is either glance-noise (a genuine
+	// sub-10 mA draw only happens in deep sleep) or a wrong-unit misread — Kirin/HiSilicon reports
+	// CURRENT_NOW in mA instead of µA, so a real ~800 mA draw arrives as raw -800 and would otherwise
+	// display as a nonsense "−1 mA". Hide rather than mislead, mirroring #94.
+	static final int MIN_DISPLAY_CURRENT_MA = 10;
 	// Above this the derived %/h is garbage (e.g. a wrong-unit current); reject rather than display it.
 	static final int MAX_PLAUSIBLE_RATE_PPH = 500;
 
@@ -251,7 +256,7 @@ public final class BatteryRateTracker {
 	 * (the post-unplug warm-up shows nothing), and never when it rounds to 0 (a static level) or exceeds
 	 * a plausible ceiling (a garbage reading). The current is reported independently, signed by
 	 * direction so it reads negative while discharging and positive while charging regardless of the
-	 * device's raw sign convention.
+	 * device's raw sign convention — and only when it clears {@link #MIN_DISPLAY_CURRENT_MA} (#152).
 	 *
 	 * @param window                 samples oldest-first
 	 * @param capacityMah            measured full capacity in mAh, or 0 when unknown/untrusted (#69)
@@ -264,7 +269,7 @@ public final class BatteryRateTracker {
 	static BatteryRate computeRate(final List<Sample> window, final int capacityMah, final boolean charging,
 	                               final long nowMillis, final int latestCurrentMicroAmps) {
 		final boolean hasCurrent = isPlausibleCurrentMicroAmps(latestCurrentMicroAmps)
-				&& Math.round(Math.abs(latestCurrentMicroAmps) / 1000f) >= 1;
+				&& Math.round(Math.abs(latestCurrentMicroAmps) / 1000f) >= MIN_DISPLAY_CURRENT_MA;
 		final int signedMilliAmps = hasCurrent ? signedCurrentMilliAmps(latestCurrentMicroAmps, charging) : 0;
 
 		final int pph = ratePercentPerHour(window, capacityMah);

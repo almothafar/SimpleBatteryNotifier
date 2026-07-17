@@ -156,6 +156,43 @@ public class BatteryRateTrackerTest {
 		}
 
 		@Test
+		public void kirinMisreadCurrent_isHiddenWhileRateStillShown() {
+			// Kirin/HiSilicon reports CURRENT_NOW in mA, not µA (#152): a real ~800 mA draw arrives as
+			// raw -800, which used to display as a nonsense "−1 mA". The display floor hides it; the
+			// level-over-time rate (source B) is unit-independent and stays.
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -800),
+					new Sample(360_000, 47, -800));
+			final BatteryRate rate = BatteryRateTracker.computeRate(window, 0, false, 360_000, -800);
+
+			assertTrue(rate.hasRate());
+			assertFalse(rate.hasCurrent());
+		}
+
+		@Test
+		public void currentJustBelowDisplayFloor_isHidden() {
+			// 9.4 mA rounds to 9, one below MIN_DISPLAY_CURRENT_MA (#152).
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -9_400),
+					new Sample(360_000, 47, -9_400));
+			final BatteryRate rate = BatteryRateTracker.computeRate(window, 0, false, 360_000, -9_400);
+
+			assertFalse(rate.hasCurrent());
+		}
+
+		@Test
+		public void currentAtDisplayFloor_isShown() {
+			// 9.5 mA rounds to exactly MIN_DISPLAY_CURRENT_MA — the floor is inclusive (#152).
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -9_500),
+					new Sample(360_000, 47, -9_500));
+			final BatteryRate rate = BatteryRateTracker.computeRate(window, 0, false, 360_000, -9_500);
+
+			assertTrue(rate.hasCurrent());
+			assertEquals(-10, rate.currentMilliAmps());
+		}
+
+		@Test
 		public void currentZero_isHiddenWhileRateStillShown() {
 			final List<Sample> window = Arrays.asList(
 					new Sample(0, 50, NO_CURRENT),
