@@ -158,6 +158,8 @@
     <!-- معدل الشحن/الاستهلاك (#108) -->
     <string name="battery_rate_value">%1$s%%/h</string>
     <string name="battery_current_value">%1$s mA</string>
+    <!-- #173: القيمة اللحظية مع متوسط النافذة -->
+    <string name="battery_current_value_with_avg">%1$s (المتوسط: %2$s)</string>
     <!-- #124: الوحدات h/m تبقى لاتينية كبقية قيم المعدل -->
     <string name="time_to_full_value_hm">~%1$sh %2$sm</string>
     <string name="time_to_full_value_m">~%1$sm</string>

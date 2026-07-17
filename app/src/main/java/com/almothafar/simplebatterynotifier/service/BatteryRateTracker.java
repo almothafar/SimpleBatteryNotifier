@@ -257,6 +257,11 @@ public final class BatteryRateTracker {
 	 * a plausible ceiling (a garbage reading). The current is reported independently, signed by
 	 * direction so it reads negative while discharging and positive while charging regardless of the
 	 * device's raw sign convention — and only when it clears {@link #MIN_DISPLAY_CURRENT_MA} (#152).
+	 * <p>
+	 * The windowed <em>average</em> current is reported alongside the instant (#173), and when available
+	 * it also takes over the floor gate: the average moves slowly, so the row's visibility is stable —
+	 * a momentary dip below the floor no longer blinks the row out, while sustained-garbage readings
+	 * (whose average is also below the floor) stay hidden.
 	 *
 	 * @param window                 samples oldest-first
 	 * @param capacityMah            measured full capacity in mAh, or 0 when unknown/untrusted (#69)
@@ -268,14 +273,52 @@ public final class BatteryRateTracker {
 	 */
 	static BatteryRate computeRate(final List<Sample> window, final int capacityMah, final boolean charging,
 	                               final long nowMillis, final int latestCurrentMicroAmps) {
+		// Floor-gate on the windowed average when available (#173): the average moves slowly, so the
+		// row's visibility can't flicker with a momentary dip, and sustained garbage (Kirin pre-#152-v2
+		// calibration averages ~1 mA) stays hidden. The instant gates itself only while the window is
+		// still too fresh to average.
+		final int avgMicroAmps = averagedCurrentMicroAmps(window);
+		final boolean hasAvg = avgMicroAmps != PROPERTY_UNSUPPORTED;
+		final int floorGateMicroAmps = hasAvg ? avgMicroAmps : latestCurrentMicroAmps;
 		final boolean hasCurrent = isPlausibleCurrentMicroAmps(latestCurrentMicroAmps)
-				&& Math.round(Math.abs(latestCurrentMicroAmps) / 1000f) >= MIN_DISPLAY_CURRENT_MA;
+				&& Math.round(Math.abs(floorGateMicroAmps) / 1000f) >= MIN_DISPLAY_CURRENT_MA;
 		final int signedMilliAmps = hasCurrent ? signedCurrentMilliAmps(latestCurrentMicroAmps, charging) : 0;
+		final boolean hasAvgCurrent = hasCurrent && hasAvg;
+		final int signedAvgMilliAmps = hasAvgCurrent ? signedCurrentMilliAmps(avgMicroAmps, charging) : 0;
 
 		final int pph = ratePercentPerHour(window, capacityMah);
 		final boolean hasRate = pph >= 1 && pph <= MAX_PLAUSIBLE_RATE_PPH;
 
-		return new BatteryRate(hasRate, hasRate ? pph : 0, charging, hasCurrent, signedMilliAmps);
+		return new BatteryRate(hasRate, hasRate ? pph : 0, charging, hasCurrent, signedMilliAmps, hasAvgCurrent, signedAvgMilliAmps);
+	}
+
+	/**
+	 * The averaged instantaneous current over the window in µA, or {@link Integer#MIN_VALUE} when the
+	 * window doesn't yet hold enough spaced plausible readings — the same smoothing criteria source A
+	 * uses ({@link #MIN_CURRENT_SAMPLES} readings spanning {@link #MIN_SPAN_CURRENT_MS}), extracted so
+	 * the rate source and the displayed average (#173) can't disagree. Pure so it is unit-testable.
+	 *
+	 * @param window samples oldest-first
+	 *
+	 * @return averaged current in µA, or {@link Integer#MIN_VALUE} when not enough data yet
+	 */
+	static int averagedCurrentMicroAmps(final List<Sample> window) {
+		if (window.size() < 2) {
+			return PROPERTY_UNSUPPORTED;
+		}
+		final long spanMs = window.get(window.size() - 1).timeMillis() - window.get(0).timeMillis();
+		double sumMicroAmps = 0;
+		int currentSamples = 0;
+		for (final Sample s : window) {
+			if (isPlausibleCurrentMicroAmps(s.currentMicroAmps())) {
+				sumMicroAmps += s.currentMicroAmps();
+				currentSamples++;
+			}
+		}
+		if (currentSamples < MIN_CURRENT_SAMPLES || spanMs < MIN_SPAN_CURRENT_MS) {
+			return PROPERTY_UNSUPPORTED;
+		}
+		return (int) Math.round(sumMicroAmps / currentSamples);
 	}
 
 	/**
@@ -296,18 +339,10 @@ public final class BatteryRateTracker {
 		final Sample last = window.get(window.size() - 1);
 		final long spanMs = last.timeMillis() - first.timeMillis();
 
-		// Source A: averaged current / capacity.
-		double sumMilliAmps = 0;
-		int currentSamples = 0;
-		for (final Sample s : window) {
-			if (isPlausibleCurrentMicroAmps(s.currentMicroAmps())) {
-				sumMilliAmps += s.currentMicroAmps() / 1000.0;
-				currentSamples++;
-			}
-		}
-		if (capacityMah > 0 && currentSamples >= MIN_CURRENT_SAMPLES && spanMs >= MIN_SPAN_CURRENT_MS) {
-			final double avgMilliAmps = sumMilliAmps / currentSamples;
-			return (int) Math.round(Math.abs(avgMilliAmps) / capacityMah * 100.0);
+		// Source A: averaged current / capacity (average shared with the displayed avg current, #173).
+		final int avgMicroAmps = averagedCurrentMicroAmps(window);
+		if (capacityMah > 0 && avgMicroAmps != PROPERTY_UNSUPPORTED) {
+			return (int) Math.round(Math.abs(avgMicroAmps / 1000.0) / capacityMah * 100.0);
 		}
 
 		// Source B: level change over time (capacity-free).
@@ -414,6 +449,26 @@ public final class BatteryRateTracker {
 	public static String formatCurrentValue(final Context context, final int signedMilliAmps) {
 		final String sign = signedMilliAmps >= 0 ? "+" : "−"; // U+2212 MINUS SIGN reads cleaner than '-'
 		return context.getString(R.string.battery_current_value, sign + Math.abs(signedMilliAmps));
+	}
+
+	/**
+	 * Formats the instantaneous current with its windowed average, e.g. {@code "−208 mA (avg: −245)"}
+	 * (#173): the moment value stays the headline, the average gives the number a stable anchor. The
+	 * average repeats the sign but not the unit, to keep the row compact. Western digits in every
+	 * locale (#96).
+	 *
+	 * @param context             Application context
+	 * @param signedMilliAmps     signed instantaneous current in mA
+	 * @param signedAvgMilliAmps  signed windowed-average current in mA
+	 *
+	 * @return the formatted current string
+	 */
+	public static String formatCurrentWithAverage(final Context context,
+	                                              final int signedMilliAmps,
+	                                              final int signedAvgMilliAmps) {
+		final String avgSign = signedAvgMilliAmps >= 0 ? "+" : "−";
+		return context.getString(R.string.battery_current_value_with_avg,
+				formatCurrentValue(context, signedMilliAmps), avgSign + Math.abs(signedAvgMilliAmps));
 	}
 
 	/**
@@ -525,19 +580,23 @@ public final class BatteryRateTracker {
 
 	/**
 	 * Result of a rate computation: the smoothed %/h and the signed instantaneous current, each with a
-	 * flag saying whether it is trustworthy enough to display.
+	 * flag saying whether it is trustworthy enough to display, plus the windowed average current shown
+	 * next to the instant (#173).
 	 *
-	 * @param hasRate         whether a trustworthy %/h is available
-	 * @param percentPerHour  rate magnitude in %/h (valid only when {@code hasRate})
-	 * @param charging        direction: true charging (charge rate), false discharging (drain rate)
-	 * @param hasCurrent      whether a trustworthy instantaneous current is available
-	 * @param currentMilliAmps signed current in mA (valid only when {@code hasCurrent})
+	 * @param hasRate             whether a trustworthy %/h is available
+	 * @param percentPerHour      rate magnitude in %/h (valid only when {@code hasRate})
+	 * @param charging            direction: true charging (charge rate), false discharging (drain rate)
+	 * @param hasCurrent          whether a trustworthy instantaneous current is available
+	 * @param currentMilliAmps    signed current in mA (valid only when {@code hasCurrent})
+	 * @param hasAvgCurrent       whether the windowed average current is available for display
+	 * @param avgCurrentMilliAmps signed windowed-average current in mA (valid only when {@code hasAvgCurrent})
 	 */
 	public record BatteryRate(boolean hasRate, int percentPerHour, boolean charging,
-	                          boolean hasCurrent, int currentMilliAmps) {
+	                          boolean hasCurrent, int currentMilliAmps,
+	                          boolean hasAvgCurrent, int avgCurrentMilliAmps) {
 
 		static BatteryRate empty() {
-			return new BatteryRate(false, 0, false, false, 0);
+			return new BatteryRate(false, 0, false, false, 0, false, 0);
 		}
 	}
 }

@@ -156,6 +156,50 @@ public class BatteryRateTrackerTest {
 		}
 
 		@Test
+		public void momentaryDipBelowFloor_staysShownViaAverageGate() {
+			// #173: a real ~278 mA draw whose latest instant dips to 6 mA — the windowed average carries
+			// the floor gate, so the row doesn't blink out; the instant stays the displayed headline.
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -278_000),
+					new Sample(30_000, 50, -278_000),
+					new Sample(60_000, 50, -278_000));
+			final BatteryRate rate = BatteryRateTracker.computeRate(window, 0, false, 60_000, -6_000);
+
+			assertTrue(rate.hasCurrent());
+			assertEquals(-6, rate.currentMilliAmps());
+			assertTrue(rate.hasAvgCurrent());
+			assertEquals(-278, rate.avgCurrentMilliAmps());
+		}
+
+		@Test
+		public void sustainedSubFloorAverage_isHidden() {
+			// #173: when the *average* is also below the floor (Kirin pre-calibration garbage, deep
+			// sleep), the row stays hidden — the stable gate hides sustained noise, not just instants.
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -800),
+					new Sample(30_000, 50, -800),
+					new Sample(60_000, 50, -800));
+			final BatteryRate rate = BatteryRateTracker.computeRate(window, 0, false, 60_000, -800);
+
+			assertFalse(rate.hasCurrent());
+			assertFalse(rate.hasAvgCurrent());
+		}
+
+		@Test
+		public void freshWindow_instantGatesItselfWithoutAverage() {
+			// Two samples can't average yet (#173): the instant carries the floor gate alone and the
+			// avg segment is absent.
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -208_000),
+					new Sample(20_000, 50, -208_000));
+			final BatteryRate rate = BatteryRateTracker.computeRate(window, 0, false, 20_000, -208_000);
+
+			assertTrue(rate.hasCurrent());
+			assertEquals(-208, rate.currentMilliAmps());
+			assertFalse(rate.hasAvgCurrent());
+		}
+
+		@Test
 		public void kirinMisreadCurrent_isHiddenWhileRateStillShown() {
 			// Kirin/HiSilicon reports CURRENT_NOW in mA, not µA (#152): a real ~800 mA draw arrives as
 			// raw -800, which used to display as a nonsense "−1 mA". The display floor hides it; the
@@ -211,6 +255,53 @@ public class BatteryRateTrackerTest {
 			final BatteryRate rate = BatteryRateTracker.computeRate(window, 0, false, 360_000, NO_CURRENT);
 
 			assertFalse(rate.hasCurrent());
+		}
+	}
+
+	/**
+	 * {@link BatteryRateTracker#averagedCurrentMicroAmps}: the shared windowed average (#173) — needs
+	 * enough spaced plausible readings, skips implausible ones, and signals "not yet" otherwise.
+	 */
+	public static class AveragedCurrent {
+
+		@Test
+		public void enoughSamples_returnsMean() {
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -300_000),
+					new Sample(30_000, 50, -200_000),
+					new Sample(60_000, 50, -250_000));
+
+			assertEquals(-250_000, BatteryRateTracker.averagedCurrentMicroAmps(window));
+		}
+
+		@Test
+		public void implausibleSamplesAreSkipped() {
+			// The NO_CURRENT sentinel doesn't drag the mean; but with it skipped only 2 plausible
+			// readings remain, below MIN_CURRENT_SAMPLES -> not yet.
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -300_000),
+					new Sample(30_000, 50, NO_CURRENT),
+					new Sample(60_000, 50, -200_000));
+
+			assertEquals(NO_CURRENT, BatteryRateTracker.averagedCurrentMicroAmps(window));
+		}
+
+		@Test
+		public void shortSpan_isNotEnough() {
+			// 3 readings but only 30s of span (< MIN_SPAN_CURRENT_MS): a burst, not a smoothed average.
+			final List<Sample> window = Arrays.asList(
+					new Sample(0, 50, -300_000),
+					new Sample(15_000, 50, -200_000),
+					new Sample(30_000, 50, -250_000));
+
+			assertEquals(NO_CURRENT, BatteryRateTracker.averagedCurrentMicroAmps(window));
+		}
+
+		@Test
+		public void tooFewSamples_isNotEnough() {
+			assertEquals(NO_CURRENT, BatteryRateTracker.averagedCurrentMicroAmps(List.of()));
+			assertEquals(NO_CURRENT, BatteryRateTracker.averagedCurrentMicroAmps(
+					List.of(new Sample(0, 50, -300_000))));
 		}
 	}
 

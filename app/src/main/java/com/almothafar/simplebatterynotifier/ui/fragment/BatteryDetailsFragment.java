@@ -385,8 +385,12 @@ public class BatteryDetailsFragment extends Fragment {
 		}
 		addTimeToFullRow(view, rate);
 		if (rate.hasCurrent()) {
-			valuesMap.put(getResources().getString(R.string.battery_current),
-					BatteryRateTracker.formatCurrentValue(view.getContext(), rate.currentMilliAmps()));
+			// #173: the moment value stays the headline; the windowed average rides along in parentheses
+			// once the window has enough data, anchoring the ticking instant to a stable figure.
+			final String currentValue = rate.hasAvgCurrent()
+					? BatteryRateTracker.formatCurrentWithAverage(view.getContext(), rate.currentMilliAmps(), rate.avgCurrentMilliAmps())
+					: BatteryRateTracker.formatCurrentValue(view.getContext(), rate.currentMilliAmps());
+			valuesMap.put(getResources().getString(R.string.battery_current), currentValue);
 		}
 	}
 
