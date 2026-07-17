@@ -286,7 +286,7 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 		updatePreferencesSummary(sharedPreferences, pref);
 
 		// The Vibrate toggle changes channel settings, which Android caches; recreate the alert
-		// channels so the new setting takes effect.
+		// channels under new versioned IDs so the new setting takes effect (#153).
 		if (nonNull(key) && key.equals(getString(R.string._pref_key_notifications_vibrate))) {
 			NotificationService.refreshAlertChannels(requireContext());
 		}
