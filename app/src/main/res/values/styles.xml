@@ -56,7 +56,10 @@
         <item name="android:windowTranslucentNavigation">false</item>
     </style>
 
+    <!-- Details-table cells (labels + values, its only users). TextAppearance.Medium's 18sp read a
+         touch large on-device (#174); 16sp — tune here if it needs another nudge. -->
     <style name="DefaultTextStyle" parent="@android:style/TextAppearance.Medium">
+        <item name="android:textSize">16sp</item>
     </style>
 
     <!-- SeekBar Preference style with better touch targets -->
