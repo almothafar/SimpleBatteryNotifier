@@ -141,7 +141,7 @@
     <string name="notification_status_channel_description">حالة البطارية المستمرة أثناء تفعيل المراقبة</string>
     <string name="notification_quiet_channel_name">تنبيهات صامتة</string>
     <string name="notification_quiet_channel_description">تنبيهات البطارية تُعرض بصمت أثناء ساعات الهدوء</string>
-    <string name="notification_status_content">%1$d%% · %2$s · %3$s</string>
+    <string name="notification_status_content">%1$s · %2$s · %3$s</string>
 
     <!-- High temperature alert -->
     <string name="notify_high_temperature">تنبيه ارتفاع الحرارة</string>

@@ -109,7 +109,7 @@ public final class BatteryRateTracker {
 		final boolean sameDirection = sameDirection(prefs, charging);
 		final List<Sample> window = loadWindow(prefs, charging, now);
 
-		final int level = Math.round(batteryDO.getBatteryPercentage());
+		final int level = batteryDO.getBatteryPercentageInt();
 		final List<Sample> updated = appendAndTrim(window, new Sample(now, level, batteryDO.getCurrentMicroAmps()), now);
 
 		// Persist only when something actually changed. ACTION_BATTERY_CHANGED can fire every few seconds

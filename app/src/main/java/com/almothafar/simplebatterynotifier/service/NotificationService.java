@@ -28,6 +28,7 @@ import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
 import com.almothafar.simplebatterynotifier.model.ChargeSpeedTier;
 import com.almothafar.simplebatterynotifier.ui.MainActivity;
+import com.almothafar.simplebatterynotifier.util.BatteryPercentFormatter;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
@@ -1056,11 +1057,14 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Build the content line of the ongoing status notification, e.g. "85% · Discharging 9%/h · 32.0 °C".
+	 * Build the content line of the ongoing status notification, e.g. "85.12% · Discharging 9%/h · 32.0 °C".
 	 * <p>
-	 * The middle segment appends the charge/drain rate to the status label when available, falling back
-	 * to the raw mA, then to the plain label — always showing the best number on hand (issue #108). The
-	 * appended rate is gated by a user setting (default on); the plain label always shows.
+	 * The percentage is the same live value the home gauge shows — two decimals when the device
+	 * genuinely resolves below one percent, whole otherwise (#158); only the level <em>alerts</em>
+	 * (critical/warning) stay integer. The middle segment appends the charge/drain rate to the status
+	 * label when available, falling back to the raw mA, then to the plain label — always showing the
+	 * best number on hand (issue #108). The appended rate is gated by a user setting (default on); the
+	 * plain label always shows.
 	 *
 	 * @param context   The application context
 	 * @param batteryDO Current battery snapshot, or null if unavailable
@@ -1069,7 +1073,7 @@ public final class NotificationService {
 	 */
 	private static String statusText(final Context context, final BatteryDO batteryDO,
 	                                 final BatteryRateTracker.BatteryRate rate) {
-		final int percentage = isNull(batteryDO) ? 0 : Math.round(batteryDO.getBatteryPercentage());
+		final String percentage = BatteryPercentFormatter.formatLive(batteryDO);
 		final String statusLabel = SystemService.getStatusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
 		final String temperature = isNull(batteryDO) ? "" : TemperatureUtils.format(context, batteryDO.getTemperature());
 		return context.getString(R.string.notification_status_content, percentage, statusWithRate(context, batteryDO, statusLabel, rate), temperature);
@@ -1156,7 +1160,7 @@ public final class NotificationService {
 		if (batteryDO.getStatus() == BatteryManager.BATTERY_STATUS_CHARGING) {
 			return R.drawable.ic_stat_battery_charging;
 		}
-		return Math.round(batteryDO.getBatteryPercentage()) <= 50
+		return batteryDO.getBatteryPercentageInt() <= 50
 		       ? R.drawable.ic_stat_battery_low
 		       : R.drawable.ic_stat_battery_full;
 	}

@@ -93,7 +93,7 @@ public final class SlowChargeDetector {
 		// Not eligible to fire right now, but the session continues → sleep (hold the streak, don't warn):
 		// a thermal/battery-protect pause (NOT_CHARGING), the deliberate taper above 80%, or wireless (v1
 		// judges wired charging only). The observation-gap lapse in decide() still resets a long-stale streak.
-		final int level = Math.round(batteryDO.getBatteryPercentage());
+		final int level = batteryDO.getBatteryPercentageInt();
 		final boolean wired = batteryDO.getPlugged() != BatteryManager.BATTERY_PLUGGED_WIRELESS;
 		if (status != BatteryManager.BATTERY_STATUS_CHARGING || !wired || level >= MAX_LEVEL_PERCENT) {
 			return;

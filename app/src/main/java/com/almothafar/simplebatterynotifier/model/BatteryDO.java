@@ -5,6 +5,12 @@ package com.almothafar.simplebatterynotifier.model;
  * Uses builder pattern for chaining setters
  */
 public final class BatteryDO {
+
+	// The synthesized sub-percent fraction is clamped into the OS whole-percent bucket so the two
+	// sources can't visibly disagree; 0.99 (not 1.0) keeps the two-decimal rendering from rounding
+	// up into the next whole percent (#158).
+	private static final float MAX_SUB_PERCENT_FRACTION = 0.99f;
+
 	private int level;
 	private int plugged;
 	private int scale;
@@ -13,6 +19,9 @@ public final class BatteryDO {
 	private int voltage;
 	private boolean present;
 	private int capacity;
+	// Remaining charge in µAh from BATTERY_PROPERTY_CHARGE_COUNTER, already gated for
+	// trustworthiness at read time (see SystemService); 0 when unavailable or untrusted (#69/#94).
+	private int chargeCounterMicroAmpHours;
 	// Instantaneous current in µA from BATTERY_PROPERTY_CURRENT_NOW; Integer.MIN_VALUE when the device
 	// doesn't report it. Sign convention varies by OEM, so callers derive direction from the status.
 	private int currentMicroAmps = Integer.MIN_VALUE;
@@ -35,6 +44,64 @@ public final class BatteryDO {
 			return 0f;
 		}
 		return (level / (float) scale) * 100;
+	}
+
+	/**
+	 * The battery percentage as an integer, under the app's single rounding policy: <b>truncation</b>.
+	 * <p>
+	 * Every integer consumer — alert thresholds, rate samples, status icons, log lines — must use
+	 * this instead of ad-hoc {@code (int)} casts or {@code Math.round}, so a 19.6% battery reads as
+	 * the same "19" everywhere (#158). Truncation matches threshold semantics: "critical at 20"
+	 * fires as soon as the battery is genuinely below 21, and 20.4% doesn't display as 20 until it
+	 * truly is.
+	 *
+	 * @return Battery percentage truncated to a whole number (0-100)
+	 */
+	public int getBatteryPercentageInt() {
+		return (int) getBatteryPercentage();
+	}
+
+	/**
+	 * Whether {@link #getPrecisePercentage()} carries genuine sub-percent resolution: either the OS
+	 * reports a fine-grained scale (&gt; 100), or a trusted charge counter and full-capacity
+	 * estimate allow the fraction to be synthesized. When false, callers must show the whole
+	 * percent — an artificial ".00" would be fake precision (#69/#94).
+	 *
+	 * @return true when the precise percentage genuinely resolves below one percent
+	 */
+	public boolean hasPrecisePercentage() {
+		return scale > 100 || hasSynthesizedFraction();
+	}
+
+	/**
+	 * The battery percentage with genuine sub-percent resolution where available (#158).
+	 * <p>
+	 * Preference order: the plain {@code level/scale} fraction when the OS scale is finer than
+	 * whole percent; else a fraction synthesized from the charge counter divided by the estimated
+	 * full capacity (AccuBattery-style), clamped into the OS whole-percent bucket
+	 * {@code [percent, percent + 0.99]} (and to 100) so the two sources can't visibly disagree.
+	 * Without a trusted counter it falls back to the whole percent
+	 * ({@link #hasPrecisePercentage()} then reads false).
+	 *
+	 * @return Battery percentage, fractional when genuine sub-percent data exists
+	 */
+	public float getPrecisePercentage() {
+		if (scale > 100 || !hasSynthesizedFraction()) {
+			return getBatteryPercentage();
+		}
+		// capacity is mAh; ×1000 puts it in the counter's µAh unit.
+		final float synthesized = chargeCounterMicroAmpHours / (capacity * 1000f) * 100f;
+		final int whole = getBatteryPercentageInt();
+		final float clamped = Math.max(whole, Math.min(whole + MAX_SUB_PERCENT_FRACTION, synthesized));
+		return Math.min(100f, clamped);
+	}
+
+	/**
+	 * Whether the fraction can be synthesized from the charge counter: a real OS level reading plus
+	 * a trusted counter and full-capacity estimate (both already gated at read time, #69/#94).
+	 */
+	private boolean hasSynthesizedFraction() {
+		return scale > 0 && level >= 0 && chargeCounterMicroAmpHours > 0 && capacity > 0;
 	}
 
 	public String getHealth() {
@@ -124,6 +191,15 @@ public final class BatteryDO {
 
 	public BatteryDO setCapacity(final int capacity) {
 		this.capacity = capacity;
+		return this;
+	}
+
+	public int getChargeCounterMicroAmpHours() {
+		return chargeCounterMicroAmpHours;
+	}
+
+	public BatteryDO setChargeCounterMicroAmpHours(final int chargeCounterMicroAmpHours) {
+		this.chargeCounterMicroAmpHours = chargeCounterMicroAmpHours;
 		return this;
 	}
 

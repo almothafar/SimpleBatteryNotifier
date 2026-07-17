@@ -149,7 +149,7 @@
     <string name="notification_quiet_channel_name">Quiet Alerts</string>
     <string name="notification_quiet_channel_description">Battery alerts shown silently during your quiet hours</string>
     <!-- e.g. "85% · Discharging · 32.0 °C" -->
-    <string name="notification_status_content">%1$d%% · %2$s · %3$s</string>
+    <string name="notification_status_content">%1$s · %2$s · %3$s</string>
 
     <!-- High temperature alert -->
     <string name="notify_high_temperature">High Temperature Alert</string>

@@ -411,7 +411,7 @@ public class BatteryDetailsFragment extends Fragment {
 		if (!rate.charging() || !rate.hasRate()) {
 			return;
 		}
-		final int level = Math.round(batteryDO.getBatteryPercentage());
+		final int level = batteryDO.getBatteryPercentageInt();
 		if (level >= 99) {
 			return;
 		}
