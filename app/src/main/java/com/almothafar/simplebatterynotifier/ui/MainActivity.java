@@ -36,6 +36,7 @@ import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.ui.widget.HorseshoeProgressBar;
+import com.almothafar.simplebatterynotifier.util.BatteryPercentFormatter;
 
 import java.util.List;
 
@@ -55,6 +56,7 @@ public class MainActivity extends BaseActivity {
 	private final Handler handler = new Handler(Looper.getMainLooper());
 
 	private int batteryPercentage;
+	private String batteryPercentageText;
 	private String subTitle;
 	private BatteryDO batteryDO;
 	private ActivityResultLauncher<Intent> settingsLauncher;
@@ -232,11 +234,14 @@ public class MainActivity extends BaseActivity {
 		if (isNull(batteryDO)) {
 			Log.w(TAG, "Unable to retrieve battery information");
 			batteryPercentage = 0;
+			batteryPercentageText = BatteryPercentFormatter.formatLive(null);
 			subTitle = getResources().getString(R.string.unknown);
 			return;
 		}
 
-		batteryPercentage = (int) batteryDO.getBatteryPercentage();
+		batteryPercentage = batteryDO.getBatteryPercentageInt();
+		// Two decimals when the device genuinely resolves below one percent, whole otherwise (#158).
+		batteryPercentageText = BatteryPercentFormatter.formatLive(batteryDO);
 		subTitle = SystemService.getStatusLabel(this, batteryDO.getStatus());
 	}
 
@@ -265,7 +270,7 @@ public class MainActivity extends BaseActivity {
 		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
 		fillBatteryInfo();
 		gauge.setLevel(batteryPercentage);
-		gauge.setTitle(batteryPercentage + "%");
+		gauge.setTitle(batteryPercentageText);
 		gauge.setStatusText(subTitle);
 
 		// Drive the gauge motion: charging wave, full-on-charger idle pulse, or discharge wave.
@@ -311,8 +316,10 @@ public class MainActivity extends BaseActivity {
 		// Keep the in-fly slider in sync with values that may have changed in Settings.
 		syncThresholdSlider();
 
+		// The ring still animates whole levels; only the final title carries the decimals (#158).
+		// Intermediate steps count up in whole percent, then the last step lands on the precise text.
 		gauge.animateLevelTo(batteryPercentage, progress -> {
-			gauge.setTitle(progress + "%");
+			gauge.setTitle(progress >= batteryPercentage ? batteryPercentageText : BatteryPercentFormatter.formatWhole(progress));
 			gauge.setStatusText(subTitle);
 		});
 	}

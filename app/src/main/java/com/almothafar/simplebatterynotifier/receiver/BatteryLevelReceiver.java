@@ -81,7 +81,7 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 			// which silently suppressed genuine low/critical alerts on a transient read failure.
 			return;
 		}
-		final int percentage = (int) batteryDO.getBatteryPercentage();
+		final int percentage = batteryDO.getBatteryPercentageInt();
 
 		// Track battery health and charge cycles
 		BatteryHealthTracker.recordBatteryState(context, percentage, status);

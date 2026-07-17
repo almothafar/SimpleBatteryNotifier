@@ -8,6 +8,7 @@ import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
@@ -84,7 +85,8 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 
 		final int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
 		final int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-		final int percentage = (int) ((level / (float) scale) * 100);
+		// Through the single rounding policy (#158) — also guards the scale=-1 default the raw division didn't.
+		final int percentage = new BatteryDO().setLevel(level).setScale(scale).getBatteryPercentageInt();
 
 		if (pluggedState > 0) {
 			// Charger connected

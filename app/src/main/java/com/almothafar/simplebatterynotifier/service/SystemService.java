@@ -83,8 +83,9 @@ public final class SystemService {
 		final String chargerType = determineChargerType(extras.plugged, resources);
 		final int batteryCapacity = getBatteryCapacity(context);
 		final int currentMicroAmps = getInstantaneousCurrentMicroAmps(context);
+		final int chargeCounterUah = getTrustedChargeCounterUah(context, batteryCapacity);
 
-		return buildBatteryDataObject(extras, chargerType, batteryCapacity, currentMicroAmps, resources);
+		return buildBatteryDataObject(extras, chargerType, batteryCapacity, currentMicroAmps, chargeCounterUah, resources);
 	}
 
 	/**
@@ -181,10 +182,12 @@ public final class SystemService {
 	/**
 	 * Build the BatteryDO object from extracted data
 	 *
-	 * @param extras          Extracted battery extras
-	 * @param chargerType     Charger type string
-	 * @param batteryCapacity Battery capacity in mAh
-	 * @param resources       Resources for string lookup
+	 * @param extras           Extracted battery extras
+	 * @param chargerType      Charger type string
+	 * @param batteryCapacity  Battery capacity in mAh
+	 * @param currentMicroAmps Instantaneous current in µA
+	 * @param chargeCounterUah Trusted remaining-charge counter in µAh (0 when unavailable/untrusted)
+	 * @param resources        Resources for string lookup
 	 *
 	 * @return Populated BatteryDO object
 	 */
@@ -192,6 +195,7 @@ public final class SystemService {
 	                                                final String chargerType,
 	                                                final int batteryCapacity,
 	                                                final int currentMicroAmps,
+	                                                final int chargeCounterUah,
 	                                                final Resources resources) {
 		final BatteryDO batteryDO = new BatteryDO();
 		batteryDO.setLevel(extras.level)
@@ -205,6 +209,7 @@ public final class SystemService {
 		         .setVoltage(extras.voltage)
 		         .setCapacity(batteryCapacity)
 		         .setCurrentMicroAmps(currentMicroAmps)
+		         .setChargeCounterMicroAmpHours(chargeCounterUah)
 		         .setIntHealth(extras.health);
 
 		// Determine health status and set it on the battery object
@@ -287,6 +292,36 @@ public final class SystemService {
 		final int chargeCounterUah = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
 		final int capacityPercent = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
 		return estimateFullCapacityMah(chargeCounterUah, capacityPercent);
+	}
+
+	/**
+	 * The raw remaining-charge counter ({@link BatteryManager#BATTERY_PROPERTY_CHARGE_COUNTER}, µAh),
+	 * gated for trustworthiness so downstream consumers can synthesize a sub-percent battery fraction
+	 * without showing fake precision (#158):
+	 * <ul>
+	 *   <li>{@code estimatedFullCapacityMah <= 0} — the counter is absent or produced an implausible
+	 *       capacity estimate (the Kirin wrong-unit bug, #69) — returns 0;</li>
+	 *   <li>the estimate is wildly out of line with the user's design capacity (#94) — returns 0;</li>
+	 *   <li>otherwise the counter reading itself, floored at 0.</li>
+	 * </ul>
+	 *
+	 * @param context                 The application context
+	 * @param estimatedFullCapacityMah The already-computed full-capacity estimate in mAh (0 = untrusted)
+	 *
+	 * @return trusted remaining charge in µAh, or 0 when the counter can't be trusted on this device
+	 */
+	private static int getTrustedChargeCounterUah(final Context context, final int estimatedFullCapacityMah) {
+		if (estimatedFullCapacityMah <= 0) {
+			return 0; // Counter unavailable or implausible (#69) — integer display instead of fake decimals.
+		}
+		if (BatteryHealthTracker.isEstimateImplausible(estimatedFullCapacityMah, BatteryHealthTracker.getDesignCapacity(context))) {
+			return 0; // Counter inconsistent with the known design capacity (#94).
+		}
+		final BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
+		if (isNull(batteryManager)) {
+			return 0;
+		}
+		return Math.max(0, batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER));
 	}
 
 	/**
