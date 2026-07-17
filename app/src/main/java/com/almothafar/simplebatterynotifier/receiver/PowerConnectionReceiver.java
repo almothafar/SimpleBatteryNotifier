@@ -128,13 +128,14 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	/**
 	 * Handle charger disconnected event
 	 * <p>
-	 * Cancels any pending speed sample, resets battery monitoring state and clears active notifications.
+	 * Cancels any pending speed sample, re-arms the charge-session alerts (full-battery + level
+	 * de-dupe — see {@link BatteryLevelReceiver#onChargerDisconnected}) and clears active notifications.
 	 *
 	 * @param context The application context
 	 */
 	private void handleChargerDisconnected(final Context context) {
 		cancelPendingSample();
-		BatteryLevelReceiver.resetVariables();
+		BatteryLevelReceiver.onChargerDisconnected(context);
 		NotificationService.clearNotifications(context);
 
 		Log.i(TAG, "Charger disconnected");

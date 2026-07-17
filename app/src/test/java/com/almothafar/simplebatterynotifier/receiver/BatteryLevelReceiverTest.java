@@ -4,8 +4,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.BatteryManager;
 
+import androidx.preference.PreferenceManager;
 import androidx.test.core.app.ApplicationProvider;
 
+import com.almothafar.simplebatterynotifier.receiver.BatteryLevelReceiver.LevelAlertState;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 
@@ -16,9 +18,8 @@ import org.mockito.MockedStatic;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-import java.lang.reflect.Field;
-
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -31,6 +32,10 @@ import static org.mockito.Mockito.times;
  * notification to {@link NotificationService}, whose static methods are mocked so we can assert
  * <em>which</em> alert (if any) it decides to send without doing real Android notification work.
  * {@link SystemService} is left real so it builds a {@code BatteryDO} from the sticky intent we set.
+ * <p>
+ * Episode state lives in SharedPreferences (#164), and each {@code receive()} uses a fresh receiver
+ * instance — so every multi-broadcast test also exercises the state surviving "process death"
+ * (nothing is carried in memory between broadcasts).
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34)
@@ -40,12 +45,9 @@ public class BatteryLevelReceiverTest {
 
 	@Before
 	public void setUp() {
+		// Robolectric gives each test a fresh application (and thus fresh SharedPreferences), so the
+		// persisted episode state (#164) always starts cleared; no manual reset needed.
 		context = ApplicationProvider.getApplicationContext();
-		// Clear the static de-dup state between tests so ordering can't leak through
-		setStatic("prevLevel", 0);
-		setStatic("prevType", 0);
-		setStatic("fullNotificationCalled", false);
-		setStatic("temperatureAlertSent", false);
 	}
 
 	@Test
@@ -109,7 +111,7 @@ public class BatteryLevelReceiverTest {
 	@Test
 	public void full_whileCharging_sendsFullAlertOnce() {
 		// Simulate the battery already sitting at 100% (unchanged) so the charging/full branch runs
-		setStatic("prevLevel", 100);
+		saveLevelState(new LevelAlertState(100, BatteryLevelReceiver.NO_ALERT, false));
 		publishBattery(BatteryManager.BATTERY_STATUS_FULL, 100, 100, BatteryManager.BATTERY_PLUGGED_AC);
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
@@ -119,38 +121,81 @@ public class BatteryLevelReceiverTest {
 		}
 	}
 
+	@Test
+	public void unplug_reArmsFullAlert_forNextChargeSession() {
+		saveLevelState(new LevelAlertState(100, BatteryLevelReceiver.NO_ALERT, false));
+		publishBattery(BatteryManager.BATTERY_STATUS_FULL, 100, 100, BatteryManager.BATTERY_PLUGGED_AC);
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			receive();
+			// Unplugged: the charge-session reset re-arms the full alert; plugging back in at full fires again.
+			BatteryLevelReceiver.onChargerDisconnected(context);
+			receive();
+
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.FULL_LEVEL_TYPE)), times(2));
+		}
+	}
+
+	@Test
+	public void temperature_hotSpell_alertsOnceAcrossBroadcasts() {
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			// 46.0 °C — above the default 45 °C threshold. Each receive() is a fresh receiver instance,
+			// so the second broadcast staying hot is exactly the killed-and-restarted-mid-spell case.
+			publishBattery(BatteryManager.BATTERY_STATUS_DISCHARGING, 80, 100, 0, 460);
+			receive();
+			publishBattery(BatteryManager.BATTERY_STATUS_DISCHARGING, 79, 100, 0, 465);
+			receive();
+
+			ns.verify(() -> NotificationService.sendTemperatureNotification(any(Context.class), anyInt()), times(1));
+		}
+	}
+
+	@Test
+	public void temperature_cooledBelowHysteresis_alertsAgainOnNextSpell() {
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			publishBattery(BatteryManager.BATTERY_STATUS_DISCHARGING, 80, 100, 0, 460);
+			receive();
+			// Cooled to 41.0 °C (≤ 45 − 3 hysteresis) — re-arms; the next spell alerts again.
+			publishBattery(BatteryManager.BATTERY_STATUS_DISCHARGING, 79, 100, 0, 410);
+			receive();
+			publishBattery(BatteryManager.BATTERY_STATUS_DISCHARGING, 78, 100, 0, 460);
+			receive();
+
+			ns.verify(() -> NotificationService.sendTemperatureNotification(any(Context.class), anyInt()), times(2));
+		}
+	}
+
 	// --- helpers -------------------------------------------------------------
 
 	private void receive() {
 		new BatteryLevelReceiver().onReceive(context, new Intent(Intent.ACTION_BATTERY_CHANGED));
 	}
 
-	@SuppressWarnings("deprecation")
 	private void publishBattery(final int status, final int level, final int scale, final int plugged) {
+		publishBattery(status, level, scale, plugged, 250); // 25.0 °C, well below the alert threshold
+	}
+
+	@SuppressWarnings("deprecation")
+	private void publishBattery(final int status, final int level, final int scale, final int plugged,
+	                            final int temperatureTenthsC) {
 		final Intent battery = new Intent(Intent.ACTION_BATTERY_CHANGED);
 		battery.putExtra(BatteryManager.EXTRA_STATUS, status);
 		battery.putExtra(BatteryManager.EXTRA_LEVEL, level);
 		battery.putExtra(BatteryManager.EXTRA_SCALE, scale);
 		battery.putExtra(BatteryManager.EXTRA_PLUGGED, plugged);
 		battery.putExtra(BatteryManager.EXTRA_PRESENT, true);
-		battery.putExtra(BatteryManager.EXTRA_TEMPERATURE, 250); // 25.0 °C, well below the alert threshold
+		battery.putExtra(BatteryManager.EXTRA_TEMPERATURE, temperatureTenthsC);
 		context.sendStickyBroadcast(battery);
 	}
 
 	private void enableAlertEveryTick() {
-		androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+		PreferenceManager.getDefaultSharedPreferences(context)
 				.edit()
 				.putBoolean(context.getString(com.almothafar.simplebatterynotifier.R.string._pref_key_notify_every_tick), true)
 				.commit();
 	}
 
-	private static void setStatic(final String fieldName, final Object value) {
-		try {
-			final Field field = BatteryLevelReceiver.class.getDeclaredField(fieldName);
-			field.setAccessible(true);
-			field.set(null, value);
-		} catch (ReflectiveOperationException e) {
-			throw new IllegalStateException("Unable to reset " + fieldName, e);
-		}
+	private void saveLevelState(final LevelAlertState state) {
+		BatteryLevelReceiver.saveLevelState(PreferenceManager.getDefaultSharedPreferences(context), state);
 	}
 }
