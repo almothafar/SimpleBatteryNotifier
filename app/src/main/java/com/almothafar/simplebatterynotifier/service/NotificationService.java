@@ -1049,7 +1049,7 @@ public final class NotificationService {
 		// can (#125). The ChargeSpeed read (CURRENT_NOW × voltage) is charging-only, so the discharging path
 		// below is untouched; it falls through to the %/h → mA → plain chain when the speed can't be estimated.
 		if (rate.charging()) {
-			final String chargingSpeed = chargingSpeedSegment(context);
+			final String chargingSpeed = chargingSpeedSegment(context, batteryDO);
 			if (nonNull(chargingSpeed)) {
 				return chargingSpeed;
 			}
@@ -1069,12 +1069,16 @@ public final class NotificationService {
 	 * The tier label already reads as "… charging", so it replaces the plain "Charging" status word rather
 	 * than being appended to it. Returns null when the speed can't be estimated (e.g. a device that doesn't
 	 * report {@code CURRENT_NOW}), so the caller falls back to the %/h → mA → plain chain.
+	 * <p>
+	 * The speed is derived from the {@code batteryDO} snapshot, not a fresh hardware read, so this segment
+	 * judges the same reading as the details table and {@link SlowChargeDetector} within one tick (#157).
 	 *
-	 * @param context The application context
+	 * @param context   The application context
+	 * @param batteryDO Current battery snapshot (non-null; the caller already checked)
 	 * @return the formatted charging-speed segment, or null when the charge speed is unknown
 	 */
-	private static String chargingSpeedSegment(final Context context) {
-		final ChargeSpeed speed = SystemService.getChargeSpeed(context);
+	private static String chargingSpeedSegment(final Context context, final BatteryDO batteryDO) {
+		final ChargeSpeed speed = ChargeSpeed.fromMeasurements(batteryDO.getCurrentMicroAmps(), batteryDO.getVoltage());
 		if (!speed.isKnown()) {
 			return null;
 		}

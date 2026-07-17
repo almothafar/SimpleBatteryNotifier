@@ -297,6 +297,11 @@ public final class SystemService {
 	 * after connection, once the current has stabilised — right at plug-in the current reads 0 or
 	 * noisy. Returns {@link ChargeSpeed#unknown()} when the device doesn't report instantaneous
 	 * current, so callers fall back to a plain "Charging" message.
+	 * <p>
+	 * This is the <em>fresh-read</em> path, meant only for the deliberately-delayed plug-in sample in
+	 * {@link com.almothafar.simplebatterynotifier.receiver.PowerConnectionReceiver} (#122). Surfaces
+	 * reacting to a battery broadcast must instead derive the speed from the {@code BatteryDO} in hand
+	 * ({@link ChargeSpeed#fromMeasurements}), so all of them judge the same reading within a tick (#157).
 	 *
 	 * @param context The application context
 	 *

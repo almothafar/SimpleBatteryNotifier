@@ -99,7 +99,9 @@ public final class SlowChargeDetector {
 			return;
 		}
 
-		final ChargeSpeed speed = SystemService.getChargeSpeed(context);
+		// Judge the snapshot in hand, not a fresh hardware read: every surface in this tick (table row,
+		// notification segment, this detector) must see the same reading (#157).
+		final ChargeSpeed speed = ChargeSpeed.fromMeasurements(batteryDO.getCurrentMicroAmps(), batteryDO.getVoltage());
 		final long now = System.currentTimeMillis();
 		final SlowChargeState previous = loadState(prefs);
 		final SlowChargeDecision decision = decide(previous, speed.isKnown(), speed.getMilliwatts(),
