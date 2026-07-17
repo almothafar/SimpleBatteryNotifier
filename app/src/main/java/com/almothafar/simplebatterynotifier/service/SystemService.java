@@ -315,9 +315,11 @@ public final class SystemService {
 	 * Read the live instantaneous battery current from {@link BatteryManager#BATTERY_PROPERTY_CURRENT_NOW}
 	 * (µA), used to derive the charge/drain rate and the signed "Current" row (issue #108).
 	 * <p>
-	 * The raw value is returned unfiltered: {@code getIntProperty} yields {@link Integer#MIN_VALUE} when
-	 * the property is unsupported, and the sign convention varies by OEM. Callers gate plausibility and
-	 * derive direction from the charging status (see {@link BatteryRateTracker}).
+	 * The reading passes through {@link CurrentUnitCalibrator}, which rescales it on devices concluded to
+	 * report mA instead of µA (the Kirin unit bug, #152) — the single read point, so every consumer sees
+	 * the same corrected value. Otherwise it is unfiltered: {@code getIntProperty} yields
+	 * {@link Integer#MIN_VALUE} when the property is unsupported, and the sign convention varies by OEM.
+	 * Callers gate plausibility and derive direction from the charging status (see {@link BatteryRateTracker}).
 	 *
 	 * @param context The application context
 	 *
@@ -329,7 +331,7 @@ public final class SystemService {
 			Log.w(TAG, "BatteryManager service unavailable");
 			return Integer.MIN_VALUE;
 		}
-		return batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+		return CurrentUnitCalibrator.observeAndScale(context, batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW));
 	}
 
 	/**
