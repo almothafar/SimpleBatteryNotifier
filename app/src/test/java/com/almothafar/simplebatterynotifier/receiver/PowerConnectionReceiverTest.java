@@ -89,6 +89,18 @@ public class PowerConnectionReceiverTest {
 	}
 
 	@Test
+	public void connected_dismissesLevelAlertImmediately() {
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 10, 100);
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			receive();
+			// Verified before the delayed speed sample runs: charging resolves the low-battery
+			// concern, so the alert's dismissal must not wait out the sampling delay (#155).
+			ns.verify(() -> NotificationService.clearLevelAlert(any(Context.class)));
+		}
+	}
+
+	@Test
 	public void samePluggedState_sendsNoNotification() {
 		PowerConnectionReceiver.setCurrentState(BatteryManager.BATTERY_PLUGGED_AC);
 		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 50, 100);

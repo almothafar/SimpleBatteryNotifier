@@ -117,6 +117,10 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 		final boolean wireless = pluggedState == BatteryManager.BATTERY_PLUGGED_WIRELESS;
 		final Context appContext = context.getApplicationContext();
 
+		// Charging resolves a shown low-battery (or stale full) alert, so dismiss it deliberately —
+		// in every charge-notification style, and immediately rather than after the sample delay (#155).
+		NotificationService.clearLevelAlert(appContext);
+
 		// Sample the charging speed after a short delay (the current is 0/noisy right at plug-in), then
 		// notify. Re-check that we're still plugged in, in case the charger was pulled during the delay.
 		scheduleSample(() -> {
