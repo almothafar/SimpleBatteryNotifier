@@ -91,16 +91,22 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * Updates all health data displays with current values from BatteryHealthTracker.
 	 */
 	private void updateHealthData() {
+		// One sticky read and one capacity estimate per refresh (#161): every cycle- and
+		// capacity-derived figure below is computed from these two values.
+		final int osCycles = SystemService.getChargeCycleCount(this);
+		final int cycles = BatteryHealthTracker.getEffectiveCycleCount(this, osCycles);
+		final int capacityMah = SystemService.getBatteryCapacity(this);
+
 		// Always show the resolved health figure (measured, else cycle-based).
-		showResolvedHealth();
+		showResolvedHealth(cycles, BatteryHealthTracker.isCycleCountFromOs(osCycles), capacityMah);
 
 		// When the device's charge counter can't be trusted (#94) the figure may be wrong: keep showing
 		// it, but flag it with a tappable warning that explains why (and the failing-battery edge case).
-		healthWarningIcon.setVisibility(BatteryHealthTracker.isBatteryReadingUnreliable(this)
+		healthWarningIcon.setVisibility(BatteryHealthTracker.isBatteryReadingUnreliable(this, capacityMah)
 		                                ? View.VISIBLE : View.GONE);
 
 		// Metrics and the design-capacity row are shown the same way in every state.
-		chargeCyclesText.setText(String.valueOf(BatteryHealthTracker.getEffectiveCycleCount(this)));
+		chargeCyclesText.setText(String.valueOf(cycles));
 		daysInUseText.setText(String.valueOf(BatteryHealthTracker.getDaysSinceFirstUse(this)));
 
 		final int designCapacity = BatteryHealthTracker.getDesignCapacity(this);
@@ -113,17 +119,22 @@ public class BatteryInsightsActivity extends BaseActivity {
 	/**
 	 * Shows the resolved health figure: the measured percentage (current capacity vs. user-entered
 	 * design capacity) when available, otherwise the cycle-based estimate. See issue #32 / #7.
+	 * Works entirely from the values the caller already read this refresh (#161).
+	 *
+	 * @param cycles       the effective charge cycle count for this refresh
+	 * @param cyclesFromOs whether that count came from the OS (labels the basis honestly, #114)
+	 * @param capacityMah  the current full capacity estimate in mAh (0 when unknown)
 	 */
-	private void showResolvedHealth() {
-		final int measuredHealth = BatteryHealthTracker.getMeasuredHealthPercentage(this);
+	private void showResolvedHealth(final int cycles, final boolean cyclesFromOs, final int capacityMah) {
+		final int measuredHealth = BatteryHealthTracker.getMeasuredHealthPercentage(this, capacityMah);
 		final boolean measured = measuredHealth >= 0;
 
 		final int healthPercentage = measured
 		                             ? measuredHealth
-		                             : BatteryHealthTracker.getEstimatedHealthPercentage(this);
+		                             : BatteryHealthTracker.estimatedHealthForCycles(cycles);
 		final BatteryHealthGrade grade = measured
 		                                 ? BatteryHealthTracker.gradeForPercentage(measuredHealth)
-		                                 : BatteryHealthTracker.getHealthGrade(this);
+		                                 : BatteryHealthTracker.gradeForCycles(cycles);
 
 		// Update health percentage and color it based on grade
 		healthPercentageText.setText(healthPercentage + "%");
@@ -138,7 +149,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 		// wear on a phone older than the app (#114).
 		final int basisRes = measured
 		                     ? R.string.health_basis_measured
-		                     : BatteryHealthTracker.isCycleCountFromOs(this)
+		                     : cyclesFromOs
 		                       ? R.string.health_basis_estimated_os
 		                       : R.string.health_basis_estimated_tracked;
 		healthBasisText.setText(basisRes);

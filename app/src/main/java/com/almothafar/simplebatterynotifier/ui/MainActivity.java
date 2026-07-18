@@ -28,7 +28,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentManager;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
@@ -62,9 +61,12 @@ public class MainActivity extends BaseActivity {
 	private ActivityResultLauncher<Intent> settingsLauncher;
 	private ActivityResultLauncher<String> notificationPermissionLauncher;
 
-	// UI elements
+	// UI elements, looked up once in onCreate — the refresh loop runs every 3 s, so per-tick
+	// findViewById/findFragmentById traversals are pointless work (#161).
 	private MaterialButton batteryInsightsButton;
 	private RangeSlider thresholdSlider;
+	private HorseshoeProgressBar batteryGauge;
+	private BatteryDetailsFragment batteryDetailsFragment;
 
 	// Self-reposting refresh loop, bound to the foreground lifecycle (started in onPostResume,
 	// stopped in onPause) so it never stacks across resumes or keeps polling in the background.
@@ -165,6 +167,9 @@ public class MainActivity extends BaseActivity {
 
 		// Initialize UI elements
 		batteryInsightsButton = findViewById(R.id.batteryInsightsButton);
+		batteryGauge = findViewById(R.id.batteryPercentage);
+		// The details fragment is declared in the layout, so it exists for the activity's lifetime.
+		batteryDetailsFragment = (BatteryDetailsFragment) getSupportFragmentManager().findFragmentById(R.id.detailsFragmentLayout);
 
 		// Set up button click listeners
 		batteryInsightsButton.setOnClickListener(v -> openBatteryInsights());
@@ -195,8 +200,7 @@ public class MainActivity extends BaseActivity {
 
 		// Resume the motion paused in onPause(); restarts only what the battery state still
 		// warrants (charging/discharging wave, full pulse, or critical breathing).
-		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
-		gauge.resumeAnimations();
+		batteryGauge.resumeAnimations();
 	}
 
 	/**
@@ -210,8 +214,7 @@ public class MainActivity extends BaseActivity {
 
 		// Motion is only auto-stopped when the view is destroyed (onDetachedFromWindow),
 		// not on backgrounding, so pause it here for the same reason we stop the timer.
-		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
-		gauge.pauseAnimations();
+		batteryGauge.pauseAnimations();
 	}
 
 	/**
@@ -267,20 +270,15 @@ public class MainActivity extends BaseActivity {
 	 * Runs on the main thread via {@link #handler}.
 	 */
 	private void refreshBatteryUi() {
-		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
 		fillBatteryInfo();
-		gauge.setLevel(batteryPercentage);
-		gauge.setTitle(batteryPercentageText);
-		gauge.setStatusText(subTitle);
+		batteryGauge.setLevel(batteryPercentage);
+		batteryGauge.setTitle(batteryPercentageText);
+		batteryGauge.setStatusText(subTitle);
 
 		// Drive the gauge motion: charging wave, full-on-charger idle pulse, or discharge wave.
 		if (nonNull(batteryDO)) {
-			gauge.setFlow(flowOf(batteryDO.getStatus()));
+			batteryGauge.setFlow(flowOf(batteryDO.getStatus()));
 		}
-
-		final FragmentManager fragmentManager = getSupportFragmentManager();
-		final BatteryDetailsFragment batteryDetailsFragment =
-				(BatteryDetailsFragment) fragmentManager.findFragmentById(R.id.detailsFragmentLayout);
 
 		if (nonNull(batteryDetailsFragment) && nonNull(batteryDO)) {
 			batteryDetailsFragment.updateBatteryDetails(batteryDO);
@@ -309,8 +307,7 @@ public class MainActivity extends BaseActivity {
 		fillBatteryInfo();
 		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 
-		final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
-		gauge.setThresholds(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20),
+		batteryGauge.setThresholds(sharedPref.getInt(getString(R.string._pref_key_critical_battery_level), 20),
 				sharedPref.getInt(getString(R.string._pref_key_warn_battery_level), 40));
 
 		// Keep the in-fly slider in sync with values that may have changed in Settings.
@@ -318,9 +315,9 @@ public class MainActivity extends BaseActivity {
 
 		// The ring still animates whole levels; only the final title carries the decimals (#158).
 		// Intermediate steps count up in whole percent, then the last step lands on the precise text.
-		gauge.animateLevelTo(batteryPercentage, progress -> {
-			gauge.setTitle(progress >= batteryPercentage ? batteryPercentageText : BatteryPercentFormatter.formatWhole(progress));
-			gauge.setStatusText(subTitle);
+		batteryGauge.animateLevelTo(batteryPercentage, progress -> {
+			batteryGauge.setTitle(progress >= batteryPercentage ? batteryPercentageText : BatteryPercentFormatter.formatWhole(progress));
+			batteryGauge.setStatusText(subTitle);
 		});
 	}
 
@@ -367,8 +364,7 @@ public class MainActivity extends BaseActivity {
 						.putInt(getString(R.string._pref_key_warn_battery_level), warning)
 						.apply();
 
-				final HorseshoeProgressBar gauge = findViewById(R.id.batteryPercentage);
-				gauge.setThresholds(critical, warning);
+				batteryGauge.setThresholds(critical, warning);
 			}
 		});
 

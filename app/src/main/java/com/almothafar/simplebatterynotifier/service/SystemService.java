@@ -150,7 +150,12 @@ public final class SystemService {
 		final boolean present = extras != null && extras.getBoolean(BatteryManager.EXTRA_PRESENT);
 		final String technology = extras != null ? extras.getString(BatteryManager.EXTRA_TECHNOLOGY) : "";
 
-		return new BatteryExtras(level, scale, status, health, plugged, temperature, voltage, present, technology);
+		// Absent below Android 14 (and on devices whose fuel gauge doesn't report it) — normalized to
+		// -1 like getChargeCycleCount, so snapshot consumers don't need a second sticky read (#161).
+		final int rawCycleCount = batteryStatus.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1);
+		final int cycleCount = rawCycleCount > 0 ? rawCycleCount : -1;
+
+		return new BatteryExtras(level, scale, status, health, plugged, temperature, voltage, present, technology, cycleCount);
 	}
 
 	/**
@@ -210,6 +215,7 @@ public final class SystemService {
 		         .setCapacity(batteryCapacity)
 		         .setCurrentMicroAmps(currentMicroAmps)
 		         .setChargeCounterMicroAmpHours(chargeCounterUah)
+		         .setCycleCount(extras.cycleCount)
 		         .setIntHealth(extras.health);
 
 		// Determine health status and set it on the battery object
@@ -614,6 +620,7 @@ public final class SystemService {
 	                             int temperature,
 	                             int voltage,
 	                             boolean present,
-	                             String technology) {
+	                             String technology,
+	                             int cycleCount) {
 	}
 }

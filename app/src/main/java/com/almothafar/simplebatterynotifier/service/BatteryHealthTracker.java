@@ -189,7 +189,24 @@ public class BatteryHealthTracker {
 		if (isNull(context)) {
 			return 0;
 		}
-		final int osCycleCount = SystemService.getChargeCycleCount(context);
+		return getEffectiveCycleCount(context, SystemService.getChargeCycleCount(context));
+	}
+
+	/**
+	 * Same as {@link #getEffectiveCycleCount(Context)}, for callers that already hold the OS cycle
+	 * count (e.g. from a {@code BatteryDO} snapshot) — avoids a second sticky-broadcast read on the
+	 * per-tick refresh path (#161).
+	 *
+	 * @param context      Application context
+	 * @param osCycleCount the already-read OS cycle count, or -1/0 when the device doesn't report one
+	 *
+	 * @return Charge cycle count (OS-reported if available, else the tracked estimate) plus any
+	 * debug-injected cycles
+	 */
+	public static int getEffectiveCycleCount(final Context context, final int osCycleCount) {
+		if (isNull(context)) {
+			return 0;
+		}
 		final int base = osCycleCount > 0 ? osCycleCount : getChargeCycles(context);
 		return base + getDebugChargeCycles(context);
 	}
@@ -201,17 +218,15 @@ public class BatteryHealthTracker {
 	 * The distinction matters for honesty (#114): the OS count covers the battery's whole life, while
 	 * the app-tracked estimate only counts charge delivered since the app was installed — on an older
 	 * phone it starts at zero and therefore understates real wear. The insights screen labels the
-	 * health basis differently for the two sources.
+	 * health basis differently for the two sources. Takes the already-read count so the caller's
+	 * single sticky read serves both this and {@link #getEffectiveCycleCount(Context, int)} (#161).
 	 *
-	 * @param context Application context
+	 * @param osCycleCount the already-read OS cycle count, or -1/0 when the device doesn't report one
 	 *
 	 * @return true when the OS reports a cycle count for this device
 	 */
-	public static boolean isCycleCountFromOs(final Context context) {
-		if (isNull(context)) {
-			return false;
-		}
-		return SystemService.getChargeCycleCount(context) > 0;
+	public static boolean isCycleCountFromOs(final int osCycleCount) {
+		return osCycleCount > 0;
 	}
 
 	/**
@@ -345,17 +360,18 @@ public class BatteryHealthTracker {
 	 * capacity. It is shown regardless of charge level so it stays consistent with the displayed
 	 * Capacity (#103); when no design capacity is set, callers fall back to the cycle-based estimate.
 	 *
-	 * @param context Application context
+	 * @param context        Application context
+	 * @param currentFullMah the already-read current full capacity estimate in mAh (0 when unknown),
+	 *                       e.g. {@code batteryDO.getCapacity()} — passed in so one capacity estimate
+	 *                       serves the whole refresh (#161)
 	 *
 	 * @return Measured health percentage (1-100), or -1 when it cannot be determined
 	 */
-	public static int getMeasuredHealthPercentage(final Context context) {
+	public static int getMeasuredHealthPercentage(final Context context, final int currentFullMah) {
 		if (isNull(context)) {
 			return -1;
 		}
-		return computeMeasuredHealth(
-				SystemService.getBatteryCapacity(context),
-				getDesignCapacity(context));
+		return computeMeasuredHealth(currentFullMah, getDesignCapacity(context));
 	}
 
 	/**
@@ -394,18 +410,19 @@ public class BatteryHealthTracker {
 	 * keeps the figure but adds a warning — see issue #94. A genuinely worn-out battery can also read
 	 * this low, a possibility the UI surfaces to the user.
 	 *
-	 * @param context Application context
+	 * @param context        Application context
+	 * @param currentFullMah the already-read current full capacity estimate in mAh (0 when unknown),
+	 *                       e.g. {@code batteryDO.getCapacity()} — passed in so one capacity estimate
+	 *                       serves the whole refresh (#161)
 	 *
 	 * @return true when a design capacity is set, a charge-counter estimate exists, and the estimate is
 	 * outside the plausible window around the design capacity
 	 */
-	public static boolean isBatteryReadingUnreliable(final Context context) {
+	public static boolean isBatteryReadingUnreliable(final Context context, final int currentFullMah) {
 		if (isNull(context)) {
 			return false;
 		}
-		return isEstimateImplausible(
-				SystemService.getBatteryCapacity(context),
-				getDesignCapacity(context));
+		return isEstimateImplausible(currentFullMah, getDesignCapacity(context));
 	}
 
 	/**
@@ -492,8 +509,18 @@ public class BatteryHealthTracker {
 	 * @return Estimated battery health percentage (0-100)
 	 */
 	public static int getEstimatedHealthPercentage(final Context context) {
-		final int cycles = getEffectiveCycleCount(context);
+		return estimatedHealthForCycles(getEffectiveCycleCount(context));
+	}
 
+	/**
+	 * Pure core of {@link #getEstimatedHealthPercentage}, taking an already-known cycle count so a
+	 * caller's single read can serve every cycle-derived figure on the screen (#161).
+	 *
+	 * @param cycles effective charge cycle count
+	 *
+	 * @return Estimated battery health percentage (40-100)
+	 */
+	public static int estimatedHealthForCycles(final int cycles) {
 		// Excellent health: 0-300 cycles (100% to 95%)
 		if (cycles < EXCELLENT_THRESHOLD) {
 			return 100 - (cycles * 5 / EXCELLENT_THRESHOLD);
@@ -527,8 +554,18 @@ public class BatteryHealthTracker {
 	 * @return the matching {@link BatteryHealthGrade}
 	 */
 	public static BatteryHealthGrade getHealthGrade(final Context context) {
-		final int cycles = getEffectiveCycleCount(context);
+		return gradeForCycles(getEffectiveCycleCount(context));
+	}
 
+	/**
+	 * Pure core of {@link #getHealthGrade}, taking an already-known cycle count (#161). Uses the same
+	 * thresholds as {@link #estimatedHealthForCycles} so percentage and grade always agree.
+	 *
+	 * @param cycles effective charge cycle count
+	 *
+	 * @return the matching {@link BatteryHealthGrade}
+	 */
+	public static BatteryHealthGrade gradeForCycles(final int cycles) {
 		if (cycles < EXCELLENT_THRESHOLD) {
 			return BatteryHealthGrade.EXCELLENT;
 		} else if (cycles < GOOD_THRESHOLD) {

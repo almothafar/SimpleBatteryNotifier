@@ -1,11 +1,20 @@
 package com.almothafar.simplebatterynotifier.service;
 
+import android.content.Context;
+import android.content.Intent;
+import android.os.BatteryManager;
+
+import androidx.test.core.app.ApplicationProvider;
+
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -13,10 +22,55 @@ import java.util.Collection;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Unit tests for the pure capacity-estimation helpers in {@link SystemService}.
+ * Unit tests for the pure capacity-estimation helpers in {@link SystemService}, and the snapshot's
+ * cycle-count extraction (#161).
  */
 @RunWith(Enclosed.class)
 public class SystemServiceTest {
+
+	/**
+	 * The OS cycle count rides on the {@code BatteryDO} snapshot (#161), extracted from the same
+	 * {@code ACTION_BATTERY_CHANGED} intent as everything else — normalized to -1 when absent or
+	 * non-positive, matching {@link SystemService#getChargeCycleCount}, so per-tick consumers never
+	 * need a second sticky-broadcast read.
+	 */
+	@RunWith(RobolectricTestRunner.class)
+	@Config(sdk = 34)
+	public static class SnapshotCycleCount {
+
+		private Context context;
+
+		@Before
+		public void setUp() {
+			context = ApplicationProvider.getApplicationContext();
+		}
+
+		@Test
+		public void reportedCycleCount_carriesOntoTheSnapshot() {
+			assertEquals(287, SystemService.getBatteryInfo(context, batteryIntent(287)).getCycleCount());
+		}
+
+		@Test
+		public void absentCycleCount_readsAsMinusOne() {
+			final Intent battery = new Intent(Intent.ACTION_BATTERY_CHANGED);
+			battery.putExtra(BatteryManager.EXTRA_LEVEL, 50);
+			battery.putExtra(BatteryManager.EXTRA_SCALE, 100);
+			assertEquals(-1, SystemService.getBatteryInfo(context, battery).getCycleCount());
+		}
+
+		@Test
+		public void nonPositiveCycleCount_normalizedToMinusOne() {
+			assertEquals(-1, SystemService.getBatteryInfo(context, batteryIntent(0)).getCycleCount());
+		}
+
+		private static Intent batteryIntent(final int cycleCount) {
+			final Intent battery = new Intent(Intent.ACTION_BATTERY_CHANGED);
+			battery.putExtra(BatteryManager.EXTRA_LEVEL, 50);
+			battery.putExtra(BatteryManager.EXTRA_SCALE, 100);
+			battery.putExtra(BatteryManager.EXTRA_CYCLE_COUNT, cycleCount);
+			return battery;
+		}
+	}
 
 	/**
 	 * {@link SystemService#estimateFullCapacityMah(int, int)} — derives full capacity (mAh) from a
