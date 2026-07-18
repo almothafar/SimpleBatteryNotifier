@@ -70,16 +70,21 @@ public class BatteryDetailsFragment extends Fragment {
 	private int cellPaddingTop;
 
 	// #94: when this device's charge counter can't be trusted, the Capacity row shows "Unknown" with a
-	// tappable info icon instead of a misleading mAh figure. Computed in fillBatteryInfo, applied by
-	// the row binder to just the capacity row.
+	// tappable amber-warning icon instead of a misleading mAh figure. Computed in fillBatteryInfo, applied
+	// by the row binder to just the capacity row.
 	private boolean capacityUnreliable;
 	private String capacityLabel;
 
-	// #108: the drain-rate row's label, and the colour applied to its value cell (amber near the user's
-	// limit, red at/above it, while discharging; 0 = no special colour). Both set in fillBatteryInfo and
-	// applied by the row binder to just that row, mirroring the capacity special-case above.
-	private String rateLabel;
-	private int rateValueColor;
+	// Per-label value-cell decorations for this refresh, applied by the row binder (#161/#188). Keyed by
+	// the row's current label (unique per row), so a row can be re-bound in place while its decoration
+	// still tracks its live state.
+	//   - valueColorByLabel: the drain-rate colour, amber near the user's limit / red at-or-above it while
+	//     discharging (#108); absent = the default value colour.
+	//   - pendingInfoByLabel: the rate/time/current rows stay present even when their value isn't ready yet
+	//     (#188); such a row shows the "—" placeholder plus a tappable info icon, and this maps the label to
+	//     its {dialogTitleRes, dialogMessageRes}.
+	private final Map<String, Integer> valueColorByLabel = new LinkedHashMap<>();
+	private final Map<String, int[]> pendingInfoByLabel = new LinkedHashMap<>();
 
 	/**
 	 * Default constructor required for fragment instantiation
@@ -158,26 +163,32 @@ public class BatteryDetailsFragment extends Fragment {
 		syncRows(tableLayout, rowViews, valuesMap, new RowBinder() {
 			@Override
 			public TableRow createRow(final String label, final CharSequence value) {
-				return createTableRow(view, label, value, cellPadding, cellPaddingTop, isUnreliableRow(label), valueColorFor(label));
+				return createTableRow(view, label, value, cellPadding, cellPaddingTop,
+						isUnreliableRow(label), valueColorFor(label), pendingInfoFor(label));
 			}
 
 			@Override
 			public void bindValue(final TableRow row, final String label, final CharSequence value) {
 				final TextView valueView = (TextView) row.getChildAt(VALUE_CELL_INDEX);
 				valueView.setText(value);
-				applyValueDecorations(valueView, isUnreliableRow(label), valueColorFor(label));
+				applyValueDecorations(valueView, isUnreliableRow(label), valueColorFor(label), pendingInfoFor(label));
 			}
 		});
 	}
 
-	/** Only the capacity row gets the "unreliable reading" info affordance (#94). */
+	/** Only the capacity row gets the amber "unreliable reading" affordance (#94). */
 	private boolean isUnreliableRow(final String label) {
 		return capacityUnreliable && label.equals(capacityLabel);
 	}
 
-	/** Only the drain-rate row is coloured (amber/red near the limit while discharging) — #108. */
+	/** The drain-rate row's amber/red colour near the limit while discharging (#108); 0 = default. */
 	private int valueColorFor(final String label) {
-		return (rateValueColor != 0 && label.equals(rateLabel)) ? rateValueColor : 0;
+		return valueColorByLabel.getOrDefault(label, 0);
+	}
+
+	/** The {titleRes, messageRes} for a row currently showing the pending placeholder (#188), or null. */
+	private int[] pendingInfoFor(final String label) {
+		return pendingInfoByLabel.get(label);
 	}
 
 	/**
@@ -299,14 +310,15 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param value           The value text
 	 * @param cellPadding     The horizontal cell padding
 	 * @param cellPaddingTop  The top cell padding
-	 * @param valueUnreliable When true, decorate the value cell with a tappable "unreliable reading" icon
+	 * @param valueUnreliable When true, decorate the value cell with a tappable amber "unreliable reading" icon
 	 * @param valueColor      Colour for the value text, or 0 to keep the default value colour (#108)
+	 * @param pendingInfo     {dialogTitleRes, dialogMessageRes} for a placeholder row's info icon, or null (#188)
 	 *
 	 * @return The created table row
 	 */
 	private TableRow createTableRow(final View view, final String label, final CharSequence value,
 	                                final int cellPadding, final int cellPaddingTop,
-	                                final boolean valueUnreliable, final int valueColor) {
+	                                final boolean valueUnreliable, final int valueColor, final int[] pendingInfo) {
 		final TableRow row = new TableRow(view.getContext());
 		final TableRow.LayoutParams layoutParams = new TableRow.LayoutParams(
 				TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT, 1.0f);
@@ -318,7 +330,7 @@ public class BatteryDetailsFragment extends Fragment {
 
 		final TextView textViewLabel = createLabelTextView(view, label, cellPadding, cellPaddingTop);
 		final TextView textViewSep = createSeparatorTextView(view);
-		final TextView textViewValue = createValueTextView(view, value, cellPadding, cellPaddingTop, valueUnreliable, valueColor);
+		final TextView textViewValue = createValueTextView(view, value, cellPadding, cellPaddingTop, valueUnreliable, valueColor, pendingInfo);
 
 		// Add views in logical order (label -> separator -> value)
 		// RTL languages will automatically reverse the visual order
@@ -380,6 +392,7 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param unreliable     When true, append a tappable amber info icon that opens the "unreliable
 	 *                       reading" explanation (#94)
 	 * @param valueColor     Colour for the value text, or 0 to keep the default value colour (#108)
+	 * @param pendingInfo    {dialogTitleRes, dialogMessageRes} for a placeholder row's info icon, or null (#188)
 	 *
 	 * @return The created TextView
 	 */
@@ -388,7 +401,8 @@ public class BatteryDetailsFragment extends Fragment {
 	                                     final int cellPadding,
 	                                     final int cellPaddingTop,
 	                                     final boolean unreliable,
-	                                     final int valueColor) {
+	                                     final int valueColor,
+	                                     final int[] pendingInfo) {
 		final TextView textView = new TextView(view.getContext());
 		textView.setTextAppearance(R.style.DefaultTextStyle);
 		textView.setText(text);
@@ -397,30 +411,43 @@ public class BatteryDetailsFragment extends Fragment {
 		textView.setGravity(Gravity.START);
 		textView.setTextDirection(View.TEXT_DIRECTION_LOCALE);
 		textView.setPaddingRelative(cellPadding, 0, 0, cellPaddingTop);
-		applyValueDecorations(textView, unreliable, valueColor);
+		applyValueDecorations(textView, unreliable, valueColor, pendingInfo);
 		return textView;
 	}
 
 	/**
-	 * (Re-)apply the per-refresh decorations of a value cell: the rate colour (#108) and the capacity
-	 * row's tappable "unreliable reading" affordance (#94). Called at creation and on every in-place
-	 * rebind (#161), so it also has to <em>clear</em> both when the row's state changes back.
+	 * (Re-)apply the per-refresh decorations of a value cell: the rate colour (#108), the capacity row's
+	 * amber "unreliable reading" affordance (#94), and the neutral info affordance on a rate/time/current
+	 * row that is showing the "—" placeholder because its value isn't ready yet (#188). Called at creation
+	 * and on every in-place rebind (#161), so it also has to <em>clear</em> all of them when a row's state
+	 * changes back (e.g. the rate finishes warming up and the placeholder becomes a real number).
 	 *
-	 * @param textView   the value cell
-	 * @param unreliable when true, decorate with the tappable amber info icon; when false, remove it
-	 * @param valueColor colour for the value text, or 0 for the default value colour
+	 * @param textView    the value cell
+	 * @param unreliable  when true, decorate with the tappable amber warning icon (capacity, #94)
+	 * @param valueColor  colour for the value text, or 0 for the default value colour
+	 * @param pendingInfo {dialogTitleRes, dialogMessageRes} for the neutral info icon (#188), or null
 	 */
-	private void applyValueDecorations(final TextView textView, final boolean unreliable, final int valueColor) {
+	private void applyValueDecorations(final TextView textView, final boolean unreliable, final int valueColor,
+	                                   final int[] pendingInfo) {
 		textView.setTextColor(valueColor != 0
 		                      ? valueColor
 		                      : GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
+		final int iconPadding = (int) (6 * getResources().getDisplayMetrics().density);
 		if (unreliable) {
 			// #94: amber warning affordance after the value; tap to learn why the reading can't be trusted.
 			// Same mark as the insights health figure, so the two screens read consistently.
 			textView.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_warning_amber, 0);
-			textView.setCompoundDrawablePadding((int) (6 * getResources().getDisplayMetrics().density));
+			textView.setCompoundDrawablePadding(iconPadding);
 			textView.setContentDescription(getString(R.string.battery_reading_unreliable_cd));
 			textView.setOnClickListener(v -> showCapacityUnreliableDialog());
+		} else if (nonNull(pendingInfo)) {
+			// #188: neutral info affordance after the "—" placeholder; tap to learn why the value isn't ready.
+			textView.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_info, 0);
+			textView.setCompoundDrawablePadding(iconPadding);
+			textView.setContentDescription(getString(R.string.battery_value_info_cd));
+			final int titleRes = pendingInfo[0];
+			final int messageRes = pendingInfo[1];
+			textView.setOnClickListener(v -> showInfoDialog(titleRes, messageRes));
 		} else {
 			textView.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0);
 			textView.setContentDescription(null);
@@ -436,11 +463,14 @@ public class BatteryDetailsFragment extends Fragment {
 	 */
 	private void fillBatteryInfo(final View view) {
 		valuesMap = new LinkedHashMap<>();
+		valueColorByLabel.clear();
+		pendingInfoByLabel.clear();
 
-		// #108: live charge/drain rate and signed current at the very top, each shown only when its
-		// reading is trustworthy. Recording here also feeds the smoothing window from the foreground
-		// refresh (the other feed is the battery broadcast) without any polling timer of our own.
-		addRateRows(view);
+		// #108/#188: live charge/drain rate, time estimate and signed current at the very top. These rows
+		// stay put across refreshes; a not-yet-ready value shows a placeholder + info icon rather than
+		// hiding. Recording here also feeds the smoothing window from the foreground refresh (the other
+		// feed is the battery broadcast) without any polling timer of our own.
+		addLiveRows(view);
 
 		valuesMap.put(getResources().getString(R.string.technology), batteryDO.getTechnology());
 
@@ -456,12 +486,18 @@ public class BatteryDetailsFragment extends Fragment {
 		capacityLabel = getResources().getString(R.string.capacity);
 		valuesMap.put(capacityLabel, capacityText);
 
-		// Show the user-entered design (rated) capacity when set (issue #32)
+		// Design (rated) capacity (issue #32). Always present (#188): when the user hasn't entered one it
+		// shows the placeholder + info icon pointing to Battery Insights, rather than the row appearing
+		// only once a value is set.
+		final String designCapacityLabel = getString(R.string.design_capacity);
 		final int designCapacity = BatteryHealthTracker.getDesignCapacity(view.getContext());
 		if (designCapacity > 0) {
 			// Western digits (0-9) in every locale — see design_capacity_value / #96.
-			valuesMap.put(getResources().getString(R.string.design_capacity),
-					getResources().getString(R.string.design_capacity_value, String.valueOf(designCapacity)));
+			valuesMap.put(designCapacityLabel,
+					getString(R.string.design_capacity_value, String.valueOf(designCapacity)));
+		} else {
+			putPendingRow(designCapacityLabel,
+					R.string.battery_design_capacity_unset_dialog_title, R.string.battery_design_capacity_unset_dialog_message);
 		}
 
 		// Add charge cycles from the battery health tracker - positioned right after capacity. The
@@ -477,57 +513,83 @@ public class BatteryDetailsFragment extends Fragment {
 	}
 
 	/**
-	 * Adds the drain/charge rate and signed-current rows at the top of the table (#108).
-	 * <p>
-	 * Each row appears only when its reading is trustworthy (independent gating like #94): the rate hides
-	 * during the brief post-unplug warm-up or a static level, the current hides when the device doesn't
-	 * report a plausible mA. The label flips between "Drain rate" and "Charge rate" with direction, and
-	 * the rate value is coloured amber/red near the user's limit while discharging (see {@link #rateColor}).
+	 * Adds the three "live" rows at the top of the table — rate, time estimate and signed current (#108,
+	 * #124, #188). Unlike the rest, these three are <b>always present</b>: rather than hiding when a value
+	 * isn't ready (which made rows appear/disappear and shift the table), a not-yet-available value shows a
+	 * "—" placeholder with a tappable info icon explaining why. The labels follow the charge direction —
+	 * "Charge rate"/"Drain rate" and "Time to full"/"Time remaining" — while "Current" is constant; because
+	 * the labels are stable within a direction, steady-state refreshes update the values in place with no
+	 * flicker (a label only changes on plug/unplug, when the whole context changes anyway).
 	 *
 	 * @param view The fragment view
 	 */
-	private void addRateRows(final View view) {
-		rateLabel = null;
-		rateValueColor = 0;
-
+	private void addLiveRows(final View view) {
 		final BatteryRateTracker.BatteryRate rate = BatteryRateTracker.record(view.getContext(), batteryDO);
+		final boolean charging = rate.charging();
 
+		// Rate row: real %/h (coloured amber/red near the limit while discharging), else the placeholder.
+		final String rateLabel = getString(charging ? R.string.charge_rate : R.string.drain_rate);
 		if (rate.hasRate()) {
-			rateLabel = getResources().getString(rate.charging() ? R.string.charge_rate : R.string.drain_rate);
 			valuesMap.put(rateLabel, BatteryRateTracker.formatRateValue(view.getContext(), rate.percentPerHour()));
-			rateValueColor = rateColor(view.getContext(), rate);
+			final int color = rateColor(view.getContext(), rate);
+			if (color != 0) {
+				valueColorByLabel.put(rateLabel, color);
+			}
+		} else {
+			putPendingRow(rateLabel, R.string.battery_rate_pending_dialog_title, R.string.battery_rate_pending_dialog_message);
 		}
-		addTimeToFullRow(view, rate);
+
+		addTimeRow(view, rate, charging);
+
+		// Current row: the signed mA (with the windowed-average second line), else the placeholder.
+		final String currentLabel = getString(R.string.battery_current);
 		if (rate.hasCurrent()) {
-			valuesMap.put(getResources().getString(R.string.battery_current), currentValueText(view, rate));
+			valuesMap.put(currentLabel, currentValueText(view, rate));
+		} else {
+			putPendingRow(currentLabel, R.string.battery_current_pending_dialog_title, R.string.battery_current_pending_dialog_message);
 		}
 	}
 
 	/**
-	 * Adds the estimated time-to-full row directly below the charge rate it is derived from (#124). Shown
-	 * only while charging, with a trustworthy rate, and below the taper top (level &lt; 99%) — hidden
-	 * otherwise, so the user never sees a garbage "0m" or a wildly optimistic figure right as the charge
-	 * tapers. The estimate is a rough linear projection (see
-	 * {@link BatteryRateTracker#estimateMinutesToFull}); precision is a non-goal — the OS owns the accurate
-	 * number. Reuses the already-computed {@code rate}; only the level is read here.
+	 * Adds the estimated-time row directly below the rate it is derived from: "Time to full" while charging,
+	 * "Time remaining" while discharging (#124/#188). A rough capacity-free linear projection (see
+	 * {@link BatteryRateTracker#estimateMinutesToFull} / {@link BatteryRateTracker#estimateMinutesToEmpty});
+	 * precision is a non-goal — the OS owns the accurate figure. When the rate isn't ready, or the estimate
+	 * degenerates (already full/empty, or right at the charge taper where a figure would mislead), the row
+	 * stays put and shows the placeholder rather than vanishing. Reuses the already-computed {@code rate};
+	 * only the level is read here.
 	 *
-	 * @param view The fragment view
-	 * @param rate The already-computed rate for this refresh
+	 * @param view     The fragment view
+	 * @param rate     The already-computed rate for this refresh
+	 * @param charging Whether the battery is charging (picks the label and the projection direction)
 	 */
-	private void addTimeToFullRow(final View view, final BatteryRateTracker.BatteryRate rate) {
-		if (!rate.charging() || !rate.hasRate()) {
-			return;
+	private void addTimeRow(final View view, final BatteryRateTracker.BatteryRate rate, final boolean charging) {
+		final String label = getString(charging ? R.string.time_to_full : R.string.time_remaining);
+		if (rate.hasRate()) {
+			final int level = batteryDO.getBatteryPercentageInt();
+			final int minutes = charging
+					? BatteryRateTracker.estimateMinutesToFull(level, rate.percentPerHour())
+					: BatteryRateTracker.estimateMinutesToEmpty(level, rate.percentPerHour());
+			if (minutes > 0) {
+				valuesMap.put(label, BatteryRateTracker.formatDuration(view.getContext(), minutes));
+				return;
+			}
 		}
-		final int level = batteryDO.getBatteryPercentageInt();
-		if (level >= 99) {
-			return;
-		}
-		final int minutes = BatteryRateTracker.estimateMinutesToFull(level, rate.percentPerHour());
-		if (minutes <= 0) {
-			return;
-		}
-		valuesMap.put(getResources().getString(R.string.time_to_full),
-				BatteryRateTracker.formatTimeToFull(view.getContext(), minutes));
+		putPendingRow(label, R.string.battery_time_pending_dialog_title, R.string.battery_time_pending_dialog_message);
+	}
+
+	/**
+	 * Places a row in its no-value state (#188): the "—" placeholder plus a tappable info icon whose
+	 * dialog explains why. Keeps the row present so the table doesn't reflow — used both for a live value
+	 * that isn't ready yet (rate/time/current) and for optional config that isn't set (design capacity).
+	 *
+	 * @param label      the row label
+	 * @param titleRes   the info dialog's title resource
+	 * @param messageRes the info dialog's message resource
+	 */
+	private void putPendingRow(final String label, final int titleRes, final int messageRes) {
+		valuesMap.put(label, getString(R.string.battery_value_pending));
+		pendingInfoByLabel.put(label, new int[]{titleRes, messageRes});
 	}
 
 	/**
@@ -589,6 +651,22 @@ public class BatteryDetailsFragment extends Fragment {
 		new MaterialAlertDialogBuilder(requireContext())
 				.setTitle(R.string.battery_reading_unreliable_dialog_title)
 				.setMessage(R.string.battery_reading_unreliable_dialog_message)
+				.setPositiveButton(android.R.string.ok, null)
+				.show();
+	}
+
+	/**
+	 * Explains why a "live" row's value isn't ready yet (#188), opened from the neutral info icon on a
+	 * placeholder rate/time/current row. The wording is row-specific (rate settling, estimate not ready,
+	 * current unavailable).
+	 *
+	 * @param titleRes   the dialog title resource
+	 * @param messageRes the dialog message resource
+	 */
+	private void showInfoDialog(final int titleRes, final int messageRes) {
+		new MaterialAlertDialogBuilder(requireContext())
+				.setTitle(titleRes)
+				.setMessage(messageRes)
 				.setPositiveButton(android.R.string.ok, null)
 				.show();
 	}

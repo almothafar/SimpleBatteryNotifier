@@ -488,16 +488,36 @@ public final class BatteryRateTracker {
 	}
 
 	/**
-	 * Formats a time-to-full estimate as a compact {@code "~1h 20m"} / {@code "~45m"}, with Western digits
+	 * Estimated minutes until empty from the smoothed drain rate (#188): the discharge mirror of
+	 * {@link #estimateMinutesToFull}, {@code level / ratePercentPerHour} hours. Same capacity-free linear
+	 * projection, so it works where the charge counter is unreliable (Kirin), and the same non-goal on
+	 * precision — the OS owns the accurate figure. Callers gate on discharging + a trustworthy rate.
+	 * Pure so it is testable.
+	 *
+	 * @param level              current battery level (0-100)
+	 * @param ratePercentPerHour smoothed drain-rate magnitude in %/h
+	 *
+	 * @return estimated minutes to empty, or 0 when not computable (non-positive rate, or already empty)
+	 */
+	public static int estimateMinutesToEmpty(final int level, final int ratePercentPerHour) {
+		if (ratePercentPerHour <= 0 || level <= 0) {
+			return 0;
+		}
+		return (int) Math.round(level * 60.0 / ratePercentPerHour);
+	}
+
+	/**
+	 * Formats a duration estimate as a compact {@code "~1h 20m"} / {@code "~45m"}, with Western digits
 	 * in every locale (#96). The units stay Latin (h/m), matching {@code battery_rate_value} and
-	 * {@code design_capacity_value}.
+	 * {@code design_capacity_value}. Direction-agnostic — used for both time-to-full and time-to-empty (#188).
 	 *
 	 * @param context      Application context
-	 * @param totalMinutes estimated minutes to full (from {@link #estimateMinutesToFull}); must be &gt; 0
+	 * @param totalMinutes estimated minutes (from {@link #estimateMinutesToFull} /
+	 *                     {@link #estimateMinutesToEmpty}); must be &gt; 0
 	 *
 	 * @return the formatted duration string
 	 */
-	public static String formatTimeToFull(final Context context, final int totalMinutes) {
+	public static String formatDuration(final Context context, final int totalMinutes) {
 		final int hours = totalMinutes / 60;
 		final int minutes = totalMinutes % 60;
 		if (hours > 0) {

@@ -419,13 +419,45 @@ public class BatteryRateTrackerTest {
 	}
 
 	/**
-	 * {@link BatteryRateTracker#formatTimeToFull}: the "~1h 20m" / "~45m" rendering and its Western-digit
+	 * {@link BatteryRateTracker#estimateMinutesToEmpty}: the discharge mirror (#188) — {@code level/rate}
+	 * hours, with the same non-computable guards. Boundaries: empty (0%), a zero/negative rate, rounding.
+	 */
+	@RunWith(Parameterized.class)
+	public static class EstimateMinutesToEmpty {
+
+		@Parameter(0) public String label;
+		@Parameter(1) public int level;
+		@Parameter(2) public int ratePercentPerHour;
+		@Parameter(3) public int expectedMinutes;
+
+		@Parameters(name = "{0}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{"50% at 30%/h -> 100m", 50, 30, 100},        // 50/30 h = 1h40m
+					{"90% at 60%/h -> 90m", 90, 60, 90},          // 90/60 h
+					{"20% at 10%/h -> 120m", 20, 10, 120},        // 20/10 h = 2h
+					{"rounds to nearest minute", 45, 40, 68},     // 45/40 h = 67.5m -> 68
+					{"one point left at 60%/h -> 1m", 1, 60, 1},
+					{"zero rate not computable", 50, 0, 0},
+					{"negative rate not computable", 50, -5, 0},
+					{"already empty not computable", 0, 30, 0},
+			});
+		}
+
+		@Test
+		public void matchesExpected() {
+			assertEquals(label, expectedMinutes, BatteryRateTracker.estimateMinutesToEmpty(level, ratePercentPerHour));
+		}
+	}
+
+	/**
+	 * {@link BatteryRateTracker#formatDuration}: the "~1h 20m" / "~45m" rendering and its Western-digit
 	 * guarantee (#96). Context-dependent (string resources), so it runs under Robolectric — unlike the pure
 	 * math above; mirrors how the other Context-backed formatters would be exercised.
 	 */
 	@RunWith(RobolectricTestRunner.class)
 	@Config(sdk = 34)
-	public static class FormatTimeToFull {
+	public static class FormatDuration {
 
 		private Context context;
 
@@ -436,17 +468,17 @@ public class BatteryRateTrackerTest {
 
 		@Test
 		public void hoursAndMinutes() {
-			assertEquals("~1h 20m", BatteryRateTracker.formatTimeToFull(context, 80));
+			assertEquals("~1h 20m", BatteryRateTracker.formatDuration(context, 80));
 		}
 
 		@Test
 		public void minutesOnly() {
-			assertEquals("~45m", BatteryRateTracker.formatTimeToFull(context, 45));
+			assertEquals("~45m", BatteryRateTracker.formatDuration(context, 45));
 		}
 
 		@Test
 		public void wholeHoursStillShowMinutes() {
-			assertEquals("~2h 0m", BatteryRateTracker.formatTimeToFull(context, 120));
+			assertEquals("~2h 0m", BatteryRateTracker.formatDuration(context, 120));
 		}
 
 		@Test
@@ -454,7 +486,7 @@ public class BatteryRateTrackerTest {
 		public void keepsWesternDigitsUnderArabicLocale() {
 			// values-ar keeps the "~%1$sh %2$sm" shape and String.valueOf keeps the digits 0-9 (#96), so the
 			// Arabic render is identical — a regression to %d here would surface Arabic-Indic digits.
-			assertEquals("~1h 20m", BatteryRateTracker.formatTimeToFull(context, 80));
+			assertEquals("~1h 20m", BatteryRateTracker.formatDuration(context, 80));
 		}
 	}
 
