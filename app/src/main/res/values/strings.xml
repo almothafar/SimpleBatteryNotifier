@@ -40,13 +40,16 @@
     <!-- #188: the rate/time/current rows stay put; a not-yet-available value shows this dash with a
          tappable info icon. Punctuation, identical in every locale. -->
     <string name="battery_value_pending">—</string>
-    <string name="battery_value_info_cd">Why this value isn\'t shown yet</string>
+    <string name="battery_value_info_cd">More information</string>
     <string name="battery_rate_pending_dialog_title">Rate is still settling</string>
     <string name="battery_rate_pending_dialog_message">The charge/drain rate is averaged over the last few minutes of readings, so it needs a minute or two after you plug in, unplug, or open the app before it can show a reliable figure.</string>
     <string name="battery_time_pending_dialog_title">Estimate not ready</string>
     <string name="battery_time_pending_dialog_message">This time estimate is projected from the charge/drain rate, so it appears once that rate has settled. It\'s also hidden very close to a full charge, where the estimate would be meaningless.</string>
     <string name="battery_current_pending_dialog_title">Live current unavailable</string>
     <string name="battery_current_pending_dialog_message">The instantaneous current can take a moment to settle, and some devices don\'t report it at all. When it\'s available it shows here in milliamps (mA).</string>
+    <!-- #188: shown on the always-present Design capacity row when the user hasn\'t entered one -->
+    <string name="battery_design_capacity_unset_dialog_title">Design capacity not set</string>
+    <string name="battery_design_capacity_unset_dialog_message">This is your battery\'s original rated capacity from the manufacturer, in mAh. Set it in Battery Insights to unlock a measured battery-health figure — until then, health is estimated from charge cycles.</string>
 
     <string name="battery">On Battery</string>
     <string name="charger_ac">AC Charger</string>

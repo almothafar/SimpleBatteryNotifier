@@ -486,12 +486,18 @@ public class BatteryDetailsFragment extends Fragment {
 		capacityLabel = getResources().getString(R.string.capacity);
 		valuesMap.put(capacityLabel, capacityText);
 
-		// Show the user-entered design (rated) capacity when set (issue #32)
+		// Design (rated) capacity (issue #32). Always present (#188): when the user hasn't entered one it
+		// shows the placeholder + info icon pointing to Battery Insights, rather than the row appearing
+		// only once a value is set.
+		final String designCapacityLabel = getString(R.string.design_capacity);
 		final int designCapacity = BatteryHealthTracker.getDesignCapacity(view.getContext());
 		if (designCapacity > 0) {
 			// Western digits (0-9) in every locale — see design_capacity_value / #96.
-			valuesMap.put(getResources().getString(R.string.design_capacity),
-					getResources().getString(R.string.design_capacity_value, String.valueOf(designCapacity)));
+			valuesMap.put(designCapacityLabel,
+					getString(R.string.design_capacity_value, String.valueOf(designCapacity)));
+		} else {
+			putPendingRow(designCapacityLabel,
+					R.string.battery_design_capacity_unset_dialog_title, R.string.battery_design_capacity_unset_dialog_message);
 		}
 
 		// Add charge cycles from the battery health tracker - positioned right after capacity. The
@@ -573,8 +579,9 @@ public class BatteryDetailsFragment extends Fragment {
 	}
 
 	/**
-	 * Places a "live" row in its not-yet-ready state (#188): the "—" placeholder value plus a tappable info
-	 * icon whose dialog explains why. Keeps the row present so the table doesn't reflow.
+	 * Places a row in its no-value state (#188): the "—" placeholder plus a tappable info icon whose
+	 * dialog explains why. Keeps the row present so the table doesn't reflow — used both for a live value
+	 * that isn't ready yet (rate/time/current) and for optional config that isn't set (design capacity).
 	 *
 	 * @param label      the row label
 	 * @param titleRes   the info dialog's title resource
