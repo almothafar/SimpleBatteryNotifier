@@ -65,31 +65,33 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	}
 
 	/**
-	 * Called when a power connection broadcast is received
+	 * Called when a battery-changed broadcast is received
 	 * <p>
 	 * This method determines the current battery state, detects whether charging is wired or
 	 * wireless, and schedules the charge-connected notification for the user.
 	 *
 	 * @param context The context in which the receiver is running
-	 * @param intent  The intent being received
+	 * @param intent  The delivered {@code ACTION_BATTERY_CHANGED} intent
 	 */
 	@Override
 	public void onReceive(final Context context, final Intent intent) {
-		final Intent batteryStatus = context.getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-		if (batteryStatus == null) {
-			Log.w(TAG, "Unable to retrieve battery status");
-			return; // Cannot determine battery status, exit early
+		// The receiver is registered for ACTION_BATTERY_CHANGED (see PowerConnectionService), so the
+		// delivered intent already carries the battery state — no need to re-query the sticky
+		// broadcast (#159). The action check guards against unexpected/spoofed intents.
+		if (intent == null || !Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
+			Log.w(TAG, "Ignoring unexpected broadcast: " + (intent == null ? "null intent" : intent.getAction()));
+			return;
 		}
 
-		final int pluggedState = batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+		final int pluggedState = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
 		// Read-compare-update in one atomic step: a check-then-act here let two quick broadcasts
 		// both pass the dedupe (issue #156).
 		if (currentState.getAndSet(pluggedState) == pluggedState) {
 			return; // Same state as before, avoid duplicate notifications
 		}
 
-		final int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-		final int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+		final int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+		final int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
 		// Through the single rounding policy (#158) — also guards the scale=-1 default the raw division didn't.
 		final int percentage = new BatteryDO().setLevel(level).setScale(scale).getBatteryPercentageInt();
 
