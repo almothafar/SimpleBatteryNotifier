@@ -8,6 +8,7 @@ import androidx.preference.PreferenceManager;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.almothafar.simplebatterynotifier.receiver.BatteryLevelReceiver.LevelAlertState;
+import com.almothafar.simplebatterynotifier.service.AlertType;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 
@@ -57,7 +58,7 @@ public class BatteryLevelReceiverTest {
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
-			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.CRITICAL_TYPE)));
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(AlertType.CRITICAL)));
 		}
 	}
 
@@ -67,7 +68,7 @@ public class BatteryLevelReceiverTest {
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
-			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.WARNING_TYPE)));
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(AlertType.WARNING)));
 		}
 	}
 
@@ -77,8 +78,8 @@ public class BatteryLevelReceiverTest {
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
-			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.WARNING_TYPE)), never());
-			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.CRITICAL_TYPE)), never());
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(AlertType.WARNING)), never());
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(AlertType.CRITICAL)), never());
 		}
 	}
 
@@ -91,7 +92,7 @@ public class BatteryLevelReceiverTest {
 			publishBattery(BatteryManager.BATTERY_STATUS_DISCHARGING, 35, 100, 0);
 			receive();
 
-			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.WARNING_TYPE)), times(1));
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(AlertType.WARNING)), times(1));
 		}
 	}
 
@@ -105,26 +106,26 @@ public class BatteryLevelReceiverTest {
 			publishBattery(BatteryManager.BATTERY_STATUS_DISCHARGING, 14, 100, 0);
 			receive();
 
-			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.CRITICAL_TYPE)), times(2));
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(AlertType.CRITICAL)), times(2));
 		}
 	}
 
 	@Test
 	public void full_whileCharging_sendsFullAlertOnce() {
 		// Simulate the battery already sitting at 100% (unchanged) so the charging/full branch runs
-		saveLevelState(new LevelAlertState(100, BatteryLevelReceiver.NO_ALERT, false));
+		saveLevelState(new LevelAlertState(100, null, false));
 		publishBattery(BatteryManager.BATTERY_STATUS_FULL, 100, 100, BatteryManager.BATTERY_PLUGGED_AC);
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
 			receive();
 			receive(); // second identical tick must not re-send
-			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.FULL_LEVEL_TYPE)), times(1));
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(AlertType.FULL)), times(1));
 		}
 	}
 
 	@Test
 	public void unplug_reArmsFullAlert_forNextChargeSession() {
-		saveLevelState(new LevelAlertState(100, BatteryLevelReceiver.NO_ALERT, false));
+		saveLevelState(new LevelAlertState(100, null, false));
 		publishBattery(BatteryManager.BATTERY_STATUS_FULL, 100, 100, BatteryManager.BATTERY_PLUGGED_AC);
 
 		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
@@ -133,7 +134,7 @@ public class BatteryLevelReceiverTest {
 			BatteryLevelReceiver.onChargerDisconnected(context);
 			receive();
 
-			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(NotificationService.FULL_LEVEL_TYPE)), times(2));
+			ns.verify(() -> NotificationService.sendNotification(any(Context.class), eq(AlertType.FULL)), times(2));
 		}
 	}
 

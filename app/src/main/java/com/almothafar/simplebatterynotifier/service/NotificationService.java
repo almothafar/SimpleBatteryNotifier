@@ -55,10 +55,6 @@ import static java.util.Objects.nonNull;
  * by calling {@link #shutdown()}.
  */
 public final class NotificationService {
-	// Notification types
-	public static final int CRITICAL_TYPE = 1;
-	public static final int WARNING_TYPE = 2;
-	public static final int FULL_LEVEL_TYPE = 3;
 	// Battery thresholds
 	public static final int RED_ALERT_LEVEL = 4;
 	public static final int FULL_PERCENTAGE = 95;
@@ -138,9 +134,13 @@ public final class NotificationService {
 	 * Send a battery status notification
 	 *
 	 * @param context The application context
-	 * @param type    Notification type (CRITICAL_TYPE, WARNING_TYPE, or FULL_LEVEL_TYPE)
+	 * @param type    Which battery-level alert to send
 	 */
-	public static void sendNotification(final Context context, final int type) {
+	public static void sendNotification(final Context context, final AlertType type) {
+		if (isNull(type)) {
+			Log.w(TAG, "No alert type given, notification not sent");
+			return;
+		}
 		if (lacksNotificationPermission(context)) {
 			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, notification not sent");
 			return;
@@ -779,7 +779,7 @@ public final class NotificationService {
 		final String channelId = channelFor(context, config.alertsAllowed, config.channelId);
 		final Notification.Builder builder = new Notification.Builder(context, channelId).setSmallIcon(config.iconRes);
 
-		if (config.type != CRITICAL_TYPE) {
+		if (!config.type.alertsEveryTime()) {
 			builder.setOnlyAlertOnce(true);
 		}
 
@@ -1226,7 +1226,7 @@ public final class NotificationService {
 	 * extracted from SharedPreferences and notification type.
 	 */
 	private static class NotificationConfig {
-		final int type;
+		final AlertType type;
 		final String channelId;
 		final int iconRes;
 		final String ticker;
@@ -1244,9 +1244,9 @@ public final class NotificationService {
 		 *
 		 * @param context The application context
 		 * @param prefs   SharedPreferences containing user settings
-		 * @param type    Notification type (CRITICAL_TYPE, WARNING_TYPE, or FULL_LEVEL_TYPE)
+		 * @param type    Which battery-level alert to configure (non-null)
 		 */
-		NotificationConfig(final Context context, final SharedPreferences prefs, final int type) {
+		NotificationConfig(final Context context, final SharedPreferences prefs, final AlertType type) {
 			this.type = type;
 
 			// Load common preferences
@@ -1256,52 +1256,64 @@ public final class NotificationService {
 			this.stickyNotification = prefs.getBoolean(context.getString(R.string._pref_key_notifications_sticky), false);
 			final boolean withinWindow = isWithinNotificationWindow(context, prefs);
 			final boolean criticalIgnoresQuietHours = prefs.getBoolean(context.getString(R.string._pref_key_critical_ignore_quiet_hours), true);
-			this.alertsAllowed = alertsAllowedNow(withinWindow, type == CRITICAL_TYPE, criticalIgnoresQuietHours);
+			this.alertsAllowed = alertsAllowedNow(withinWindow, type == AlertType.CRITICAL, criticalIgnoresQuietHours);
 			this.ignoreSilent = shouldIgnoreSilentMode(context, prefs);
 			this.vibrate = isVibrationEnabled(context, prefs);
 
 			final String defaultSound = context.getString(R.string._default_notification_sound_uri);
 
-			// Configure based on notification type
-			switch (type) {
-				case CRITICAL_TYPE -> {
-					this.channelId = CHANNEL_ID_CRITICAL;
-					this.iconRes = R.drawable.ic_stat_device_battery_charging_20;
-					this.alarmSound = prefs.getString(context.getString(R.string._pref_key_notifications_alert_sound_ringtone), defaultSound);
-					this.ticker = context.getString(R.string.notification_critical_ticker, criticalLevel);
-					this.title = context.getString(R.string.notification_critical_title);
-					this.content = context.getString(R.string.notification_critical_content, criticalLevel);
-					this.bigContent = context.getString(R.string.notification_critical_content_big, criticalLevel);
-				}
-				case WARNING_TYPE -> {
-					this.channelId = CHANNEL_ID_WARNING;
-					this.iconRes = R.drawable.ic_stat_device_battery_charging_50;
-					this.alarmSound = prefs.getString(context.getString(R.string._pref_key_notifications_warning_sound_ringtone), defaultSound);
-					this.ticker = context.getString(R.string.notification_warning_ticker, warningLevel);
-					this.title = context.getString(R.string.notification_warning_title);
-					this.content = context.getString(R.string.notification_warning_content, warningLevel);
-					this.bigContent = context.getString(R.string.notification_warning_content_big, warningLevel);
-				}
-				case FULL_LEVEL_TYPE -> {
-					this.channelId = CHANNEL_ID_FULL;
-					this.iconRes = R.drawable.ic_stat_device_battery_charging_full;
-					this.alarmSound = prefs.getString(context.getString(R.string._pref_key_notifications_full_sound_ringtone), defaultSound);
-					this.ticker = context.getString(R.string.notification_full_level_ticker);
-					this.title = context.getString(R.string.notification_full_level_title);
-					this.content = context.getString(R.string.notification_full_level_content);
-					this.bigContent = context.getString(R.string.notification_full_level_content_big);
-				}
-				default -> {
-					// Fallback to FULL_LEVEL_TYPE configuration
-					this.channelId = CHANNEL_ID_FULL;
-					this.iconRes = R.drawable.ic_stat_device_battery_charging_full;
-					this.alarmSound = defaultSound;
-					this.ticker = "";
-					this.title = "";
-					this.content = "";
-					this.bigContent = "";
-				}
-			}
+			// A switch EXPRESSION over the enum is exhaustive at compile time — the old int switch
+			// needed a default branch, which posted a completely blank notification on any invalid
+			// type value (issue #160). That branch can no longer exist.
+			final AlertStyle style = switch (type) {
+				case CRITICAL -> new AlertStyle(
+						CHANNEL_ID_CRITICAL,
+						R.drawable.ic_stat_device_battery_charging_20,
+						prefs.getString(context.getString(R.string._pref_key_notifications_alert_sound_ringtone), defaultSound),
+						context.getString(R.string.notification_critical_ticker, criticalLevel),
+						context.getString(R.string.notification_critical_title),
+						context.getString(R.string.notification_critical_content, criticalLevel),
+						context.getString(R.string.notification_critical_content_big, criticalLevel));
+				case WARNING -> new AlertStyle(
+						CHANNEL_ID_WARNING,
+						R.drawable.ic_stat_device_battery_charging_50,
+						prefs.getString(context.getString(R.string._pref_key_notifications_warning_sound_ringtone), defaultSound),
+						context.getString(R.string.notification_warning_ticker, warningLevel),
+						context.getString(R.string.notification_warning_title),
+						context.getString(R.string.notification_warning_content, warningLevel),
+						context.getString(R.string.notification_warning_content_big, warningLevel));
+				case FULL -> new AlertStyle(
+						CHANNEL_ID_FULL,
+						R.drawable.ic_stat_device_battery_charging_full,
+						prefs.getString(context.getString(R.string._pref_key_notifications_full_sound_ringtone), defaultSound),
+						context.getString(R.string.notification_full_level_ticker),
+						context.getString(R.string.notification_full_level_title),
+						context.getString(R.string.notification_full_level_content),
+						context.getString(R.string.notification_full_level_content_big));
+			};
+			this.channelId = style.channelId();
+			this.iconRes = style.iconRes();
+			this.alarmSound = style.alarmSound();
+			this.ticker = style.ticker();
+			this.title = style.title();
+			this.content = style.content();
+			this.bigContent = style.bigContent();
 		}
+	}
+
+	/**
+	 * The per-type presentation of a battery-level alert, produced by the exhaustive type switch in
+	 * {@link NotificationConfig} (#160).
+	 *
+	 * @param channelId  the audible base channel ID for this type
+	 * @param iconRes    the small-icon resource
+	 * @param alarmSound the user's chosen alarm sound for this type
+	 * @param ticker     the ticker text
+	 * @param title      the notification title
+	 * @param content    the collapsed content line
+	 * @param bigContent the expanded (BigTextStyle) content
+	 */
+	private record AlertStyle(String channelId, int iconRes, String alarmSound, String ticker,
+	                          String title, String content, String bigContent) {
 	}
 }

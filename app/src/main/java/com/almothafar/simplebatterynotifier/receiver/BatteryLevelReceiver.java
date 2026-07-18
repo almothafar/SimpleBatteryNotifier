@@ -8,6 +8,7 @@ import android.os.BatteryManager;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.service.AlertType;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.BatteryRateTracker;
 import com.almothafar.simplebatterynotifier.service.FastDrainDetector;
@@ -17,6 +18,7 @@ import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 /**
  * Broadcast receiver for monitoring battery level changes.
@@ -35,9 +37,6 @@ import static java.util.Objects.isNull;
  * serialized by the main looper.
  */
 public class BatteryLevelReceiver extends BroadcastReceiver {
-
-	/** "No alert sent" marker for {@code prevType}; the real types (1-3) live in NotificationService. */
-	static final int NO_ALERT = 0;
 
 	/**
 	 * How far (in °C) the battery must cool below the threshold before another high-temperature
@@ -67,7 +66,7 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	public static void onChargerDisconnected(final Context context) {
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		final LevelAlertState state = loadLevelState(prefs);
-		final LevelAlertState reset = new LevelAlertState(state.prevLevel(), NO_ALERT, false);
+		final LevelAlertState reset = new LevelAlertState(state.prevLevel(), null, false);
 		if (!reset.equals(state)) {
 			saveLevelState(prefs, reset);
 		}
@@ -119,7 +118,7 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		if (!decision.newState().equals(previous)) {
 			saveLevelState(sharedPref, decision.newState());
 		}
-		if (decision.notifyType() != NO_ALERT) {
+		if (nonNull(decision.notifyType())) {
 			NotificationService.sendNotification(context, decision.notifyType());
 		}
 
@@ -177,7 +176,7 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	 * @param full       whether the battery status is {@code BATTERY_STATUS_FULL}
 	 * @param config     the user's alert thresholds and toggles
 	 *
-	 * @return which alert to send now ({@link #NO_ALERT} for none) and the new state to persist
+	 * @return which alert to send now ({@code null} for none) and the new state to persist
 	 */
 	static LevelAlertDecision decideLevelAlert(final LevelAlertState state, final int percentage,
 	                                           final boolean charging, final boolean full,
@@ -196,19 +195,19 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	private static LevelAlertDecision decideDischarging(final LevelAlertState state, final int percentage,
 	                                                    final LevelAlertConfig config) {
 		// Force the critical alert through the de-dupe at the red-alert floor: about to die trumps "already told you".
-		int prevType = percentage <= NotificationService.RED_ALERT_LEVEL ? NO_ALERT : state.prevType();
-		int notifyType = NO_ALERT;
+		AlertType prevType = percentage <= NotificationService.RED_ALERT_LEVEL ? null : state.prevType();
+		AlertType notifyType = null;
 
 		if (percentage <= config.criticalLevel()) {
-			if (prevType != NotificationService.CRITICAL_TYPE || config.alertEveryTick()) {
-				notifyType = NotificationService.CRITICAL_TYPE;
+			if (prevType != AlertType.CRITICAL || config.alertEveryTick()) {
+				notifyType = AlertType.CRITICAL;
 			}
-			prevType = NotificationService.CRITICAL_TYPE;
+			prevType = AlertType.CRITICAL;
 		} else if (percentage <= config.warningLevel() && config.warningEnabled()) {
-			if (prevType != NotificationService.WARNING_TYPE) {
-				notifyType = NotificationService.WARNING_TYPE;
+			if (prevType != AlertType.WARNING) {
+				notifyType = AlertType.WARNING;
 			}
-			prevType = NotificationService.WARNING_TYPE;
+			prevType = AlertType.WARNING;
 		}
 		return new LevelAlertDecision(notifyType, new LevelAlertState(percentage, prevType, state.fullNotified()));
 	}
@@ -220,10 +219,10 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	private static LevelAlertDecision decideChargingOrFull(final LevelAlertState state, final int percentage,
 	                                                       final boolean full, final LevelAlertConfig config) {
 		boolean fullNotified = state.fullNotified();
-		int notifyType = NO_ALERT;
+		AlertType notifyType = null;
 
 		if (!fullNotified && full && config.fullNotifyEnabled()) {
-			notifyType = NotificationService.FULL_LEVEL_TYPE;
+			notifyType = AlertType.FULL;
 			fullNotified = true;
 		}
 		if (percentage <= NotificationService.FULL_PERCENTAGE && percentage > config.warningLevel()) {
@@ -265,26 +264,28 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	static LevelAlertState loadLevelState(final SharedPreferences prefs) {
 		return new LevelAlertState(
 				prefs.getInt(PREF_PREV_LEVEL, 0),
-				prefs.getInt(PREF_PREV_TYPE, NO_ALERT),
+				AlertType.fromPersistedId(prefs.getInt(PREF_PREV_TYPE, 0)),
 				prefs.getBoolean(PREF_FULL_NOTIFIED, false));
 	}
 
 	static void saveLevelState(final SharedPreferences prefs, final LevelAlertState state) {
 		prefs.edit()
 		     .putInt(PREF_PREV_LEVEL, state.prevLevel())
-		     .putInt(PREF_PREV_TYPE, state.prevType())
+		     .putInt(PREF_PREV_TYPE, AlertType.persistedId(state.prevType()))
 		     .putBoolean(PREF_FULL_NOTIFIED, state.fullNotified())
 		     .apply();
 	}
 
 	/**
-	 * Persisted level-alert episode state (#164).
+	 * Persisted level-alert episode state (#164). The type is stored via its stable persisted id
+	 * (see {@link AlertType#persistedId}), so state written by older int-typed versions reads back
+	 * unchanged.
 	 *
 	 * @param prevLevel    the percentage seen on the previous broadcast (gates the discharge branch)
-	 * @param prevType     the last level alert sent while discharging ({@link #NO_ALERT} when none)
+	 * @param prevType     the last level alert sent while discharging ({@code null} when none)
 	 * @param fullNotified whether the full-battery alert has fired this charge session
 	 */
-	record LevelAlertState(int prevLevel, int prevType, boolean fullNotified) {
+	record LevelAlertState(int prevLevel, AlertType prevType, boolean fullNotified) {
 	}
 
 	/**
@@ -304,10 +305,10 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 	/**
 	 * Result of {@link #decideLevelAlert}: which alert to send now, and the state to persist.
 	 *
-	 * @param notifyType a {@code NotificationService} type, or {@link #NO_ALERT} for none
+	 * @param notifyType the alert to send, or {@code null} for none
 	 * @param newState   the state to persist
 	 */
-	record LevelAlertDecision(int notifyType, LevelAlertState newState) {
+	record LevelAlertDecision(AlertType notifyType, LevelAlertState newState) {
 	}
 
 	/**
