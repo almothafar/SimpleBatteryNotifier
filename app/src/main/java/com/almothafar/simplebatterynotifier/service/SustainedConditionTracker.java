@@ -63,8 +63,12 @@ final class SustainedConditionTracker {
      *
      * @return whether to notify now, the new streak to persist, and the streak's elapsed time
      */
-    static Outcome decide(final Streak state, final boolean measurable, final boolean conditionActive,
-                          final long sustainedMs, final long nowMillis, final RepeatPolicy policy) {
+    static Outcome decide(Streak state,
+                          boolean measurable,
+                          boolean conditionActive,
+                          long sustainedMs,
+                          long nowMillis,
+                          RepeatPolicy policy) {
         if (!measurable) {
             return new Outcome(false, state, 0); // sleep — keep the streak, don't fire
         }
@@ -108,7 +112,7 @@ final class SustainedConditionTracker {
      *
      * @return a repeat-with-reminders policy
      */
-    static RepeatPolicy withReminders(final boolean activelyUsed, final long reminderGapMs) {
+    static RepeatPolicy withReminders(boolean activelyUsed, long reminderGapMs) {
         return (alerted, lastReminder, nowMillis) -> {
             if (!alerted) {
                 return new Repeat(true, true, nowMillis); // first alert this episode, any screen state
@@ -132,18 +136,21 @@ final class SustainedConditionTracker {
         private final String keyLastSeen;
         private final String keyLastReminder;
 
-        StreakStore(final String keyStart, final String keyAlerted, final String keyLastSeen, final String keyLastReminder) {
+        StreakStore(String keyStart,
+                    String keyAlerted,
+                    String keyLastSeen,
+                    String keyLastReminder) {
             this.keyStart = keyStart;
             this.keyAlerted = keyAlerted;
             this.keyLastSeen = keyLastSeen;
             this.keyLastReminder = keyLastReminder;
         }
 
-        StreakStore(final String keyStart, final String keyAlerted, final String keyLastSeen) {
+        StreakStore(String keyStart, String keyAlerted, String keyLastSeen) {
             this(keyStart, keyAlerted, keyLastSeen, null);
         }
 
-        Streak load(final SharedPreferences prefs) {
+        Streak load(SharedPreferences prefs) {
             return new Streak(
                     prefs.getLong(keyStart, 0),
                     prefs.getBoolean(keyAlerted, false),
@@ -151,7 +158,7 @@ final class SustainedConditionTracker {
                     keyLastReminder == null ? 0 : prefs.getLong(keyLastReminder, 0));
         }
 
-        void save(final SharedPreferences prefs, final Streak state) {
+        void save(SharedPreferences prefs, Streak state) {
             final SharedPreferences.Editor editor = prefs.edit()
                     .putLong(keyStart, state.start())
                     .putBoolean(keyAlerted, state.alerted())
@@ -169,7 +176,7 @@ final class SustainedConditionTracker {
          * @param prefs the shared preferences
          * @param state the state to persist
          */
-        void saveIfChanged(final SharedPreferences prefs, final Streak state) {
+        void saveIfChanged(SharedPreferences prefs, Streak state) {
             if (!load(prefs).equals(state)) {
                 save(prefs, state);
             }
@@ -181,7 +188,7 @@ final class SustainedConditionTracker {
          *
          * @param prefs the shared preferences
          */
-        void clear(final SharedPreferences prefs) {
+        void clear(SharedPreferences prefs) {
             saveIfChanged(prefs, CLEARED);
         }
     }
@@ -198,7 +205,7 @@ final class SustainedConditionTracker {
     record Streak(long start, boolean alerted, long lastSeen, long lastReminder) {
 
         /** A streak for a detector with no reminder concept (slow charge). */
-        Streak(final long start, final boolean alerted, final long lastSeen) {
+        Streak(long start, boolean alerted, long lastSeen) {
             this(start, alerted, lastSeen, 0);
         }
     }

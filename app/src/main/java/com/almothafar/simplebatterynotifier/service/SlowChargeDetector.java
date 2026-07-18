@@ -75,7 +75,7 @@ public final class SlowChargeDetector {
 	 * @param context   Application context
 	 * @param batteryDO Current battery snapshot (may be null)
 	 */
-	public static void evaluate(final Context context, final BatteryDO batteryDO) {
+	public static void evaluate(Context context, BatteryDO batteryDO) {
 		if (isNull(context) || isNull(batteryDO)) {
 			return;
 		}
@@ -129,9 +129,14 @@ public final class SlowChargeDetector {
 	 *
 	 * @return whether to warn now, the new streak to persist, and the streak's elapsed time
 	 */
-	static Outcome decide(final Streak state, final boolean powerKnown, final int milliwatts,
-	                      final int floorMw, final long sustainedMs, final long nowMillis) {
-		return SustainedConditionTracker.decide(state, powerKnown, milliwatts < floorMw,
-				sustainedMs, nowMillis, SustainedConditionTracker.fireOnce());
+	static Outcome decide(Streak state,
+	                      boolean powerKnown,
+	                      int milliwatts,
+	                      int floorMw,
+	                      long sustainedMs,
+	                      long nowMillis) {
+		final boolean conditionActive = milliwatts < floorMw;
+		return SustainedConditionTracker.decide(state, powerKnown, conditionActive, sustainedMs, nowMillis,
+				SustainedConditionTracker.fireOnce());
 	}
 }

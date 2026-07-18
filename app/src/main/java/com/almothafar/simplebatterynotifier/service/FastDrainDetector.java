@@ -65,7 +65,7 @@ public final class FastDrainDetector {
 	 * @param batteryDO Current battery snapshot (may be null)
 	 * @param rate      The rate just computed by {@link BatteryRateTracker#record}
 	 */
-	public static void evaluate(final Context context, final BatteryDO batteryDO, final BatteryRate rate) {
+	public static void evaluate(Context context, BatteryDO batteryDO, BatteryRate rate) {
 		if (isNull(context) || isNull(batteryDO)) {
 			return;
 		}
@@ -118,15 +118,26 @@ public final class FastDrainDetector {
 	 *
 	 * @return the notify flag, the new streak to persist, and the streak's elapsed time (for the message)
 	 */
-	static Outcome decide(final Streak state, final boolean rateAvailable, final int ratePph,
-	                      final int limitPph, final long sustainedMs, final long reminderGapMs,
-	                      final boolean activelyUsed, final long nowMillis) {
-		return SustainedConditionTracker.decide(state, rateAvailable, ratePph >= limitPph,
-				sustainedMs, nowMillis, SustainedConditionTracker.withReminders(activelyUsed, reminderGapMs));
+	static Outcome decide(Streak state,
+	                      boolean rateAvailable,
+	                      int ratePph,
+	                      int limitPph,
+	                      long sustainedMs,
+	                      long reminderGapMs,
+	                      boolean activelyUsed,
+	                      long nowMillis) {
+		final boolean conditionActive = ratePph >= limitPph;
+		final SustainedConditionTracker.RepeatPolicy policy =
+				SustainedConditionTracker.withReminders(activelyUsed, reminderGapMs);
+		return SustainedConditionTracker.decide(state, rateAvailable, conditionActive, sustainedMs, nowMillis, policy);
 	}
 
-	private static long minutesPref(final SharedPreferences prefs, final Context context, final int keyRes,
-	                                final int defaultMinutes, final int minMinutes, final int maxMinutes) {
+	private static long minutesPref(SharedPreferences prefs,
+	                                Context context,
+	                                int keyRes,
+	                                int defaultMinutes,
+	                                int minMinutes,
+	                                int maxMinutes) {
 		return clampMinutesToMs(prefs.getInt(context.getString(keyRes), defaultMinutes), minMinutes, maxMinutes);
 	}
 
@@ -142,7 +153,7 @@ public final class FastDrainDetector {
 	 *
 	 * @return the clamped duration in milliseconds
 	 */
-	static long clampMinutesToMs(final int storedMinutes, final int minMinutes, final int maxMinutes) {
+	static long clampMinutesToMs(int storedMinutes, int minMinutes, int maxMinutes) {
 		return Math.max(minMinutes, Math.min(maxMinutes, storedMinutes)) * MS_PER_MINUTE;
 	}
 }
