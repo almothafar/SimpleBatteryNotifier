@@ -34,6 +34,19 @@
     <string name="battery_current">Current</string>
     <!-- #124: estimated time to full, shown below the charge rate while charging -->
     <string name="time_to_full">Time to full</string>
+    <!-- #188: estimated time to empty, shown while discharging (mirror of Time to full) -->
+    <string name="time_to_empty">Time to empty</string>
+
+    <!-- #188: the rate/time/current rows stay put; a not-yet-available value shows this dash with a
+         tappable info icon. Punctuation, identical in every locale. -->
+    <string name="battery_value_pending">—</string>
+    <string name="battery_value_info_cd">Why this value isn\'t shown yet</string>
+    <string name="battery_rate_pending_dialog_title">Rate is still settling</string>
+    <string name="battery_rate_pending_dialog_message">The charge/drain rate is averaged over the last few minutes of readings, so it needs a minute or two after you plug in, unplug, or open the app before it can show a reliable figure.</string>
+    <string name="battery_time_pending_dialog_title">Estimate not ready</string>
+    <string name="battery_time_pending_dialog_message">This time estimate is projected from the charge/drain rate, so it appears once that rate has settled. It\'s also hidden very close to a full charge, where the estimate would be meaningless.</string>
+    <string name="battery_current_pending_dialog_title">Live current unavailable</string>
+    <string name="battery_current_pending_dialog_message">The instantaneous current can take a moment to settle, and some devices don\'t report it at all. When it\'s available it shows here in milliamps (mA).</string>
 
     <string name="battery">On Battery</string>
     <string name="charger_ac">AC Charger</string>

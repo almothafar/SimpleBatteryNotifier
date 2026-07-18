@@ -32,6 +32,19 @@
     <string name="battery_current">التيار</string>
     <!-- #124: الوقت المقدّر حتى اكتمال الشحن -->
     <string name="time_to_full">الوقت حتى الاكتمال</string>
+    <!-- #188: الوقت المقدّر حتى نفاد البطارية أثناء التفريغ (مقابل الوقت حتى الاكتمال) -->
+    <string name="time_to_empty">الوقت حتى الفراغ</string>
+
+    <!-- #188: تبقى صفوف المعدل/الوقت/التيار ثابتة؛ وتظهر هذه الشرطة مع أيقونة معلومات قابلة للنقر
+         عندما تكون القيمة غير متوفرة بعد. علامة ترقيم، متطابقة في كل اللغات. -->
+    <string name="battery_value_pending">—</string>
+    <string name="battery_value_info_cd">لماذا لا تظهر هذه القيمة بعد</string>
+    <string name="battery_rate_pending_dialog_title">جارٍ حساب المعدل</string>
+    <string name="battery_rate_pending_dialog_message">يُحسب معدل الشحن/الاستهلاك كمتوسط لقراءات الدقائق القليلة الماضية، لذا يحتاج إلى دقيقة أو دقيقتين بعد توصيل الشاحن أو فصله أو فتح التطبيق قبل أن يعرض قيمة موثوقة.</string>
+    <string name="battery_time_pending_dialog_title">التقدير غير جاهز</string>
+    <string name="battery_time_pending_dialog_message">يُشتق هذا التقدير الزمني من معدل الشحن/الاستهلاك، لذا يظهر بعد استقرار ذلك المعدل. كما يُخفى قرب اكتمال الشحن حيث يكون التقدير بلا معنى.</string>
+    <string name="battery_current_pending_dialog_title">التيار المباشر غير متوفر</string>
+    <string name="battery_current_pending_dialog_message">قد يستغرق التيار اللحظي وقتًا حتى يستقر، وبعض الأجهزة لا تُبلغ عنه إطلاقًا. عند توفره يظهر هنا بالملّي أمبير (mA).</string>
 
     <string name="battery">على البطارية</string>
     <string name="charger_ac">مقبس طاقة</string>
