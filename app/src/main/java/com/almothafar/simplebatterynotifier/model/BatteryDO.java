@@ -25,6 +25,9 @@ public final class BatteryDO {
 	// Instantaneous current in µA from BATTERY_PROPERTY_CURRENT_NOW; Integer.MIN_VALUE when the device
 	// doesn't report it. Sign convention varies by OEM, so callers derive direction from the status.
 	private int currentMicroAmps = Integer.MIN_VALUE;
+	// OS-reported charge cycle count from EXTRA_CYCLE_COUNT (Android 14+); -1 when the device doesn't
+	// report it. Carried on the snapshot so per-tick consumers don't re-read the sticky broadcast (#159/#161).
+	private int cycleCount = -1;
 	private String technology;
 	private String powerSource;
 	private String health;
@@ -209,6 +212,15 @@ public final class BatteryDO {
 
 	public BatteryDO setCurrentMicroAmps(final int currentMicroAmps) {
 		this.currentMicroAmps = currentMicroAmps;
+		return this;
+	}
+
+	public int getCycleCount() {
+		return cycleCount;
+	}
+
+	public BatteryDO setCycleCount(final int cycleCount) {
+		this.cycleCount = cycleCount;
 		return this;
 	}
 

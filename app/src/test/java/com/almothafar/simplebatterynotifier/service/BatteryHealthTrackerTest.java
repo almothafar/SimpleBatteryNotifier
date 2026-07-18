@@ -21,6 +21,68 @@ import static org.junit.Assert.assertEquals;
 public class BatteryHealthTrackerTest {
 
 	/**
+	 * {@link BatteryHealthTracker#estimatedHealthForCycles(int)} — the cycle-based degradation curve
+	 * (#161 extracted it as a pure core so one cycle read serves every figure on a screen).
+	 */
+	@RunWith(Parameterized.class)
+	public static class EstimatedHealthForCycles {
+
+		@Parameter(0) public String label;
+		@Parameter(1) public int cycles;
+		@Parameter(2) public int expected;
+
+		@Parameters(name = "{0}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{"new battery -> 100%", 0, 100},
+					{"mid-excellent 150 -> 98%", 150, 98},
+					{"excellent boundary 300 -> 95%", 300, 95},
+					{"mid-good 400 -> 90%", 400, 90},
+					{"good boundary 500 -> 85%", 500, 85},
+					{"mid-fair 650 -> 78%", 650, 78},
+					{"fair boundary 800 -> 70%", 800, 70},
+					{"deep poor 1300 -> 40%", 1300, 40},
+					{"floor holds at 40%", 2000, 40},
+			});
+		}
+
+		@Test
+		public void matchesExpected() {
+			assertEquals(label, expected, BatteryHealthTracker.estimatedHealthForCycles(cycles));
+		}
+	}
+
+	/**
+	 * {@link BatteryHealthTracker#gradeForCycles(int)} — the cycle-count bucket boundaries, which must
+	 * stay consistent with the {@link BatteryHealthTracker#estimatedHealthForCycles(int)} curve.
+	 */
+	@RunWith(Parameterized.class)
+	public static class GradeForCycles {
+
+		@Parameter(0) public int cycles;
+		@Parameter(1) public BatteryHealthGrade expected;
+
+		@Parameters(name = "{0} cycles -> {1}")
+		public static Collection<Object[]> data() {
+			return Arrays.asList(new Object[][]{
+					{0, BatteryHealthGrade.EXCELLENT},
+					{299, BatteryHealthGrade.EXCELLENT},
+					{300, BatteryHealthGrade.GOOD},
+					{499, BatteryHealthGrade.GOOD},
+					{500, BatteryHealthGrade.FAIR},
+					{799, BatteryHealthGrade.FAIR},
+					{800, BatteryHealthGrade.POOR},
+					{2000, BatteryHealthGrade.POOR},
+			});
+		}
+
+		@Test
+		public void matchesExpected() {
+			assertEquals(expected, BatteryHealthTracker.gradeForCycles(cycles));
+		}
+	}
+
+	/**
 	 * {@link BatteryHealthTracker#computeMeasuredHealth(int, int)} — measured capacity as a percentage
 	 * of design capacity, clamped to 1..100, or -1 when the inputs are unusable.
 	 */

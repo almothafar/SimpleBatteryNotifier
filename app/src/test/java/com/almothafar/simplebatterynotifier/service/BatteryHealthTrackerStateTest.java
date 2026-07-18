@@ -104,8 +104,8 @@ public class BatteryHealthTrackerStateTest {
 
 	@Test
 	public void measuredHealth_requiresDesignCapacity() {
-		// Without a design capacity there's nothing to measure against
-		assertEquals(-1, BatteryHealthTracker.getMeasuredHealthPercentage(context));
+		// Without a design capacity there's nothing to measure against, whatever capacity was read
+		assertEquals(-1, BatteryHealthTracker.getMeasuredHealthPercentage(context, 4400));
 	}
 
 	@Test

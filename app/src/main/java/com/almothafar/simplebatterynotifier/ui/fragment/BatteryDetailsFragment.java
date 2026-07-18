@@ -54,19 +54,30 @@ public class BatteryDetailsFragment extends Fragment {
 	// #173: the avg line under the Current value renders at this fraction of the cell's text size.
 	private static final float AVG_LINE_SIZE_RATIO = 0.8f;
 
+	// The value TextView is the third cell of every row (label, separator, value).
+	private static final int VALUE_CELL_INDEX = 2;
+
 	private BatteryDO batteryDO;
 	private Map<String, CharSequence> valuesMap;
 	private View viewRef;
 
+	// The rows currently in the table, keyed by label (#161): each refresh updates the value cells in
+	// place and only adds/removes rows whose keys changed, instead of rebuilding the whole table —
+	// which lost accessibility focus every 3 s and churned allocations. Rebuilt with the view.
+	private final Map<String, TableRow> rowViews = new LinkedHashMap<>();
+	private TableLayout tableLayout;
+	private int cellPadding;
+	private int cellPaddingTop;
+
 	// #94: when this device's charge counter can't be trusted, the Capacity row shows "Unknown" with a
 	// tappable info icon instead of a misleading mAh figure. Computed in fillBatteryInfo, applied by
-	// createDetailsTable to just the capacity row.
+	// the row binder to just the capacity row.
 	private boolean capacityUnreliable;
 	private String capacityLabel;
 
 	// #108: the drain-rate row's label, and the colour applied to its value cell (amber near the user's
 	// limit, red at/above it, while discharging; 0 = no special colour). Both set in fillBatteryInfo and
-	// applied by createDetailsTable to just that row, mirroring the capacity special-case above.
+	// applied by the row binder to just that row, mirroring the capacity special-case above.
 	private String rateLabel;
 	private int rateValueColor;
 
@@ -94,11 +105,13 @@ public class BatteryDetailsFragment extends Fragment {
 		this.viewRef = view;
 		batteryDO = SystemService.getBatteryInfo(view.getContext());
 
+		setupTable(view);
+
 		// CRITICAL: Check for null batteryDO
 		if (isNull(batteryDO)) {
 			Log.w(TAG, "Unable to retrieve battery information");
 		} else {
-			createDetailsTable(view);
+			refreshDetailsTable(view);
 		}
 
 		maybeShowScrollHint(view);
@@ -107,15 +120,14 @@ public class BatteryDetailsFragment extends Fragment {
 	}
 
 	/**
-	 * Create and populate the battery details table
+	 * One-time table setup for a freshly inflated view: column behaviour, cached paddings, and a clean
+	 * row registry (the old view's rows are gone with it).
 	 *
 	 * @param view The fragment view containing the table
 	 */
-	public void createDetailsTable(final View view) {
-		fillBatteryInfo(view);
-
-		final TableLayout tableLayout = view.findViewById(R.id.batteryDetailsTable);
-		tableLayout.removeAllViews();
+	private void setupTable(final View view) {
+		tableLayout = view.findViewById(R.id.batteryDetailsTable);
+		rowViews.clear();
 		// Colon-aligned rows with the divider near the horizontal centre (#96): stretch BOTH the label (0)
 		// and value (2) columns so they share the width evenly, and the end-aligned labels' colons line up
 		// around the middle in both LTR and RTL (rather than wherever the widest label happens to end).
@@ -126,19 +138,94 @@ public class BatteryDetailsFragment extends Fragment {
 		tableLayout.setColumnStretchable(2, true);
 		tableLayout.setColumnShrinkable(0, true);
 		tableLayout.setColumnShrinkable(2, true);
-		final int cellPadding = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding);
-		final int cellPaddingTop = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding_top);
+		cellPadding = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding);
+		cellPaddingTop = getResources().getDimensionPixelSize(R.dimen.battery_details_cell_padding_top);
+	}
 
-		int rowIndex = 0;
-		for (final String key : valuesMap.keySet()) {
-			// Only the capacity row gets the "unreliable reading" info affordance (#94).
-			final boolean unreliable = capacityUnreliable && key.equals(capacityLabel);
-			// Only the drain-rate row is coloured (amber/red near the limit while discharging) — #108.
-			final int valueColor = (rateValueColor != 0 && key.equals(rateLabel)) ? rateValueColor : 0;
-			final TableRow row = createTableRow(view, key, valuesMap.get(key), cellPadding, cellPaddingTop, unreliable, valueColor);
-			tableLayout.addView(row, rowIndex);
-			rowIndex++;
+	/**
+	 * Refresh the battery details table with the current {@code batteryDO}.
+	 * <p>
+	 * Steady-state refreshes (every 3 s while the screen is open) update the existing rows' value
+	 * cells in place; rows are only created or removed when their key genuinely appears or vanishes
+	 * (rate warm-up, time-to-full gating, capacity turning unknown). This keeps accessibility focus,
+	 * scroll position and the view tree stable across refreshes (#161).
+	 *
+	 * @param view The fragment view containing the table
+	 */
+	private void refreshDetailsTable(final View view) {
+		fillBatteryInfo(view);
+
+		syncRows(tableLayout, rowViews, valuesMap, new RowBinder() {
+			@Override
+			public TableRow createRow(final String label, final CharSequence value) {
+				return createTableRow(view, label, value, cellPadding, cellPaddingTop, isUnreliableRow(label), valueColorFor(label));
+			}
+
+			@Override
+			public void bindValue(final TableRow row, final String label, final CharSequence value) {
+				final TextView valueView = (TextView) row.getChildAt(VALUE_CELL_INDEX);
+				valueView.setText(value);
+				applyValueDecorations(valueView, isUnreliableRow(label), valueColorFor(label));
+			}
+		});
+	}
+
+	/** Only the capacity row gets the "unreliable reading" info affordance (#94). */
+	private boolean isUnreliableRow(final String label) {
+		return capacityUnreliable && label.equals(capacityLabel);
+	}
+
+	/** Only the drain-rate row is coloured (amber/red near the limit while discharging) — #108. */
+	private int valueColorFor(final String label) {
+		return (rateValueColor != 0 && label.equals(rateLabel)) ? rateValueColor : 0;
+	}
+
+	/**
+	 * Bring the table's rows in line with the desired label→value map: bind existing rows' value
+	 * cells in place, remove rows whose label vanished, and insert new rows at their position.
+	 * Relative order of surviving rows never changes (rows only appear/disappear), so inserting at
+	 * the walk index keeps every row where it belongs. Static and binder-driven so the diffing is
+	 * unit-testable without a fragment (#161).
+	 *
+	 * @param tableLayout the table being updated
+	 * @param rowViews    the rows currently in the table, keyed by label — updated in place
+	 * @param values      the desired rows for this refresh, in display order
+	 * @param binder      creates a full row for a new label / rebinds the value cell of an existing one
+	 */
+	static void syncRows(final TableLayout tableLayout, final Map<String, TableRow> rowViews,
+	                     final Map<String, CharSequence> values, final RowBinder binder) {
+		// Drop rows whose label is gone this refresh.
+		rowViews.entrySet().removeIf(entry -> {
+			if (values.containsKey(entry.getKey())) {
+				return false;
+			}
+			tableLayout.removeView(entry.getValue());
+			return true;
+		});
+
+		int index = 0;
+		for (final Map.Entry<String, CharSequence> entry : values.entrySet()) {
+			TableRow row = rowViews.get(entry.getKey());
+			if (isNull(row)) {
+				row = binder.createRow(entry.getKey(), entry.getValue());
+				tableLayout.addView(row, index);
+				rowViews.put(entry.getKey(), row);
+			} else {
+				binder.bindValue(row, entry.getKey(), entry.getValue());
+			}
+			index++;
 		}
+	}
+
+	/**
+	 * How {@link #syncRows} materializes rows: create a complete row for a label that just appeared,
+	 * or rebind the value cell of a row that persists across refreshes.
+	 */
+	interface RowBinder {
+
+		TableRow createRow(String label, CharSequence value);
+
+		void bindValue(TableRow row, String label, CharSequence value);
 	}
 
 	/**
@@ -149,7 +236,7 @@ public class BatteryDetailsFragment extends Fragment {
 	public void updateBatteryDetails(final BatteryDO batteryDO) {
 		this.batteryDO = batteryDO;
 		if (nonNull(viewRef) && nonNull(batteryDO)) {
-			this.createDetailsTable(viewRef);
+			refreshDetailsTable(viewRef);
 		}
 	}
 
@@ -305,14 +392,28 @@ public class BatteryDetailsFragment extends Fragment {
 		final TextView textView = new TextView(view.getContext());
 		textView.setTextAppearance(R.style.DefaultTextStyle);
 		textView.setText(text);
-		textView.setTextColor(valueColor != 0
-		                      ? valueColor
-		                      : GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
 		// Start-align + relative padding + locale text direction so numeric (Latin) values sit right after
 		// the colon like the Arabic text values do, instead of flying to the far edge in RTL (#96).
 		textView.setGravity(Gravity.START);
 		textView.setTextDirection(View.TEXT_DIRECTION_LOCALE);
 		textView.setPaddingRelative(cellPadding, 0, 0, cellPaddingTop);
+		applyValueDecorations(textView, unreliable, valueColor);
+		return textView;
+	}
+
+	/**
+	 * (Re-)apply the per-refresh decorations of a value cell: the rate colour (#108) and the capacity
+	 * row's tappable "unreliable reading" affordance (#94). Called at creation and on every in-place
+	 * rebind (#161), so it also has to <em>clear</em> both when the row's state changes back.
+	 *
+	 * @param textView   the value cell
+	 * @param unreliable when true, decorate with the tappable amber info icon; when false, remove it
+	 * @param valueColor colour for the value text, or 0 for the default value colour
+	 */
+	private void applyValueDecorations(final TextView textView, final boolean unreliable, final int valueColor) {
+		textView.setTextColor(valueColor != 0
+		                      ? valueColor
+		                      : GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
 		if (unreliable) {
 			// #94: amber warning affordance after the value; tap to learn why the reading can't be trusted.
 			// Same mark as the insights health figure, so the two screens read consistently.
@@ -320,8 +421,12 @@ public class BatteryDetailsFragment extends Fragment {
 			textView.setCompoundDrawablePadding((int) (6 * getResources().getDisplayMetrics().density));
 			textView.setContentDescription(getString(R.string.battery_reading_unreliable_cd));
 			textView.setOnClickListener(v -> showCapacityUnreliableDialog());
+		} else {
+			textView.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0);
+			textView.setContentDescription(null);
+			textView.setOnClickListener(null);
+			textView.setClickable(false);
 		}
-		return textView;
 	}
 
 	/**
@@ -341,9 +446,10 @@ public class BatteryDetailsFragment extends Fragment {
 
 		// Capacity is an estimate from BatteryManager. Show "Unknown" rather than "0 mAh" when the device
 		// doesn't report the charge counter, and also when the reported figure can't be trusted (#94) —
-		// in that case createDetailsTable adds a tappable info icon explaining why.
+		// in that case the row binder adds a tappable info icon explaining why. The snapshot's capacity
+		// is passed down so no second capacity estimate is read this tick (#161).
 		final int capacity = batteryDO.getCapacity();
-		capacityUnreliable = BatteryHealthTracker.isBatteryReadingUnreliable(view.getContext());
+		capacityUnreliable = BatteryHealthTracker.isBatteryReadingUnreliable(view.getContext(), capacity);
 		final String capacityText = (capacity > 0 && !capacityUnreliable)
 		                            ? capacity + " mAh"
 		                            : getResources().getString(R.string.unknown);
@@ -358,8 +464,9 @@ public class BatteryDetailsFragment extends Fragment {
 					getResources().getString(R.string.design_capacity_value, String.valueOf(designCapacity)));
 		}
 
-		// Add charge cycles from the battery health tracker - positioned right after capacity
-		final int chargeCycles = BatteryHealthTracker.getEffectiveCycleCount(view.getContext());
+		// Add charge cycles from the battery health tracker - positioned right after capacity. The
+		// snapshot already carries the OS cycle count, so this triggers no extra sticky read (#161).
+		final int chargeCycles = BatteryHealthTracker.getEffectiveCycleCount(view.getContext(), batteryDO.getCycleCount());
 		valuesMap.put(getResources().getString(R.string.charge_cycles), String.valueOf(chargeCycles));
 
 		valuesMap.put(getResources().getString(R.string.voltage), batteryDO.getVoltage() + " mV");
