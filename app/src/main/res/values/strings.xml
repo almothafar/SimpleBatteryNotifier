@@ -34,8 +34,8 @@
     <string name="battery_current">Current</string>
     <!-- #124: estimated time to full, shown below the charge rate while charging -->
     <string name="time_to_full">Time to full</string>
-    <!-- #188: estimated time to empty, shown while discharging (mirror of Time to full) -->
-    <string name="time_to_empty">Time to empty</string>
+    <!-- #188: estimated time until the battery runs out, shown while discharging -->
+    <string name="time_remaining">Time remaining</string>
 
     <!-- #188: the rate/time/current rows stay put; a not-yet-available value shows this dash with a
          tappable info icon. Punctuation, identical in every locale. -->

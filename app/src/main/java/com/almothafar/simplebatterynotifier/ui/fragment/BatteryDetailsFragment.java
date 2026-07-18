@@ -511,7 +511,7 @@ public class BatteryDetailsFragment extends Fragment {
 	 * #124, #188). Unlike the rest, these three are <b>always present</b>: rather than hiding when a value
 	 * isn't ready (which made rows appear/disappear and shift the table), a not-yet-available value shows a
 	 * "—" placeholder with a tappable info icon explaining why. The labels follow the charge direction —
-	 * "Charge rate"/"Drain rate" and "Time to full"/"Time to empty" — while "Current" is constant; because
+	 * "Charge rate"/"Drain rate" and "Time to full"/"Time remaining" — while "Current" is constant; because
 	 * the labels are stable within a direction, steady-state refreshes update the values in place with no
 	 * flicker (a label only changes on plug/unplug, when the whole context changes anyway).
 	 *
@@ -546,7 +546,7 @@ public class BatteryDetailsFragment extends Fragment {
 
 	/**
 	 * Adds the estimated-time row directly below the rate it is derived from: "Time to full" while charging,
-	 * "Time to empty" while discharging (#124/#188). A rough capacity-free linear projection (see
+	 * "Time remaining" while discharging (#124/#188). A rough capacity-free linear projection (see
 	 * {@link BatteryRateTracker#estimateMinutesToFull} / {@link BatteryRateTracker#estimateMinutesToEmpty});
 	 * precision is a non-goal — the OS owns the accurate figure. When the rate isn't ready, or the estimate
 	 * degenerates (already full/empty, or right at the charge taper where a figure would mislead), the row
@@ -558,7 +558,7 @@ public class BatteryDetailsFragment extends Fragment {
 	 * @param charging Whether the battery is charging (picks the label and the projection direction)
 	 */
 	private void addTimeRow(final View view, final BatteryRateTracker.BatteryRate rate, final boolean charging) {
-		final String label = getString(charging ? R.string.time_to_full : R.string.time_to_empty);
+		final String label = getString(charging ? R.string.time_to_full : R.string.time_remaining);
 		if (rate.hasRate()) {
 			final int level = batteryDO.getBatteryPercentageInt();
 			final int minutes = charging
