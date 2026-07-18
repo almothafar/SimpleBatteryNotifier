@@ -28,10 +28,10 @@ import static org.mockito.Mockito.times;
 /**
  * Robolectric + Mockito tests for {@link BatteryLevelReceiver}'s threshold and de-duplication logic.
  * <p>
- * The receiver reads the sticky {@code ACTION_BATTERY_CHANGED} intent and delegates the actual
- * notification to {@link NotificationService}, whose static methods are mocked so we can assert
- * <em>which</em> alert (if any) it decides to send without doing real Android notification work.
- * {@link SystemService} is left real so it builds a {@code BatteryDO} from the sticky intent we set.
+ * The receiver reads the delivered {@code ACTION_BATTERY_CHANGED} intent (#159) and delegates the
+ * actual notification to {@link NotificationService}, whose static methods are mocked so we can
+ * assert <em>which</em> alert (if any) it decides to send without doing real Android notification
+ * work. {@link SystemService} is left real so it builds a {@code BatteryDO} from the intent we deliver.
  * <p>
  * Episode state lives in SharedPreferences (#164), and each {@code receive()} uses a fresh receiver
  * instance — so every multi-broadcast test also exercises the state surviving "process death"
@@ -42,6 +42,7 @@ import static org.mockito.Mockito.times;
 public class BatteryLevelReceiverTest {
 
 	private Context context;
+	private Intent latestBattery;
 
 	@Before
 	public void setUp() {
@@ -165,17 +166,30 @@ public class BatteryLevelReceiverTest {
 		}
 	}
 
+	@Test
+	public void unexpectedAction_isIgnored() {
+		// The receiver reads the delivered intent (#159); a wrong-action intent (whose missing extras
+		// would otherwise read as a 0% battery) must be dropped by the guard, not alerted on.
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			new BatteryLevelReceiver().onReceive(context, new Intent(Intent.ACTION_POWER_CONNECTED));
+			ns.verifyNoInteractions();
+		}
+	}
+
 	// --- helpers -------------------------------------------------------------
 
 	private void receive() {
-		new BatteryLevelReceiver().onReceive(context, new Intent(Intent.ACTION_BATTERY_CHANGED));
+		new BatteryLevelReceiver().onReceive(context, latestBattery);
 	}
 
 	private void publishBattery(final int status, final int level, final int scale, final int plugged) {
 		publishBattery(status, level, scale, plugged, 250); // 25.0 °C, well below the alert threshold
 	}
 
-	@SuppressWarnings("deprecation")
+	/**
+	 * Build the battery-changed intent {@link #receive()} will deliver. The receiver reads the
+	 * delivered intent directly (#159), so no sticky broadcast is involved anymore.
+	 */
 	private void publishBattery(final int status, final int level, final int scale, final int plugged,
 	                            final int temperatureTenthsC) {
 		final Intent battery = new Intent(Intent.ACTION_BATTERY_CHANGED);
@@ -185,7 +199,7 @@ public class BatteryLevelReceiverTest {
 		battery.putExtra(BatteryManager.EXTRA_PLUGGED, plugged);
 		battery.putExtra(BatteryManager.EXTRA_PRESENT, true);
 		battery.putExtra(BatteryManager.EXTRA_TEMPERATURE, temperatureTenthsC);
-		context.sendStickyBroadcast(battery);
+		latestBattery = battery;
 	}
 
 	private void enableAlertEveryTick() {

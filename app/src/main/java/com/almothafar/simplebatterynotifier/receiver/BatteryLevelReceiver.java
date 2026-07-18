@@ -3,7 +3,6 @@ package com.almothafar.simplebatterynotifier.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
 import androidx.preference.PreferenceManager;
@@ -76,17 +75,19 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 
 	@Override
 	public void onReceive(final Context context, final Intent intent) {
-		final Intent batteryStatus = context.getApplicationContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-		if (isNull(batteryStatus)) {
-			return; // Cannot determine battery status, exit early
+		// The receiver is registered for ACTION_BATTERY_CHANGED (see PowerConnectionService), so the
+		// delivered intent already carries the battery state — no need to re-query the sticky
+		// broadcast (#159). The action check guards against unexpected/spoofed intents.
+		if (isNull(intent) || !Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
+			return;
 		}
 
-		final int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+		final int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
 		final boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING;
 		final boolean isFull = status == BatteryManager.BATTERY_STATUS_FULL;
 
-		// Reuse the sticky intent we already read above instead of triggering a second read.
-		final BatteryDO batteryDO = SystemService.getBatteryInfo(context, batteryStatus);
+		// Build the reading from the delivered intent; with a non-null intent this never returns null.
+		final BatteryDO batteryDO = SystemService.getBatteryInfo(context, intent);
 
 		// Feed the charge/drain rate window from this broadcast (no polling timer of our own) so both the
 		// ongoing notification below and the details table reflect the latest reading (issue #108). The
@@ -97,11 +98,6 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 		// reusing the rate just computed instead of re-parsing the persisted sample window.
 		NotificationService.updateOngoingNotification(context, batteryDO, rate);
 
-		if (isNull(batteryDO)) {
-			// Without a real reading, don't assume a level. Previously this defaulted to 100%,
-			// which silently suppressed genuine low/critical alerts on a transient read failure.
-			return;
-		}
 		final int percentage = batteryDO.getBatteryPercentageInt();
 
 		// Track battery health and charge cycles

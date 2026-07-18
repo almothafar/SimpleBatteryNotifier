@@ -31,7 +31,7 @@ import static org.robolectric.Shadows.shadowOf;
  * Robolectric + Mockito tests for {@link PowerConnectionReceiver}: wired/wireless detection,
  * plugged-state de-duplication, and the disconnect cleanup path. The
  * {@link NotificationService} static methods are mocked so we can assert what the receiver decides
- * to do from the sticky {@code ACTION_BATTERY_CHANGED} intent.
+ * to do from the delivered {@code ACTION_BATTERY_CHANGED} intent (#159).
  * <p>
  * The charge-connected notification is dispatched a short delay after connection (the charging
  * current is noisy right at plug-in), so tests advance the main looper by
@@ -42,6 +42,7 @@ import static org.robolectric.Shadows.shadowOf;
 public class PowerConnectionReceiverTest {
 
 	private Context context;
+	private Intent latestBattery;
 
 	@Before
 	public void setUp() {
@@ -144,6 +145,19 @@ public class PowerConnectionReceiverTest {
 	}
 
 	@Test
+	public void unexpectedAction_isIgnored() {
+		// The receiver reads the delivered intent (#159), so an intent with the wrong action must be
+		// dropped by the guard instead of being misread as a battery snapshot.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 50, 100);
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			new PowerConnectionReceiver().onReceive(context, new Intent(Intent.ACTION_POWER_CONNECTED));
+			runPendingSample();
+			ns.verifyNoInteractions();
+		}
+	}
+
+	@Test
 	public void disconnected_clearsNotifications() {
 		PowerConnectionReceiver.setCurrentState(BatteryManager.BATTERY_PLUGGED_AC);
 		publishBattery(0, 50, 100); // unplugged
@@ -160,7 +174,7 @@ public class PowerConnectionReceiverTest {
 	// --- helpers -------------------------------------------------------------
 
 	private void receive() {
-		new PowerConnectionReceiver().onReceive(context, new Intent(Intent.ACTION_POWER_CONNECTED));
+		new PowerConnectionReceiver().onReceive(context, latestBattery);
 	}
 
 	/**
@@ -170,6 +184,11 @@ public class PowerConnectionReceiverTest {
 		shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(PowerConnectionReceiver.CHARGE_SAMPLE_DELAY_MS));
 	}
 
+	/**
+	 * Build the battery-changed intent {@link #receive()} will deliver (the receiver reads the
+	 * delivered intent directly since #159), and publish it as the sticky broadcast too — the
+	 * delayed sample's still-plugged re-check reads the sticky state.
+	 */
 	@SuppressWarnings("deprecation")
 	private void publishBattery(final int plugged, final int level, final int scale) {
 		final Intent battery = new Intent(Intent.ACTION_BATTERY_CHANGED);
@@ -178,5 +197,6 @@ public class PowerConnectionReceiverTest {
 		battery.putExtra(BatteryManager.EXTRA_SCALE, scale);
 		battery.putExtra(BatteryManager.EXTRA_PRESENT, true);
 		context.sendStickyBroadcast(battery);
+		latestBattery = battery;
 	}
 }
