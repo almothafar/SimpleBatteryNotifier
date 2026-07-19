@@ -47,6 +47,11 @@ public final class SystemService {
 	private static final String POWER_SUPPLY_DIR = "/sys/class/power_supply";
 	private static final String CHARGE_FULL_DESIGN_NODE = "charge_full_design";
 
+	// The single alert vibration pattern (issue #166): the alert channels' vibration and the manual
+	// silent-mode-override buzz in vibratePhone() both use it, so the two can't drift. Waveform is
+	// {delay, on, off, on, off} in milliseconds; -1 = don't repeat.
+	static final long[] VIBRATION_PATTERN = {0, 500, 250, 500, 250};
+
 	private SystemService() {
 		// Utility class - prevent instantiation
 	}
@@ -555,9 +560,8 @@ public final class SystemService {
 		}
 
 		if (vibrator.hasVibrator()) {
-			final long[] pattern = {0, 500, 250, 500, 250};
 			// Use VibrationEffect for O+ (API 26 is minSdk, so this is always available)
-			vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1));
+			vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1));
 		} else {
 			Log.w(TAG, "Device cannot vibrate");
 		}

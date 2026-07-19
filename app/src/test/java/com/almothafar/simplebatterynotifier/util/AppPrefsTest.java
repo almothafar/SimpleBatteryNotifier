@@ -25,7 +25,9 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for the {@link AppPrefs} facade (#162). The context-backed cases run under Robolectric (typed
@@ -97,6 +99,18 @@ public class AppPrefsTest {
 			                 .putInt(context.getString(R.string._pref_key_fast_drain_limit), 999)
 			                 .apply();
 			assertEquals(AppPrefs.MAX_DRAIN_LIMIT_PPH, AppPrefs.drainLimitPph(context));
+		}
+
+		@Test
+		public void vibrateEnabled_defaultsTrueAndReadsBack() {
+			// Defaults on (matches the switch's android:defaultValue in pref_behaviour.xml).
+			assertTrue(AppPrefs.DEFAULT_VIBRATE);
+			assertTrue(AppPrefs.vibrateEnabled(context));
+
+			PreferenceManager.getDefaultSharedPreferences(context).edit()
+			                 .putBoolean(context.getString(R.string._pref_key_notifications_vibrate), false)
+			                 .apply();
+			assertFalse(AppPrefs.vibrateEnabled(context));
 		}
 
 		/**

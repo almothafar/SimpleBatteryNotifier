@@ -22,7 +22,10 @@ import com.almothafar.simplebatterynotifier.model.LevelThresholds;
  *       and the pair travels as a {@link LevelThresholds};</li>
  *   <li>the shared "high drain" limit — its default, accepted range and clamp ({@link #drainLimitPph}
  *       + {@link #clampDrainLimit}) moved here from {@code BatteryRateTracker}, so "a corrupt stored
- *       value can't defeat the feature" lives in one place.</li>
+ *       value can't defeat the feature" lives in one place;</li>
+ *   <li>the "Vibrate" flag ({@link #vibrateEnabled}) — previously re-read with an inline {@code true}
+ *       default in three spots (channel creation, the level-alert config and the manual override path),
+ *       which meant the alert channels and the silent-mode buzz could drift apart.</li>
  * </ul>
  * The one restatement that remains is the XML-declared slider default in {@code pref_alerts.xml}, which
  * the framework instantiates from XML and so cannot share a constant with — a comment ties the two, and
@@ -41,6 +44,9 @@ public final class AppPrefs {
 	public static final int MIN_DRAIN_LIMIT_PPH = 5;
 	/** Highest accepted drain limit in %/h; mirrors the slider's {@code android:max} in pref_alerts.xml. */
 	public static final int MAX_DRAIN_LIMIT_PPH = 60;
+
+	/** Default for the "Vibrate" preference — mirrors the switch's {@code android:defaultValue} in pref_behaviour.xml. */
+	public static final boolean DEFAULT_VIBRATE = true;
 
 	private AppPrefs() {
 		// Utility class
@@ -122,6 +128,19 @@ public final class AppPrefs {
 	 */
 	public static int clampDrainLimit(final int stored) {
 		return Math.max(MIN_DRAIN_LIMIT_PPH, Math.min(MAX_DRAIN_LIMIT_PPH, stored));
+	}
+
+	/**
+	 * Whether the "Vibrate" preference is on (default {@link #DEFAULT_VIBRATE}). It drives both the alert
+	 * channels' vibration and the manual silent-mode-override vibration, so those two reads can't disagree
+	 * about whether to buzz.
+	 *
+	 * @param context Application context
+	 *
+	 * @return true when vibration is enabled
+	 */
+	public static boolean vibrateEnabled(final Context context) {
+		return prefs(context).getBoolean(context.getString(R.string._pref_key_notifications_vibrate), DEFAULT_VIBRATE);
 	}
 
 	private static SharedPreferences prefs(final Context context) {
