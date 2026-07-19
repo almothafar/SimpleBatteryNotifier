@@ -173,8 +173,14 @@
     <!-- Silent channel used to show an alert quietly during quiet hours (issue #111) -->
     <string name="notification_quiet_channel_name">Quiet Alerts</string>
     <string name="notification_quiet_channel_description">Battery alerts shown silently during your quiet hours</string>
-    <!-- e.g. "85% · Discharging · 32.0 °C" -->
-    <string name="notification_status_content">%1$s · %2$s · %3$s</string>
+    <!-- Title line: the headline data (the header already shows the app name, so the title
+         doesn't repeat it). e.g. "85% · Discharging 9%/h" -->
+    <string name="notification_status_title">%1$s · %2$s</string>
+    <!-- Content line: secondary detail under the headline. e.g. "~9h 26m left · 34.6 °C" -->
+    <string name="notification_status_detail">%1$s · %2$s</string>
+    <!-- %1$s is the formatted duration estimate ("~9h 26m"), see time_to_full_value_hm -->
+    <string name="notification_status_time_left">%1$s left</string>
+    <string name="notification_status_time_to_full">%1$s to full</string>
 
     <!-- High temperature alert -->
     <string name="notify_high_temperature">High Temperature Alert</string>
@@ -202,8 +208,8 @@
     <string name="time_to_full_value_m">~%1$sm</string>
     <string name="pref_cat_title_drain">Battery Drain</string>
     <string name="show_rate_in_notification">Show rate in status notification</string>
-    <string name="show_rate_in_notification_summary_on">The ongoing notification shows the live drain/charge rate next to the status</string>
-    <string name="show_rate_in_notification_summary_off">The ongoing notification shows only the status label</string>
+    <string name="show_rate_in_notification_summary_on">The ongoing notification shows the live drain/charge rate and the estimated time remaining</string>
+    <string name="show_rate_in_notification_summary_off">The ongoing notification shows only the status label and temperature</string>
     <string name="drain_limit">High drain limit</string>
     <string name="drain_limit_summary">The drain rate turns amber near this limit and red at or above it, and the fast-drain alert fires when it stays there. Measured in percentage points per hour.</string>
 

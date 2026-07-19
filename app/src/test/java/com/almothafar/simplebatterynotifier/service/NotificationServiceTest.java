@@ -2,14 +2,18 @@ package com.almothafar.simplebatterynotifier.service;
 
 import android.Manifest;
 import android.app.Application;
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.os.BatteryManager;
 
 import androidx.preference.PreferenceManager;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
+import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -237,6 +241,70 @@ public class NotificationServiceTest {
 			NotificationService.sendNotification(context, null);
 
 			assertEquals(0, shadowOf(manager).size());
+		}
+	}
+
+	/**
+	 * The two lines of the ongoing status notification: the title carries the headline data
+	 * (percentage + status/rate) instead of repeating the app name the header already shows, and
+	 * the content line carries the time estimate + temperature.
+	 */
+	@RunWith(RobolectricTestRunner.class)
+	@Config(sdk = 34)
+	public static class OngoingStatusLines {
+
+		private Context context;
+
+		@Before
+		public void setUp() {
+			context = ApplicationProvider.getApplicationContext();
+		}
+
+		private static BatteryDO discharging85() {
+			return new BatteryDO().setLevel(85).setScale(100)
+					.setStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
+					.setTemperature(346);
+		}
+
+		private static BatteryRateTracker.BatteryRate rate(final boolean charging, final int pph) {
+			return new BatteryRateTracker.BatteryRate(true, pph, charging, false, 0, false, 0);
+		}
+
+		@Test
+		public void builtNotificationTitle_isHeadlineData_notAppName() {
+			final Notification built = NotificationService.buildOngoingNotification(context, discharging85(), rate(false, 9));
+			assertEquals("85% · Discharging 9%/h", String.valueOf(built.extras.getCharSequence(Notification.EXTRA_TITLE)));
+		}
+
+		@Test
+		public void detail_showsTimeLeftAndTemperature_whileDischarging() {
+			// 85% at 9 %/h → 566.67 min, rounded to 567 → "~9h 27m".
+			final String expected = "~9h 27m left · " + TemperatureUtils.format(context, 346);
+			assertEquals(expected, NotificationService.statusDetail(context, discharging85(), rate(false, 9)));
+		}
+
+		@Test
+		public void detail_showsTimeToFull_whileCharging() {
+			final BatteryDO charging = discharging85().setLevel(80)
+					.setStatus(BatteryManager.BATTERY_STATUS_CHARGING);
+			// 20 points to full at 20 %/h → exactly 60 min → "~1h 0m".
+			final String expected = "~1h 0m to full · " + TemperatureUtils.format(context, 346);
+			assertEquals(expected, NotificationService.statusDetail(context, charging, rate(true, 20)));
+		}
+
+		@Test
+		public void detail_fallsBackToTemperature_whenRateDisplayOff() {
+			PreferenceManager.getDefaultSharedPreferences(context).edit()
+					.putBoolean(context.getString(R.string._pref_key_show_rate_in_notification), false)
+					.commit();
+			assertEquals(TemperatureUtils.format(context, 346),
+					NotificationService.statusDetail(context, discharging85(), rate(false, 9)));
+		}
+
+		@Test
+		public void nullSnapshot_yieldsUnknownTitleAndEmptyDetail() {
+			assertEquals("0% · Unknown", NotificationService.statusTitle(context, null, null));
+			assertEquals("", NotificationService.statusDetail(context, null, null));
 		}
 	}
 

@@ -557,8 +557,8 @@ public final class NotificationService {
 
 		return new Notification.Builder(context, CHANNEL_ID_STATUS)
 				.setSmallIcon(ongoingIconRes(batteryDO))
-				.setContentTitle(context.getString(R.string.app_name))
-				.setContentText(statusText(context, batteryDO, rate))
+				.setContentTitle(statusTitle(context, batteryDO, rate))
+				.setContentText(statusDetail(context, batteryDO, rate))
 				.setContentIntent(createMainActivityIntent(context))
 				.setOnlyAlertOnce(true)
 				.setOngoing(true)
@@ -1116,26 +1116,94 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Build the content line of the ongoing status notification, e.g. "85.12% · Discharging 9%/h · 32.0 °C".
+	 * Build the title line of the ongoing status notification, e.g. "85.12% · Discharging 9%/h".
 	 * <p>
-	 * The percentage is the same live value the home gauge shows — two decimals when the device
+	 * The title carries the headline data, not the app name — Android already prints the app name in
+	 * the notification header, so repeating it in the title wasted the most glanceable line. The
+	 * percentage is the same live value the home gauge shows — two decimals when the device
 	 * genuinely resolves below one percent, whole otherwise (#158); only the level <em>alerts</em>
-	 * (critical/warning) stay integer. The middle segment appends the charge/drain rate to the status
-	 * label when available, falling back to the raw mA, then to the plain label — always showing the
-	 * best number on hand (issue #108). The appended rate is gated by a user setting (default on); the
+	 * (critical/warning) stay integer. The status segment appends the charge/drain rate when
+	 * available, falling back to the raw mA, then to the plain label — always showing the best
+	 * number on hand (issue #108). The appended rate is gated by a user setting (default on); the
 	 * plain label always shows.
 	 *
 	 * @param context   The application context
 	 * @param batteryDO Current battery snapshot, or null if unavailable
 	 * @param rate      The precomputed charge/drain rate
-	 * @return Formatted status text
+	 * @return Formatted title text
 	 */
-	private static String statusText(final Context context, final BatteryDO batteryDO,
-	                                 final BatteryRateTracker.BatteryRate rate) {
+	static String statusTitle(final Context context, final BatteryDO batteryDO,
+	                          final BatteryRateTracker.BatteryRate rate) {
 		final String percentage = BatteryPercentFormatter.formatLive(batteryDO);
 		final String statusLabel = SystemService.getStatusLabel(context, isNull(batteryDO) ? -1 : batteryDO.getStatus());
+		return context.getString(R.string.notification_status_title, percentage, statusWithRate(context, batteryDO, statusLabel, rate));
+	}
+
+	/**
+	 * Build the content line of the ongoing status notification — the secondary detail under the
+	 * headline: the estimated time to empty/full plus the temperature, e.g. "~9h 26m left · 34.6 °C"
+	 * or "~45m to full · 34.6 °C", degrading to just the temperature when no trustworthy rate is
+	 * available (or the user turned the rate display off — the estimate is derived from the same
+	 * tracker, so the toggle governs both). The projection is the same capacity-free linear one the
+	 * details table shows (#124/#188); precision is a non-goal — the OS owns the accurate figure.
+	 *
+	 * @param context   The application context
+	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 * @param rate      The precomputed charge/drain rate
+	 * @return Formatted detail text (empty when nothing is known)
+	 */
+	static String statusDetail(final Context context, final BatteryDO batteryDO,
+	                           final BatteryRateTracker.BatteryRate rate) {
 		final String temperature = isNull(batteryDO) ? "" : TemperatureUtils.format(context, batteryDO.getTemperature());
-		return context.getString(R.string.notification_status_content, percentage, statusWithRate(context, batteryDO, statusLabel, rate), temperature);
+		final String time = timeEstimateSegment(context, batteryDO, rate);
+		if (isNull(time)) {
+			return temperature;
+		}
+		if (temperature.isEmpty()) {
+			return time;
+		}
+		return context.getString(R.string.notification_status_detail, time, temperature);
+	}
+
+	/**
+	 * The estimated-time segment of the detail line: "~9h 26m left" while discharging, "~45m to full"
+	 * while charging — mirroring the details table's time row (#124/#188), including its gating: a
+	 * trustworthy %/h and a non-degenerate estimate (not already full/empty). Returns null when no
+	 * figure should be shown, so the caller falls back to the temperature alone.
+	 *
+	 * @param context   The application context
+	 * @param batteryDO Current battery snapshot, or null if unavailable
+	 * @param rate      The precomputed charge/drain rate
+	 * @return the formatted time segment, or null when no estimate is available
+	 */
+	private static String timeEstimateSegment(final Context context, final BatteryDO batteryDO,
+	                                          final BatteryRateTracker.BatteryRate rate) {
+		if (isNull(batteryDO) || isNull(rate) || !rate.hasRate() || !showRateEnabled(context)) {
+			return null;
+		}
+		final int level = batteryDO.getBatteryPercentageInt();
+		final int minutes = rate.charging()
+				? BatteryRateTracker.estimateMinutesToFull(level, rate.percentPerHour())
+				: BatteryRateTracker.estimateMinutesToEmpty(level, rate.percentPerHour());
+		if (minutes <= 0) {
+			return null;
+		}
+		final String duration = BatteryRateTracker.formatDuration(context, minutes);
+		return context.getString(rate.charging()
+				? R.string.notification_status_time_to_full
+				: R.string.notification_status_time_left, duration);
+	}
+
+	/**
+	 * Whether the "show rate in status notification" setting is on (default on). Governs both the
+	 * rate appended to the status segment and the derived time estimate in the detail line.
+	 *
+	 * @param context The application context
+	 * @return true when the rate (and its derived estimate) should be shown
+	 */
+	private static boolean showRateEnabled(final Context context) {
+		return PreferenceManager.getDefaultSharedPreferences(context)
+		                        .getBoolean(context.getString(R.string._pref_key_show_rate_in_notification), true);
 	}
 
 	/**
@@ -1150,12 +1218,7 @@ public final class NotificationService {
 	 */
 	private static String statusWithRate(final Context context, final BatteryDO batteryDO,
 	                                     final String statusLabel, final BatteryRateTracker.BatteryRate rate) {
-		if (isNull(batteryDO) || isNull(rate)) {
-			return statusLabel;
-		}
-		final boolean showRate = PreferenceManager.getDefaultSharedPreferences(context)
-		                                           .getBoolean(context.getString(R.string._pref_key_show_rate_in_notification), true);
-		if (!showRate) {
+		if (isNull(batteryDO) || isNull(rate) || !showRateEnabled(context)) {
 			return statusLabel;
 		}
 		// While charging, humans think in charger speed, not %/h — show the estimated tier + wattage when we
