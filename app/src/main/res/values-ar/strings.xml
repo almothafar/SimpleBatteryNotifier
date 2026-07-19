@@ -152,6 +152,14 @@
 
     <!-- ==== Added for localization pass #42 (drafted by Claude — pending maintainer review) ==== -->
 
+    <!-- Notification channel names/descriptions shown in system Settings → Notifications (#165) -->
+    <string name="notification_critical_channel_name">تنبيهات البطارية الحرجة</string>
+    <string name="notification_critical_channel_description">تنبيهات مستوى البطارية الحرج</string>
+    <string name="notification_warning_channel_name">تحذيرات البطارية</string>
+    <string name="notification_warning_channel_description">إشعارات تحذير البطارية</string>
+    <string name="notification_full_channel_name">اكتمال شحن البطارية</string>
+    <string name="notification_full_channel_description">إشعارات اكتمال شحن البطارية</string>
+
     <!-- Persistent foreground-service status notification -->
     <string name="notification_status_channel_name">حالة البطارية</string>
     <string name="notification_status_channel_description">حالة البطارية المستمرة أثناء تفعيل المراقبة</string>

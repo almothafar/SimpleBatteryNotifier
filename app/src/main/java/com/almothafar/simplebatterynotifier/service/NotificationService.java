@@ -654,49 +654,52 @@ public final class NotificationService {
 		final boolean vibrate = prefs.getBoolean(context.getString(R.string._pref_key_notifications_vibrate), true);
 		final int version = alertChannelVersion(prefs);
 
-		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_CRITICAL, version),
-				"Battery Critical Alerts", "Critical battery level alerts", Color.RED, vibrate);
-		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_WARNING, version),
-				"Battery Warnings", "Battery warning notifications", Color.rgb(0xff, 0x66, 0x00), vibrate);
-		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_FULL, version),
-				"Battery Full", "Battery fully charged notifications", Color.GREEN, vibrate);
-		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_TEMPERATURE, version),
+		createOrUpdateAlertChannel(manager, versionedChannelId(CHANNEL_ID_CRITICAL, version),
+				context.getString(R.string.notification_critical_channel_name),
+				context.getString(R.string.notification_critical_channel_description), Color.RED, vibrate);
+		createOrUpdateAlertChannel(manager, versionedChannelId(CHANNEL_ID_WARNING, version),
+				context.getString(R.string.notification_warning_channel_name),
+				context.getString(R.string.notification_warning_channel_description), Color.rgb(0xff, 0x66, 0x00), vibrate);
+		createOrUpdateAlertChannel(manager, versionedChannelId(CHANNEL_ID_FULL, version),
+				context.getString(R.string.notification_full_channel_name),
+				context.getString(R.string.notification_full_channel_description), Color.GREEN, vibrate);
+		createOrUpdateAlertChannel(manager, versionedChannelId(CHANNEL_ID_TEMPERATURE, version),
 				context.getString(R.string.notification_temperature_channel_name),
 				context.getString(R.string.notification_temperature_channel_description), Color.RED, vibrate);
-		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_FAST_DRAIN, version),
+		createOrUpdateAlertChannel(manager, versionedChannelId(CHANNEL_ID_FAST_DRAIN, version),
 				context.getString(R.string.notification_fast_drain_channel_name),
 				context.getString(R.string.notification_fast_drain_channel_description), Color.rgb(0xff, 0x66, 0x00), vibrate);
-		createChannelIfNotExists(manager, versionedChannelId(CHANNEL_ID_SLOW_CHARGE, version),
+		createOrUpdateAlertChannel(manager, versionedChannelId(CHANNEL_ID_SLOW_CHARGE, version),
 				context.getString(R.string.notification_slow_charge_channel_name),
 				context.getString(R.string.notification_slow_charge_channel_description), Color.rgb(0xff, 0x66, 0x00), vibrate);
-		createSilentChannelIfNotExists(manager, CHANNEL_ID_STATUS,
+		createOrUpdateSilentChannel(manager, CHANNEL_ID_STATUS,
 				context.getString(R.string.notification_status_channel_name),
 				context.getString(R.string.notification_status_channel_description));
-		createSilentChannelIfNotExists(manager, CHANNEL_ID_ALERTS_SILENT,
+		createOrUpdateSilentChannel(manager, CHANNEL_ID_ALERTS_SILENT,
 				context.getString(R.string.notification_quiet_channel_name),
 				context.getString(R.string.notification_quiet_channel_description));
 	}
 
 	/**
-	 * Create a low-importance, fully silent channel (no sound, vibration, lights or badge).
+	 * Create a low-importance, fully silent channel (no sound, vibration, lights or badge), or update
+	 * its name/description if it already exists.
 	 * <p>
 	 * Used both by the persistent status notification and, during the user's quiet hours, to deliver
 	 * an alert quietly so it stays visible without disturbing the user (issue #111).
+	 * <p>
+	 * As with the alert channels, re-calling for an existing ID updates only name/description, so
+	 * translated names reach upgraded installs (#165) without disturbing the silent behaviour.
 	 *
 	 * @param manager     The NotificationManager
 	 * @param channelId   The channel ID to create
 	 * @param name        The channel name
 	 * @param description The channel description
 	 */
-	private static void createSilentChannelIfNotExists(
+	private static void createOrUpdateSilentChannel(
 			final NotificationManager manager,
 			final String channelId,
 			final String name,
 			final String description) {
-		if (nonNull(manager.getNotificationChannel(channelId))) {
-			return;
-		}
-
 		final NotificationChannel channel = new NotificationChannel(channelId, name, NotificationManager.IMPORTANCE_LOW);
 		channel.setDescription(description);
 		channel.enableLights(false);
@@ -707,7 +710,13 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Create a notification channel if it doesn't already exist
+	 * Create an alert channel, or update its name/description if it already exists.
+	 * <p>
+	 * Re-calling {@code createNotificationChannel} with an existing ID updates only the name,
+	 * description and group — Android ignores importance, vibration, lights and sound so the user's
+	 * (and the versioned #153) settings are preserved. This is how translated channel names reach
+	 * <em>upgraded</em> installs, not just fresh ones (#165): the channel already exists, so we still
+	 * re-apply the current locale's name and description.
 	 *
 	 * @param manager   The NotificationManager
 	 * @param channelId The channel ID
@@ -716,17 +725,13 @@ public final class NotificationService {
 	 * @param ledColor  The LED color for notifications
 	 * @param vibrate   Whether the channel should vibrate (from the user's Vibrate preference)
 	 */
-	private static void createChannelIfNotExists(
+	private static void createOrUpdateAlertChannel(
 			final NotificationManager manager,
 			final String channelId,
 			final String name,
 			final String description,
 			final int ledColor,
 			final boolean vibrate) {
-		if (nonNull(manager.getNotificationChannel(channelId))) {
-			return;
-		}
-
 		final NotificationChannel channel = new NotificationChannel(channelId, name, NotificationManager.IMPORTANCE_HIGH);
 		channel.setDescription(description);
 		channel.enableLights(true);

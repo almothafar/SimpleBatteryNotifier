@@ -10,6 +10,8 @@ import android.util.AttributeSet;
 import android.util.Log;
 import androidx.preference.Preference;
 
+import com.almothafar.simplebatterynotifier.R;
+
 import static java.util.Objects.nonNull;
 
 /**
@@ -203,7 +205,7 @@ public class RingtonePreference extends Preference {
 				Log.e(TAG, "Error loading ringtone for " + currentRingtoneUri, e);
 			}
 		}
-		// Empty or null URI means no ringtone selected (silent/none)
-		setSummary("None");
+		// Empty or null URI means no ringtone selected — matches the picker's own "Silent" option (#165)
+		setSummary(getContext().getString(R.string.pref_ringtone_silent));
 	}
 }

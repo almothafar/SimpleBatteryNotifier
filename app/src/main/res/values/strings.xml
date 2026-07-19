@@ -129,6 +129,15 @@
     <string name="notification_full_level_content">You can unplug your charger now</string>
     <string name="notification_full_level_content_big" formatted="false">Charge complete — you can unplug now. Batteries age fastest when kept at 100%, so unplugging soon (and staying roughly between 20% and 80% day to day) helps the battery last longer.</string>
 
+    <!-- Notification channel names/descriptions shown in system Settings → Notifications (#165).
+         The critical/warning/full channels predate the resourced newer channels below. -->
+    <string name="notification_critical_channel_name">Battery Critical Alerts</string>
+    <string name="notification_critical_channel_description">Critical battery level alerts</string>
+    <string name="notification_warning_channel_name">Battery Warnings</string>
+    <string name="notification_warning_channel_description">Battery warning notifications</string>
+    <string name="notification_full_channel_name">Battery Full</string>
+    <string name="notification_full_channel_description">Battery fully charged notifications</string>
+
     <string name="notification_charge_started_title">Charging started</string>
 
     <!-- Charge-connected message (issue #122): reports charging speed + wired/wireless instead of
