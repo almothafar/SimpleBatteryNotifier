@@ -20,10 +20,6 @@ public final class BatteryRangeSliderHelper {
 	public static final int LEVEL_TO = 50;
 	/** Minimum gap kept between the critical and warning thumbs, in percent. */
 	public static final int MIN_SEPARATION = 5;
-	/** Default critical level, matching the historical {@code SeekBarPreference} default. */
-	public static final int DEFAULT_CRITICAL = 20;
-	/** Default warning level, matching the historical {@code SeekBarPreference} default. */
-	public static final int DEFAULT_WARNING = 40;
 
 	private BatteryRangeSliderHelper() {
 		// Utility class

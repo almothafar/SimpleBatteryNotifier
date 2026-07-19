@@ -11,6 +11,10 @@
         android:title="@string/pref_cat_title_thresholds"
         app:iconSpaceReserved="false">
 
+        <!-- criticalDefault/warningDefault must match AppPrefs.DEFAULT_CRITICAL_LEVEL /
+             DEFAULT_WARNING_LEVEL, the single owner of these defaults for the alert engine,
+             receiver and gauge (#162). The framework instantiates from XML, so the value is
+             restated here rather than shared as a constant. -->
         <com.almothafar.simplebatterynotifier.ui.preference.BatteryRangeSliderPreference
             android:key="@string/_pref_key_battery_level_range"
             android:persistent="false"

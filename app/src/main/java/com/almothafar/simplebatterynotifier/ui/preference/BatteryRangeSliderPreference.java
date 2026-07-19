@@ -11,6 +11,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceViewHolder;
 
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.util.AppPrefs;
 import com.google.android.material.slider.RangeSlider;
 
 import java.util.List;
@@ -37,8 +38,8 @@ public class BatteryRangeSliderPreference extends Preference {
 	private int from = BatteryRangeSliderHelper.LEVEL_FROM;
 	private int to = BatteryRangeSliderHelper.LEVEL_TO;
 	private int minSeparation = BatteryRangeSliderHelper.MIN_SEPARATION;
-	private int criticalDefault = BatteryRangeSliderHelper.DEFAULT_CRITICAL;
-	private int warningDefault = BatteryRangeSliderHelper.DEFAULT_WARNING;
+	private int criticalDefault = AppPrefs.DEFAULT_CRITICAL_LEVEL;
+	private int warningDefault = AppPrefs.DEFAULT_WARNING_LEVEL;
 
 	public BatteryRangeSliderPreference(final Context context, final AttributeSet attrs,
 	                                    final int defStyleAttr, final int defStyleRes) {

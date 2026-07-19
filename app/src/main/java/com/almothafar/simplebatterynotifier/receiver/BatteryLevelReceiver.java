@@ -15,6 +15,7 @@ import com.almothafar.simplebatterynotifier.service.FastDrainDetector;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
 import com.almothafar.simplebatterynotifier.service.SlowChargeDetector;
 import com.almothafar.simplebatterynotifier.service.SystemService;
+import com.almothafar.simplebatterynotifier.util.AppPrefs;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 
 import static java.util.Objects.isNull;
@@ -104,8 +105,8 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 
 		final SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
 		final LevelAlertConfig config = new LevelAlertConfig(
-				sharedPref.getInt(context.getString(R.string._pref_key_critical_battery_level), 20),
-				sharedPref.getInt(context.getString(R.string._pref_key_warn_battery_level), 40),
+				AppPrefs.criticalLevel(context),
+				AppPrefs.warningLevel(context),
 				sharedPref.getBoolean(context.getString(R.string._pref_key_notify_for_warning_level), true),
 				sharedPref.getBoolean(context.getString(R.string._pref_key_notify_for_full_level), true),
 				sharedPref.getBoolean(context.getString(R.string._pref_key_notify_every_tick), false));
