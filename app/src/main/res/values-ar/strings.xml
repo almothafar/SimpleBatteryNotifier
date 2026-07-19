@@ -175,7 +175,7 @@
     <!-- #194: التفصيل الموسّع (عند السحب للأسفل) — سطر "التسمية: القيمة". تسميات الوقت المتبقي/الوقت
          حتى الاكتمال/الحرارة/معدل الاستهلاك مُعاد استخدامها من جدول التفاصيل. -->
     <string name="notification_detail_line">%1$s: %2$s</string>
-    <string name="notification_label_now">الآن</string>
+    <string name="notification_label_now">مباشر</string>
     <string name="notification_label_average">المتوسط</string>
 
     <!-- High temperature alert -->

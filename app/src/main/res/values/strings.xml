@@ -180,7 +180,7 @@
     <!-- #194: expanded (pull-down) breakdown — one "label: value" line each. Labels for Time remaining /
          Time to full / Temperature / Drain rate are reused from the details table. -->
     <string name="notification_detail_line">%1$s: %2$s</string>
-    <string name="notification_label_now">Now</string>
+    <string name="notification_label_now">Live</string>
     <string name="notification_label_average">Average</string>
 
     <!-- High temperature alert -->
