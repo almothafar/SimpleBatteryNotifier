@@ -245,9 +245,10 @@ public class NotificationServiceTest {
 	}
 
 	/**
-	 * The two lines of the ongoing status notification: the title carries the headline data
-	 * (percentage + status/rate) instead of repeating the app name the header already shows, and
-	 * the content line carries the time estimate + temperature.
+	 * The two lines of the ongoing status notification (#192): the title carries the stable headline —
+	 * percentage + plain charge state — instead of repeating the app name the header already shows, and
+	 * the content line carries the volatile details (rate/power, time estimate, temperature) with no
+	 * status word, so the two lines never repeat each other.
 	 */
 	@RunWith(RobolectricTestRunner.class)
 	@Config(sdk = 34)
@@ -266,34 +267,45 @@ public class NotificationServiceTest {
 					.setTemperature(346);
 		}
 
-		private static BatteryRateTracker.BatteryRate rate(final boolean charging, final int pph) {
+		private static BatteryRateTracker.BatteryRate rate(boolean charging, int pph) {
 			return new BatteryRateTracker.BatteryRate(true, pph, charging, false, 0, false, 0);
 		}
 
 		@Test
-		public void builtNotificationTitle_isHeadlineData_notAppName() {
+		public void builtNotificationTitle_isStableHeadline_notAppNameNorRate() {
 			final Notification built = NotificationService.buildOngoingNotification(context, discharging85(), rate(false, 9));
-			assertEquals("85% · Discharging 9%/h", String.valueOf(built.extras.getCharSequence(Notification.EXTRA_TITLE)));
+			// Stable metrics only: percentage + status. The rate lives in the content line.
+			assertEquals("85% · Discharging", String.valueOf(built.extras.getCharSequence(Notification.EXTRA_TITLE)));
 		}
 
 		@Test
-		public void detail_showsTimeLeftAndTemperature_whileDischarging() {
+		public void detail_showsRateTimeAndTemperature_whileDischarging() {
 			// 85% at 9 %/h → 566.67 min, rounded to 567 → "~9h 27m".
-			final String expected = "~9h 27m left · " + TemperatureUtils.format(context, 346);
+			final String expected = "9%/h · ~9h 27m left · " + TemperatureUtils.format(context, 346);
 			assertEquals(expected, NotificationService.statusDetail(context, discharging85(), rate(false, 9)));
 		}
 
 		@Test
-		public void detail_showsTimeToFull_whileCharging() {
+		public void detail_showsChargePowerAndTimeToFull_whileCharging() {
+			// 2 A × 5 V = 10 W; 20 points to full at 20 %/h → exactly 60 min → "~1h 0m".
 			final BatteryDO charging = discharging85().setLevel(80)
-					.setStatus(BatteryManager.BATTERY_STATUS_CHARGING);
-			// 20 points to full at 20 %/h → exactly 60 min → "~1h 0m".
-			final String expected = "~1h 0m to full · " + TemperatureUtils.format(context, 346);
+					.setStatus(BatteryManager.BATTERY_STATUS_CHARGING)
+					.setCurrentMicroAmps(2_000_000).setVoltage(5000);
+			final String expected = "~10 W · ~1h 0m to full · " + TemperatureUtils.format(context, 346);
 			assertEquals(expected, NotificationService.statusDetail(context, charging, rate(true, 20)));
 		}
 
 		@Test
-		public void detail_fallsBackToTemperature_whenRateDisplayOff() {
+		public void detail_fallsBackToChargeRate_whenChargePowerUnknown() {
+			// No current/voltage → charge power can't be estimated → the charge %/h stands in.
+			final BatteryDO charging = discharging85().setLevel(80)
+					.setStatus(BatteryManager.BATTERY_STATUS_CHARGING);
+			final String expected = "20%/h · ~1h 0m to full · " + TemperatureUtils.format(context, 346);
+			assertEquals(expected, NotificationService.statusDetail(context, charging, rate(true, 20)));
+		}
+
+		@Test
+		public void detail_fallsBackToTemperatureOnly_whenRateDisplayOff() {
 			PreferenceManager.getDefaultSharedPreferences(context).edit()
 					.putBoolean(context.getString(R.string._pref_key_show_rate_in_notification), false)
 					.commit();
@@ -303,7 +315,7 @@ public class NotificationServiceTest {
 
 		@Test
 		public void nullSnapshot_yieldsUnknownTitleAndEmptyDetail() {
-			assertEquals("0% · Unknown", NotificationService.statusTitle(context, null, null));
+			assertEquals("0% · Unknown", NotificationService.statusTitle(context, null));
 			assertEquals("", NotificationService.statusDetail(context, null, null));
 		}
 	}

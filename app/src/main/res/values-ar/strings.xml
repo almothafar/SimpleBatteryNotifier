@@ -137,8 +137,6 @@
     <string name="charge_connected_power">%1$s · %2$s · ~%3$d واط</string>
     <string name="charge_connected_tier">%1$s · %2$s</string>
     <string name="charge_connected_plain">شحن %1$s</string>
-    <!-- #125: إشعار الحالة أثناء الشحن — الفئة + الواط المقدّر، مثل "شحن سريع · ~18 واط" -->
-    <string name="notification_status_charge_power">%1$s · ~%2$s واط</string>
 
     <!-- "Charge notification style" preference (issue #122) -->
     <string name="charge_notification_style_title">أسلوب تنبيه الشحن</string>
@@ -165,12 +163,14 @@
     <string name="notification_status_channel_description">حالة البطارية المستمرة أثناء تفعيل المراقبة</string>
     <string name="notification_quiet_channel_name">تنبيهات صامتة</string>
     <string name="notification_quiet_channel_description">تنبيهات البطارية تُعرض بصمت أثناء ساعات الهدوء</string>
-    <!-- سطر العنوان: البيانات الرئيسية (الترويسة تعرض اسم التطبيق أصلاً فلا يتكرر في العنوان) -->
+    <!-- سطر العنوان: البيانات الثابتة — النسبة المئوية + حالة الشحن (الترويسة تعرض اسم التطبيق،
+         والمعدل/الوقت المتغيّران في سطر المحتوى). مثل "85% · تفريغ" -->
     <string name="notification_status_title">%1$s · %2$s</string>
-    <!-- سطر المحتوى: التفاصيل الثانوية تحت العنوان، مثل "يتبقى ~9h 26m · 34.6 °C" -->
-    <string name="notification_status_detail">%1$s · %2$s</string>
-    <!-- %1$s هي المدة المنسقة ("~9h 26m")، انظر time_to_full_value_hm -->
-    <string name="notification_status_time_left">يتبقى %1$s</string>
+    <!-- سطر المحتوى أثناء الشحن: الواط المقدّر (بدون كلمة الفئة — العنوان يذكر "شحن" أصلاً). %1$s
+         بأرقام غربية (String.valueOf) 0-9 في كل اللغات (#96). مثل "~18 واط" -->
+    <string name="notification_status_watts">~%1$s واط</string>
+    <!-- %1$s هي المدة المنسقة ("~9h 27m")، انظر time_to_full_value_hm -->
+    <string name="notification_status_time_left">يتبقّى %1$s</string>
     <string name="notification_status_time_to_full">%1$s حتى الاكتمال</string>
 
     <!-- High temperature alert -->
@@ -195,9 +195,9 @@
     <string name="time_to_full_value_hm">~%1$sh %2$sm</string>
     <string name="time_to_full_value_m">~%1$sm</string>
     <string name="pref_cat_title_drain">استهلاك البطارية</string>
-    <string name="show_rate_in_notification">إظهار المعدل في إشعار الحالة</string>
-    <string name="show_rate_in_notification_summary_on">يعرض الإشعار المستمر معدل الشحن/الاستهلاك المباشر والوقت المتبقي المقدّر</string>
-    <string name="show_rate_in_notification_summary_off">يعرض الإشعار المستمر تسمية الحالة ودرجة الحرارة فقط</string>
+    <string name="show_rate_in_notification">إظهار المعدل والوقت في إشعار الحالة</string>
+    <string name="show_rate_in_notification_summary_on">يضيف الإشعار المستمر المعدل/القدرة المباشرة والوقت المقدّر إلى النسبة المئوية والحالة ودرجة الحرارة</string>
+    <string name="show_rate_in_notification_summary_off">يعرض الإشعار المستمر النسبة المئوية والحالة ودرجة الحرارة فقط</string>
     <string name="drain_limit">حد الاستهلاك المرتفع</string>
     <string name="drain_limit_summary">يتحول معدل الاستهلاك إلى اللون الكهرماني عند الاقتراب من هذا الحد وإلى الأحمر عند بلوغه أو تجاوزه، ويُطلق تنبيه الاستهلاك السريع عند بقائه عند الحد. يُقاس بنقاط مئوية في الساعة.</string>
 
