@@ -4,6 +4,7 @@ import android.content.Context;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.provider.Settings;
+import android.util.Log;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,6 +21,7 @@ import static java.util.Objects.isNull;
  * an explicit shutdown to).
  */
 final class AlertSounds {
+	private static final String TAG = AlertSounds.class.getSimpleName();
 
 	// Do Not Disturb mode constants
 	private static final String ZEN_MODE = "zen_mode";
@@ -76,6 +78,10 @@ final class AlertSounds {
 		try {
 			return ZEN_MODE_IMPORTANT_INTERRUPTIONS == Settings.Global.getInt(context.getContentResolver(), ZEN_MODE);
 		} catch (Settings.SettingNotFoundException e) {
+			// zen_mode has existed since API 21 and minSdk is 26, so its absence is unexpected, not an
+			// expected-validation case — log it rather than swallow. Falling back to "not in DND" keeps
+			// the alert on its normal audible path.
+			Log.w(TAG, "zen_mode setting not found; assuming not in Do Not Disturb", e);
 			return false;
 		}
 	}
