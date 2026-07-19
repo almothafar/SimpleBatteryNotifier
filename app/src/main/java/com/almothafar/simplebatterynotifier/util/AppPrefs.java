@@ -15,8 +15,10 @@ import com.almothafar.simplebatterynotifier.R;
  * <p>
  * <b>Migrated so far:</b> the critical/warning battery levels. The same {@code 20}/{@code 40} literals
  * previously lived in {@code NotificationService}, {@code BatteryLevelReceiver}, {@code MainActivity}
- * and the range slider's helper; they now live only in {@link #DEFAULT_CRITICAL_LEVEL} /
- * {@link #DEFAULT_WARNING_LEVEL} here. Remaining settings migrate incrementally.
+ * and the range slider's helper; every Java read now derives its default from
+ * {@link #DEFAULT_CRITICAL_LEVEL} / {@link #DEFAULT_WARNING_LEVEL}. The one restatement that remains is
+ * the XML-declared slider default in {@code pref_alerts.xml} (see below), which the framework
+ * instantiates from XML and so cannot share a constant with. Remaining settings migrate incrementally.
  * <p>
  * The XML-declared defaults in {@code pref_alerts.xml} ({@code criticalDefault}/{@code warningDefault})
  * must stay in step with these constants — the framework instantiates the slider from XML, so the two
