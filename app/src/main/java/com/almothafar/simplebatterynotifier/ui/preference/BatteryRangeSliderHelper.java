@@ -1,6 +1,7 @@
 package com.almothafar.simplebatterynotifier.ui.preference;
 
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.model.LevelThresholds;
 import com.google.android.material.slider.RangeSlider;
 
 /**
@@ -20,10 +21,6 @@ public final class BatteryRangeSliderHelper {
 	public static final int LEVEL_TO = 50;
 	/** Minimum gap kept between the critical and warning thumbs, in percent. */
 	public static final int MIN_SEPARATION = 5;
-	/** Default critical level, matching the historical {@code SeekBarPreference} default. */
-	public static final int DEFAULT_CRITICAL = 20;
-	/** Default warning level, matching the historical {@code SeekBarPreference} default. */
-	public static final int DEFAULT_WARNING = 40;
 
 	private BatteryRangeSliderHelper() {
 		// Utility class
@@ -32,7 +29,7 @@ public final class BatteryRangeSliderHelper {
 	/**
 	 * Apply the shared bounds, integer step, minimum thumb separation, and a "{@code N%}" label
 	 * formatter to a slider. Does not set the thumb values — callers set those after clamping via
-	 * {@link #clampPair(int, int, int, int, int)}.
+	 * {@link #clampPair(LevelThresholds, int, int, int)}.
 	 *
 	 * @param slider        the range slider to configure
 	 * @param from          combined track start (critical floor)
@@ -50,22 +47,27 @@ public final class BatteryRangeSliderHelper {
 	}
 
 	/**
-	 * Clamp a (critical, warning) pair into {@code [from, to]} while keeping them at least
-	 * {@code minSeparation} apart, so persisted or corrupted values can always be shown on the
-	 * slider without tripping its validation.
+	 * Clamp a {@link LevelThresholds} pair into {@code [from, to]} while keeping the two levels at least
+	 * {@code minSeparation} apart, so persisted or corrupted values can always be shown on the slider
+	 * without tripping its validation.
 	 *
-	 * @return a two-element array {@code {critical, warning}}
+	 * @param levels        the raw (critical, warning) pair to reconcile
+	 * @param from          combined track start (critical floor)
+	 * @param to            combined track end (warning ceiling)
+	 * @param minSeparation minimum gap between the two thumbs, in value units
+	 *
+	 * @return a clamped {@code (critical, warning)} pair the slider can always accept
 	 */
-	public static int[] clampPair(final int critical, final int warning,
-	                              final int from, final int to, final int minSeparation) {
-		int low = clamp(critical, from, to);
-		int high = clamp(warning, from, to);
+	public static LevelThresholds clampPair(final LevelThresholds levels,
+	                                        final int from, final int to, final int minSeparation) {
+		int low = clamp(levels.critical(), from, to);
+		int high = clamp(levels.warning(), from, to);
 		if (high - low < minSeparation) {
 			// Push the warning thumb up first; if that hits the ceiling, pull critical back down.
 			high = Math.min(to, low + minSeparation);
 			low = Math.max(from, high - minSeparation);
 		}
-		return new int[]{low, high};
+		return new LevelThresholds(low, high);
 	}
 
 	private static int clamp(final int value, final int lo, final int hi) {

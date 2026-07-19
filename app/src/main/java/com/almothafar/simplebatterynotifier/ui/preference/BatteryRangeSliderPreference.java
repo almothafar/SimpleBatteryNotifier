@@ -11,6 +11,8 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceViewHolder;
 
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.model.LevelThresholds;
+import com.almothafar.simplebatterynotifier.util.AppPrefs;
 import com.google.android.material.slider.RangeSlider;
 
 import java.util.List;
@@ -37,8 +39,8 @@ public class BatteryRangeSliderPreference extends Preference {
 	private int from = BatteryRangeSliderHelper.LEVEL_FROM;
 	private int to = BatteryRangeSliderHelper.LEVEL_TO;
 	private int minSeparation = BatteryRangeSliderHelper.MIN_SEPARATION;
-	private int criticalDefault = BatteryRangeSliderHelper.DEFAULT_CRITICAL;
-	private int warningDefault = BatteryRangeSliderHelper.DEFAULT_WARNING;
+	private int criticalDefault = AppPrefs.DEFAULT_CRITICAL_LEVEL;
+	private int warningDefault = AppPrefs.DEFAULT_WARNING_LEVEL;
 
 	public BatteryRangeSliderPreference(final Context context, final AttributeSet attrs,
 	                                    final int defStyleAttr, final int defStyleRes) {
@@ -102,15 +104,15 @@ public class BatteryRangeSliderPreference extends Preference {
 		slider.clearOnChangeListeners();
 		slider.clearOnSliderTouchListeners();
 
-		final int[] pair = readClampedValues();
-		slider.setValues((float) pair[0], (float) pair[1]);
-		updateCaptions(criticalCaption, warningCaption, pair[0], pair[1]);
+		final LevelThresholds pair = readClampedValues();
+		slider.setValues((float) pair.critical(), (float) pair.warning());
+		updateCaptions(criticalCaption, warningCaption, pair.critical(), pair.warning());
 
 		// Update the captions live while dragging; persist only when the drag ends to avoid a burst
 		// of writes and readers seeing half-applied intermediate values.
 		slider.addOnChangeListener((s, value, fromUser) -> {
-			final int[] current = currentValues(s);
-			updateCaptions(criticalCaption, warningCaption, current[0], current[1]);
+			final LevelThresholds current = currentValues(s);
+			updateCaptions(criticalCaption, warningCaption, current.critical(), current.warning());
 		});
 
 		slider.addOnSliderTouchListener(new RangeSlider.OnSliderTouchListener() {
@@ -121,8 +123,7 @@ public class BatteryRangeSliderPreference extends Preference {
 
 			@Override
 			public void onStopTrackingTouch(@NonNull final RangeSlider s) {
-				final int[] current = currentValues(s);
-				persist(current[0], current[1]);
+				persist(currentValues(s));
 			}
 		});
 	}
@@ -131,19 +132,19 @@ public class BatteryRangeSliderPreference extends Preference {
 	 * Read the persisted critical/warning values (falling back to the defaults) and clamp them into
 	 * the slider's bounds and separation so they can always be applied safely.
 	 */
-	private int[] readClampedValues() {
+	private LevelThresholds readClampedValues() {
 		final SharedPreferences prefs = getSharedPreferences();
 		final int critical = nonNull(prefs) ? prefs.getInt(criticalKey, criticalDefault) : criticalDefault;
 		final int warning = nonNull(prefs) ? prefs.getInt(warningKey, warningDefault) : warningDefault;
-		return BatteryRangeSliderHelper.clampPair(critical, warning, from, to, minSeparation);
+		return BatteryRangeSliderHelper.clampPair(new LevelThresholds(critical, warning), from, to, minSeparation);
 	}
 
-	private void persist(final int critical, final int warning) {
+	private void persist(final LevelThresholds levels) {
 		final SharedPreferences prefs = getSharedPreferences();
 		if (nonNull(prefs)) {
 			prefs.edit()
-					.putInt(criticalKey, critical)
-					.putInt(warningKey, warning)
+					.putInt(criticalKey, levels.critical())
+					.putInt(warningKey, levels.warning())
 					.apply();
 		}
 	}
@@ -158,9 +159,9 @@ public class BatteryRangeSliderPreference extends Preference {
 		}
 	}
 
-	private static int[] currentValues(final RangeSlider slider) {
+	private static LevelThresholds currentValues(final RangeSlider slider) {
 		final List<Float> values = slider.getValues();
-		return new int[]{Math.round(values.get(0)), Math.round(values.get(1))};
+		return new LevelThresholds(Math.round(values.get(0)), Math.round(values.get(1)));
 	}
 
 	private static String orDefault(final String value, final String fallback) {

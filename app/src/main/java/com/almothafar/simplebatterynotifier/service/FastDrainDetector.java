@@ -10,6 +10,7 @@ import com.almothafar.simplebatterynotifier.service.BatteryRateTracker.BatteryRa
 import com.almothafar.simplebatterynotifier.service.SustainedConditionTracker.Outcome;
 import com.almothafar.simplebatterynotifier.service.SustainedConditionTracker.Streak;
 import com.almothafar.simplebatterynotifier.service.SustainedConditionTracker.StreakStore;
+import com.almothafar.simplebatterynotifier.util.AppPrefs;
 
 import static java.util.Objects.isNull;
 
@@ -80,7 +81,7 @@ public final class FastDrainDetector {
 			return;
 		}
 
-		final int limit = BatteryRateTracker.getDrainLimitPercentPerHour(context);
+		final int limit = AppPrefs.drainLimitPph(context);
 		final long sustainedMs = minutesPref(prefs, context, R.string._pref_key_fast_drain_sustained_minutes,
 				DEFAULT_SUSTAINED_MINUTES, MIN_SUSTAINED_MINUTES, MAX_SUSTAINED_MINUTES);
 		final long reminderGapMs = minutesPref(prefs, context, R.string._pref_key_fast_drain_reminder_minutes,
@@ -143,7 +144,7 @@ public final class FastDrainDetector {
 
 	/**
 	 * Clamps a stored minutes preference to its slider range and converts to millis. Mirrors
-	 * {@link BatteryRateTracker#clampDrainLimit}: the slider constrains UI input, but a corrupt or
+	 * {@link AppPrefs#clampDrainLimit}: the slider constrains UI input, but a corrupt or
 	 * out-of-range stored value (e.g. 0 sustained minutes) would otherwise defeat the sustained-window
 	 * requirement and fire on a momentary spike. Pure so it is unit-testable.
 	 *

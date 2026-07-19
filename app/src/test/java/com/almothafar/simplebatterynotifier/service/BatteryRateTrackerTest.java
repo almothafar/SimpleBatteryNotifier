@@ -660,34 +660,6 @@ public class BatteryRateTrackerTest {
 	}
 
 	/**
-	 * {@link BatteryRateTracker#clampDrainLimit}: a stored limit outside the slider's range is clamped,
-	 * so a corrupt preference can't skew the red line or the #109 trigger.
-	 */
-	@RunWith(Parameterized.class)
-	public static class ClampDrainLimit {
-
-		@Parameter(0) public int stored;
-		@Parameter(1) public int expected;
-
-		@Parameters(name = "stored={0} -> {1}")
-		public static Collection<Object[]> data() {
-			return Arrays.asList(new Object[][]{
-					{20, 20},                                          // in range: unchanged
-					{BatteryRateTracker.MIN_DRAIN_LIMIT_PPH, 5},       // boundaries kept
-					{BatteryRateTracker.MAX_DRAIN_LIMIT_PPH, 60},
-					{0, 5},                                            // below min: clamped up
-					{-3, 5},
-					{999, 60},                                         // above max: clamped down
-			});
-		}
-
-		@Test
-		public void matchesExpected() {
-			assertEquals(expected, BatteryRateTracker.clampDrainLimit(stored));
-		}
-	}
-
-	/**
 	 * {@link BatteryRateTracker#appendAndTrim}: the min-spacing throttle and the trailing-window age trim.
 	 */
 	public static class Windowing {

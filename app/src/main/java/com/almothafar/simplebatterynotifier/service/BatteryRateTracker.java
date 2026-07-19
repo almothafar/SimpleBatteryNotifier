@@ -65,12 +65,6 @@ public final class BatteryRateTracker {
 	// Above this the derived %/h is garbage (e.g. a wrong-unit current); reject rather than display it.
 	static final int MAX_PLAUSIBLE_RATE_PPH = 500;
 
-	// The "red / high drain" limit shared with the fast-drain alert (#109): default and accepted range.
-	// MIN/MAX must match the slider bounds (android:min/android:max) in pref_alerts.xml; they are
-	// enforced when the preference is read, so an out-of-range stored value can't skew the red line.
-	public static final int DEFAULT_DRAIN_LIMIT_PPH = 20;
-	public static final int MIN_DRAIN_LIMIT_PPH = 5;
-	public static final int MAX_DRAIN_LIMIT_PPH = 60;
 	// Amber sits just below the red limit; 0.75x keeps colour reserved for genuinely high drain (#108).
 	private static final float AMBER_RATIO = 0.75f;
 
@@ -384,33 +378,6 @@ public final class BatteryRateTracker {
 	static int signedCurrentMilliAmps(final int microAmps, final boolean charging) {
 		final int magnitude = Math.round(Math.abs(microAmps) / 1000f);
 		return charging ? magnitude : -magnitude;
-	}
-
-	/**
-	 * The user's shared "high drain" limit in %/h — the red line in the details table (#108) and the
-	 * fast-drain alert trigger (#109). Defaults to {@link #DEFAULT_DRAIN_LIMIT_PPH}.
-	 *
-	 * @param context Application context
-	 *
-	 * @return the configured limit in %/h
-	 */
-	public static int getDrainLimitPercentPerHour(final Context context) {
-		final int stored = PreferenceManager.getDefaultSharedPreferences(context)
-		                                    .getInt(context.getString(R.string._pref_key_fast_drain_limit), DEFAULT_DRAIN_LIMIT_PPH);
-		return clampDrainLimit(stored);
-	}
-
-	/**
-	 * Clamps a stored drain limit to the accepted range, so a corrupt or out-of-range preference value
-	 * can't skew the red line here or the fast-drain trigger in #109. The bounds mirror the slider's
-	 * {@code android:min}/{@code android:max} in {@code pref_alerts.xml}. Pure so it is unit-testable.
-	 *
-	 * @param stored the raw persisted limit in %/h
-	 *
-	 * @return the limit clamped to [{@link #MIN_DRAIN_LIMIT_PPH}, {@link #MAX_DRAIN_LIMIT_PPH}]
-	 */
-	static int clampDrainLimit(final int stored) {
-		return Math.max(MIN_DRAIN_LIMIT_PPH, Math.min(MAX_DRAIN_LIMIT_PPH, stored));
 	}
 
 	/**

@@ -31,6 +31,7 @@ import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
 import com.almothafar.simplebatterynotifier.model.ChargeSpeedTier;
 import com.almothafar.simplebatterynotifier.ui.MainActivity;
+import com.almothafar.simplebatterynotifier.util.AppPrefs;
 import com.almothafar.simplebatterynotifier.util.BatteryPercentFormatter;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
@@ -1407,8 +1408,8 @@ public final class NotificationService {
 			this.type = type;
 
 			// Load common preferences
-			final int warningLevel = prefs.getInt(context.getString(R.string._pref_key_warn_battery_level), 40);
-			final int criticalLevel = prefs.getInt(context.getString(R.string._pref_key_critical_battery_level), 20);
+			final int warningLevel = AppPrefs.warningLevel(context);
+			final int criticalLevel = AppPrefs.criticalLevel(context);
 
 			this.stickyNotification = prefs.getBoolean(context.getString(R.string._pref_key_notifications_sticky), false);
 			final boolean withinWindow = isWithinNotificationWindow(context, prefs);
