@@ -169,9 +169,14 @@
     <!-- سطر المحتوى أثناء الشحن: الواط المقدّر (بدون كلمة الفئة — العنوان يذكر "شحن" أصلاً). %1$s
          بأرقام غربية (String.valueOf) 0-9 في كل اللغات (#96). مثل "~18 واط" -->
     <string name="notification_status_watts">~%1$s واط</string>
-    <!-- %1$s هي المدة المنسقة ("~9h 27m")، انظر time_to_full_value_hm -->
-    <string name="notification_status_time_left">يتبقّى %1$s</string>
+    <!-- المدة المنسقة ("~9h 27m") في سطر الوقت المطوي؛ انظر time_to_full_value_hm -->
+    <string name="notification_status_time_remaining">يتبقّى %1$s</string>
     <string name="notification_status_time_to_full">%1$s حتى الاكتمال</string>
+    <!-- #194: التفصيل الموسّع (عند السحب للأسفل) — سطر "التسمية: القيمة". تسميات الوقت المتبقي/الوقت
+         حتى الاكتمال/الحرارة/معدل الاستهلاك مُعاد استخدامها من جدول التفاصيل. -->
+    <string name="notification_detail_line">%1$s: %2$s</string>
+    <string name="notification_label_now">مباشر</string>
+    <string name="notification_label_average">المتوسط</string>
 
     <!-- High temperature alert -->
     <string name="notify_high_temperature">تنبيه ارتفاع الحرارة</string>

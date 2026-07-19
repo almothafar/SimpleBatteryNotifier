@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.robolectric.Shadows.shadowOf;
 
 /**
@@ -245,15 +246,16 @@ public class NotificationServiceTest {
 	}
 
 	/**
-	 * The two lines of the ongoing status notification (#192): the title carries the stable headline —
-	 * percentage + plain charge state — instead of repeating the app name the header already shows, and
-	 * the content line carries the volatile details (rate/power, time estimate, temperature) with no
-	 * status word, so the two lines never repeat each other.
+	 * The ongoing status notification (#192 title + #194 expandable body): the title is the stable
+	 * percentage + state; the <b>collapsed</b> content is rate/power · current · remaining; the
+	 * <b>expanded</b> content is a labelled Now / Average / time / temperature breakdown. Expected strings
+	 * are built from the same formatters the code uses, so the sign glyph, separators and units can't drift.
 	 */
 	@RunWith(RobolectricTestRunner.class)
 	@Config(sdk = 34)
 	public static class OngoingStatusLines {
 
+		private static final String SEP = " · ";
 		private Context context;
 
 		@Before
@@ -267,56 +269,122 @@ public class NotificationServiceTest {
 					.setTemperature(346);
 		}
 
+		private static BatteryDO charging80() {
+			// 2 A × 5 V = 10 W.
+			return new BatteryDO().setLevel(80).setScale(100)
+					.setStatus(BatteryManager.BATTERY_STATUS_CHARGING)
+					.setTemperature(346).setCurrentMicroAmps(2_000_000).setVoltage(5000);
+		}
+
+		/** Rate with a %/h only (no current/average yet) — the warm-up shape. */
 		private static BatteryRateTracker.BatteryRate rate(boolean charging, int pph) {
 			return new BatteryRateTracker.BatteryRate(true, pph, charging, false, 0, false, 0);
 		}
 
+		/** Rate with a %/h plus instantaneous and windowed-average current. */
+		private static BatteryRateTracker.BatteryRate rateFull(boolean charging, int pph, int mA, int avgMa) {
+			return new BatteryRateTracker.BatteryRate(true, pph, charging, true, mA, true, avgMa);
+		}
+
+		private String cur(int mA) {
+			return BatteryRateTracker.formatCurrentValue(context, mA);
+		}
+
+		private String line(int labelRes, String value) {
+			return context.getString(R.string.notification_detail_line, context.getString(labelRes), value);
+		}
+
+		private String temp() {
+			return TemperatureUtils.format(context, 346);
+		}
+
 		@Test
-		public void builtNotificationTitle_isStableHeadline_notAppNameNorRate() {
+		public void title_isStableHeadline_notAppNameNorRate() {
 			final Notification built = NotificationService.buildOngoingNotification(context, discharging85(), rate(false, 9));
-			// Stable metrics only: percentage + status. The rate lives in the content line.
 			assertEquals("85% · Discharging", String.valueOf(built.extras.getCharSequence(Notification.EXTRA_TITLE)));
 		}
 
 		@Test
-		public void detail_showsRateTimeAndTemperature_whileDischarging() {
-			// 85% at 9 %/h → 566.67 min, rounded to 567 → "~9h 27m".
-			final String expected = "9%/h · ~9h 27m left · " + TemperatureUtils.format(context, 346);
-			assertEquals(expected, NotificationService.statusDetail(context, discharging85(), rate(false, 9)));
+		public void collapsed_isRateCurrentRemaining_whileDischarging() {
+			// 85% at 9 %/h → 566.67 → 567 min → "~9h 27m".
+			final String remaining = context.getString(R.string.notification_status_time_remaining, "~9h 27m");
+			final String expected = "9%/h" + SEP + cur(-250) + SEP + remaining;
+			assertEquals(expected, NotificationService.statusDetail(context, discharging85(), rateFull(false, 9, -250, -338)));
 		}
 
 		@Test
-		public void detail_showsChargePowerAndTimeToFull_whileCharging() {
-			// 2 A × 5 V = 10 W; 20 points to full at 20 %/h → exactly 60 min → "~1h 0m".
-			final BatteryDO charging = discharging85().setLevel(80)
-					.setStatus(BatteryManager.BATTERY_STATUS_CHARGING)
-					.setCurrentMicroAmps(2_000_000).setVoltage(5000);
-			final String expected = "~10 W · ~1h 0m to full · " + TemperatureUtils.format(context, 346);
-			assertEquals(expected, NotificationService.statusDetail(context, charging, rate(true, 20)));
+		public void collapsed_isWattsCurrentToFull_whileCharging() {
+			// 20 points to full at 20 %/h → exactly 60 min → "~1h 0m".
+			final String toFull = context.getString(R.string.notification_status_time_to_full, "~1h 0m");
+			final String expected = "~10 W" + SEP + cur(2000) + SEP + toFull;
+			assertEquals(expected, NotificationService.statusDetail(context, charging80(), rateFull(true, 20, 2000, 1900)));
 		}
 
 		@Test
-		public void detail_fallsBackToChargeRate_whenChargePowerUnknown() {
-			// No current/voltage → charge power can't be estimated → the charge %/h stands in.
-			final BatteryDO charging = discharging85().setLevel(80)
-					.setStatus(BatteryManager.BATTERY_STATUS_CHARGING);
-			final String expected = "20%/h · ~1h 0m to full · " + TemperatureUtils.format(context, 346);
-			assertEquals(expected, NotificationService.statusDetail(context, charging, rate(true, 20)));
+		public void collapsed_dropsCurrent_whenNoneYet() {
+			// Warm-up: %/h available, no current → rate · remaining, no mA segment.
+			final String remaining = context.getString(R.string.notification_status_time_remaining, "~9h 27m");
+			assertEquals("9%/h" + SEP + remaining,
+					NotificationService.statusDetail(context, discharging85(), rate(false, 9)));
 		}
 
 		@Test
-		public void detail_fallsBackToTemperatureOnly_whenRateDisplayOff() {
+		public void expanded_isLabelledBreakdown_whileDischarging() {
+			final String expected = String.join("\n",
+					line(R.string.notification_label_now, cur(-250)),
+					line(R.string.notification_label_average, cur(-338) + SEP + "9%/h"),
+					line(R.string.time_remaining, "~9h 27m"),
+					line(R.string.temperature, temp()));
+			assertEquals(expected, NotificationService.statusDetailExpanded(context, discharging85(), rateFull(false, 9, -250, -338)));
+		}
+
+		@Test
+		public void expanded_isLabelledBreakdown_whileCharging() {
+			// Now pairs current with wattage; Average is current only (no %/h while charging).
+			final String expected = String.join("\n",
+					line(R.string.notification_label_now, cur(2000) + SEP + "~10 W"),
+					line(R.string.notification_label_average, cur(1900)),
+					line(R.string.time_to_full, "~1h 0m"),
+					line(R.string.temperature, temp()));
+			assertEquals(expected, NotificationService.statusDetailExpanded(context, charging80(), rateFull(true, 20, 2000, 1900)));
+		}
+
+		@Test
+		public void expanded_usesDrainRateLine_whenNoAverageCurrentYet() {
+			// %/h but no average current → the rate gets its own labelled line instead of riding Average.
+			final String expected = String.join("\n",
+					line(R.string.drain_rate, "9%/h"),
+					line(R.string.time_remaining, "~9h 27m"),
+					line(R.string.temperature, temp()));
+			assertEquals(expected, NotificationService.statusDetailExpanded(context, discharging85(), rate(false, 9)));
+		}
+
+		@Test
+		public void builtNotification_isExpandable_whenBreakdownAvailable() {
+			final Notification built = NotificationService.buildOngoingNotification(context, discharging85(), rateFull(false, 9, -250, -338));
+			final CharSequence bigText = built.extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
+			assertEquals(NotificationService.statusDetailExpanded(context, discharging85(), rateFull(false, 9, -250, -338)),
+					String.valueOf(bigText));
+		}
+
+		@Test
+		public void rateDisplayOff_showsTemperatureOnly_andNotExpandable() {
 			PreferenceManager.getDefaultSharedPreferences(context).edit()
 					.putBoolean(context.getString(R.string._pref_key_show_rate_in_notification), false)
 					.commit();
-			assertEquals(TemperatureUtils.format(context, 346),
-					NotificationService.statusDetail(context, discharging85(), rate(false, 9)));
+			// Collapsed: bare temperature. Expanded: a single "Temperature: …" line → no BigText.
+			assertEquals(temp(), NotificationService.statusDetail(context, discharging85(), rateFull(false, 9, -250, -338)));
+			assertEquals(line(R.string.temperature, temp()),
+					NotificationService.statusDetailExpanded(context, discharging85(), rateFull(false, 9, -250, -338)));
+			final Notification built = NotificationService.buildOngoingNotification(context, discharging85(), rateFull(false, 9, -250, -338));
+			assertNull(built.extras.getCharSequence(Notification.EXTRA_BIG_TEXT));
 		}
 
 		@Test
 		public void nullSnapshot_yieldsUnknownTitleAndEmptyDetail() {
 			assertEquals("0% · Unknown", NotificationService.statusTitle(context, null));
 			assertEquals("", NotificationService.statusDetail(context, null, null));
+			assertEquals("", NotificationService.statusDetailExpanded(context, null, null));
 		}
 	}
 
