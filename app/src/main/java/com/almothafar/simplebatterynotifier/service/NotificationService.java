@@ -20,8 +20,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 import androidx.core.content.ContextCompat;
+import androidx.core.text.BidiFormatter;
+import androidx.core.text.TextUtilsCompat;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
@@ -36,6 +39,7 @@ import java.lang.ref.WeakReference;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -560,16 +564,24 @@ public final class NotificationService {
 	                                                    final BatteryRateTracker.BatteryRate rate) {
 		createNotificationChannels(context);
 
-		return new Notification.Builder(context, CHANNEL_ID_STATUS)
+		final String collapsed = statusDetail(context, batteryDO, rate);
+		final String expanded = statusDetailExpanded(context, batteryDO, rate);
+		final Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID_STATUS)
 				.setSmallIcon(ongoingIconRes(batteryDO))
 				.setContentTitle(statusTitle(context, batteryDO))
-				.setContentText(statusDetail(context, batteryDO, rate))
+				.setContentText(collapsed)
 				.setContentIntent(createMainActivityIntent(context))
 				.setOnlyAlertOnce(true)
 				.setOngoing(true)
 				.setVisibility(Notification.VISIBILITY_PUBLIC)
-				.setCategory(Notification.CATEGORY_STATUS)
-				.build();
+				.setCategory(Notification.CATEGORY_STATUS);
+
+		// Make it expandable only when the pull-down actually adds something (a multi-line breakdown);
+		// a single-line expanded view (e.g. temperature only) would show a pointless expand chevron (#194).
+		if (expanded.indexOf('\n') >= 0) {
+			builder.setStyle(new Notification.BigTextStyle().bigText(expanded));
+		}
+		return builder.build();
 	}
 
 	/**
@@ -1140,80 +1152,175 @@ public final class NotificationService {
 	}
 
 	/**
-	 * Build the content line of the ongoing status notification — the volatile details under the stable
-	 * headline: the live rate/power, the estimated time to empty/full, and the temperature, joined by
-	 * "{@value #DETAIL_SEPARATOR}" and each shown only when it's available, e.g. "9%/h · ~9h 27m left ·
-	 * 34.6 °C" or "~18 W · ~45m to full · 34.6 °C". The rate/power and the time estimate are gated by the
-	 * show-rate setting (default on); the temperature always shows when a snapshot exists. Degrades to
-	 * whatever remains — down to just the temperature, or empty when there's no snapshot at all.
+	 * The collapsed content line — the volatile numbers under the stable title, joined by
+	 * "{@value #DETAIL_SEPARATOR}": rate/power · current · time, e.g. "9%/h · −250 mA · ~9h 27m remaining"
+	 * or "~18 W · +1500 mA · ~45m to full" (#194). Temperature moves to the expanded view. Each segment is
+	 * shown only when available and only when the show-rate setting is on; if nothing qualifies (setting
+	 * off, or a warm-up tick) it falls back to the temperature so the line is never empty.
 	 *
 	 * @param context   The application context
 	 * @param batteryDO Current battery snapshot, or null if unavailable
 	 * @param rate      The precomputed charge/drain rate
-	 * @return Formatted detail text (empty when nothing is known)
+	 * @return Formatted collapsed text (empty when there's no snapshot at all)
 	 */
 	static String statusDetail(Context context, BatteryDO batteryDO, BatteryRateTracker.BatteryRate rate) {
-		final boolean showRate = showRateEnabled(context);
 		final List<String> parts = new ArrayList<>(3);
-
-		final String speed = speedDetailSegment(context, batteryDO, rate, showRate);
-		if (nonNull(speed)) {
-			parts.add(speed);
+		if (showRateEnabled(context) && nonNull(batteryDO) && nonNull(rate)) {
+			addIfPresent(parts, rateOrPowerSegment(context, batteryDO, rate));
+			addIfPresent(parts, collapsedCurrentSegment(context, rate));
+			addIfPresent(parts, collapsedTimeSegment(context, batteryDO, rate));
 		}
-		final String time = timeEstimateSegment(context, batteryDO, rate, showRate);
-		if (nonNull(time)) {
-			parts.add(time);
-		}
-		if (nonNull(batteryDO)) {
-			parts.add(TemperatureUtils.format(context, batteryDO.getTemperature()));
+		if (parts.isEmpty()) {
+			return nonNull(batteryDO) ? isolate(TemperatureUtils.format(context, batteryDO.getTemperature())) : "";
 		}
 		return String.join(DETAIL_SEPARATOR, parts);
 	}
 
 	/**
-	 * The speed detail for the notification body: the drain rate ("9%/h", falling back to the raw mA)
-	 * while discharging, or the charge power ("~18 W", falling back to the charge %/h) while charging.
-	 * Numbers only — the qualitative state (Charging/Discharging) is the title's job, so the two lines
-	 * stay non-redundant (issue #108/#125). Gated by the show-rate setting; returns null when nothing
-	 * trustworthy is available.
+	 * The expanded content (BigText) — the same numbers on labelled lines (#194): Now / Average /
+	 * Time&nbsp;remaining / Temperature while discharging, Now / Average / Time&nbsp;to&nbsp;full /
+	 * Temperature while charging. "Now" is the instantaneous current (plus the charge wattage while
+	 * charging); "Average" is the windowed average, carrying the smoothed %/h while discharging — the app
+	 * computes a single smoothed rate, which is itself an average, so there is no separate instantaneous
+	 * %/h. Every line is dropped when its data is absent; the temperature always shows. Returns a single
+	 * line (no expansion) when nothing but temperature is available.
 	 *
 	 * @param context   The application context
 	 * @param batteryDO Current battery snapshot, or null if unavailable
 	 * @param rate      The precomputed charge/drain rate
-	 * @param showRate  whether the show-rate setting is on
-	 * @return the formatted speed segment, or null when none should be shown
+	 * @return newline-joined expanded text (may be a single line or empty)
 	 */
-	private static String speedDetailSegment(Context context, BatteryDO batteryDO,
-	                                         BatteryRateTracker.BatteryRate rate, boolean showRate) {
-		if (isNull(batteryDO) || isNull(rate) || !showRate) {
-			return null;
+	static String statusDetailExpanded(Context context, BatteryDO batteryDO, BatteryRateTracker.BatteryRate rate) {
+		final List<String> lines = new ArrayList<>(4);
+		if (showRateEnabled(context) && nonNull(batteryDO) && nonNull(rate)) {
+			addLine(context, lines, R.string.notification_label_now, nowSegment(context, batteryDO, rate));
+			addAverageLine(context, lines, rate);
+			addTimeLine(context, lines, batteryDO, rate);
 		}
+		if (nonNull(batteryDO)) {
+			addLine(context, lines, R.string.temperature, TemperatureUtils.format(context, batteryDO.getTemperature()));
+		}
+		return String.join("\n", lines);
+	}
+
+	private static void addIfPresent(List<String> parts, String value) {
+		if (nonNull(value)) {
+			parts.add(value);
+		}
+	}
+
+	/** Appends an expanded "label: value" line, with the (Latin) value bidi-isolated for RTL (#194). */
+	private static void addLine(Context context, List<String> lines, int labelRes, String rawValue) {
+		if (nonNull(rawValue)) {
+			lines.add(context.getString(R.string.notification_detail_line, context.getString(labelRes), isolate(rawValue)));
+		}
+	}
+
+	/**
+	 * The "Average" expanded line: the windowed-average current, with the smoothed %/h appended while
+	 * discharging (the %/h is itself a windowed average). When the average current isn't ready yet but a
+	 * rate is, a plain "Drain rate" line stands in so the %/h isn't lost from the breakdown.
+	 */
+	private static void addAverageLine(Context context, List<String> lines, BatteryRateTracker.BatteryRate rate) {
+		if (rate.hasAvgCurrent()) {
+			String value = BatteryRateTracker.formatCurrentValue(context, rate.avgCurrentMilliAmps());
+			if (!rate.charging() && rate.hasRate()) {
+				value = value + DETAIL_SEPARATOR + BatteryRateTracker.formatRateValue(context, rate.percentPerHour());
+			}
+			addLine(context, lines, R.string.notification_label_average, value);
+		} else if (!rate.charging() && rate.hasRate()) {
+			addLine(context, lines, R.string.drain_rate, BatteryRateTracker.formatRateValue(context, rate.percentPerHour()));
+		}
+	}
+
+	/** The expanded time line: "Time remaining"/"Time to full" label with the bare duration (#194). */
+	private static void addTimeLine(Context context, List<String> lines, BatteryDO batteryDO, BatteryRateTracker.BatteryRate rate) {
+		final int minutes = estimatedMinutes(batteryDO, rate);
+		if (minutes > 0) {
+			addLine(context, lines,
+					rate.charging() ? R.string.time_to_full : R.string.time_remaining,
+					BatteryRateTracker.formatDuration(context, minutes));
+		}
+	}
+
+	/**
+	 * The "Now" value: the instantaneous current, plus the charge wattage while charging (wattage alone if
+	 * the current itself is unavailable). Null when neither is available.
+	 */
+	private static String nowSegment(Context context, BatteryDO batteryDO, BatteryRateTracker.BatteryRate rate) {
 		if (rate.charging()) {
-			final String power = chargePowerSegment(context, batteryDO);
+			final String power = powerSegment(context, batteryDO);
+			if (rate.hasCurrent()) {
+				final String current = BatteryRateTracker.formatCurrentValue(context, rate.currentMilliAmps());
+				return nonNull(power) ? current + DETAIL_SEPARATOR + power : current;
+			}
+			return power;
+		}
+		return rate.hasCurrent() ? BatteryRateTracker.formatCurrentValue(context, rate.currentMilliAmps()) : null;
+	}
+
+	/**
+	 * The collapsed rate/power segment (bidi-isolated): the drain rate "%/h" while discharging, or the
+	 * charge power "~18 W" while charging (falling back to the charge %/h when the wattage is unknown).
+	 * The raw current is <em>not</em> a fallback here — the collapsed line carries the current in its own
+	 * segment, so this never duplicates it. Returns null when no rate/power is available.
+	 */
+	private static String rateOrPowerSegment(Context context, BatteryDO batteryDO, BatteryRateTracker.BatteryRate rate) {
+		if (rate.charging()) {
+			final String power = powerSegment(context, batteryDO);
 			if (nonNull(power)) {
-				return power;
+				return isolate(power);
 			}
 		}
-		if (rate.hasRate()) {
-			return BatteryRateTracker.formatRateValue(context, rate.percentPerHour());
+		return rate.hasRate() ? isolate(BatteryRateTracker.formatRateValue(context, rate.percentPerHour())) : null;
+	}
+
+	/** The collapsed current segment (bidi-isolated), or null when no trustworthy current is available. */
+	private static String collapsedCurrentSegment(Context context, BatteryRateTracker.BatteryRate rate) {
+		return rate.hasCurrent() ? isolate(BatteryRateTracker.formatCurrentValue(context, rate.currentMilliAmps())) : null;
+	}
+
+	/**
+	 * The collapsed time segment: "~9h 27m remaining" / "~45m to full", with the duration bidi-isolated so
+	 * it doesn't reorder inside an RTL line. Null when no non-degenerate estimate is available.
+	 */
+	private static String collapsedTimeSegment(Context context, BatteryDO batteryDO, BatteryRateTracker.BatteryRate rate) {
+		final int minutes = estimatedMinutes(batteryDO, rate);
+		if (minutes <= 0) {
+			return null;
 		}
-		if (rate.hasCurrent()) {
-			return BatteryRateTracker.formatCurrentValue(context, rate.currentMilliAmps());
+		final String duration = isolate(BatteryRateTracker.formatDuration(context, minutes));
+		return context.getString(rate.charging()
+				? R.string.notification_status_time_to_full
+				: R.string.notification_status_time_remaining, duration);
+	}
+
+	/**
+	 * The estimated minutes to full (charging) or empty (discharging), mirroring the details table's
+	 * gating (#124/#188): 0 when there's no trustworthy rate or the estimate degenerates (already
+	 * full/empty).
+	 */
+	private static int estimatedMinutes(BatteryDO batteryDO, BatteryRateTracker.BatteryRate rate) {
+		if (!rate.hasRate()) {
+			return 0;
 		}
-		return null;
+		final int level = batteryDO.getBatteryPercentageInt();
+		return rate.charging()
+				? BatteryRateTracker.estimateMinutesToFull(level, rate.percentPerHour())
+				: BatteryRateTracker.estimateMinutesToEmpty(level, rate.percentPerHour());
 	}
 
 	/**
 	 * The charge power as a wattage-only segment ("~18 W"), or null when it can't be estimated or rounds
 	 * below 1 W. Derived from the snapshot (not a fresh read), so it agrees with the details table and
 	 * {@link SlowChargeDetector} within a tick (#157). The tier label ("Fast charging") is deliberately
-	 * omitted here — it would repeat the "Charging" the title already carries.
+	 * omitted — it would repeat the "Charging" the title already carries.
 	 *
 	 * @param context   The application context
 	 * @param batteryDO Current battery snapshot (non-null; the caller already checked)
 	 * @return the formatted wattage segment, or null when the charge power is unknown or sub-watt
 	 */
-	private static String chargePowerSegment(Context context, BatteryDO batteryDO) {
+	private static String powerSegment(Context context, BatteryDO batteryDO) {
 		final ChargeSpeed speed = ChargeSpeed.fromMeasurements(batteryDO.getCurrentMicroAmps(), batteryDO.getVoltage());
 		if (!speed.isKnown() || speed.getWatts() < 1) {
 			return null;
@@ -1223,33 +1330,18 @@ public final class NotificationService {
 	}
 
 	/**
-	 * The estimated-time segment of the detail line: "~9h 27m left" while discharging, "~45m to full"
-	 * while charging — mirroring the details table's time row (#124/#188), including its gating: a
-	 * trustworthy %/h and a non-degenerate estimate (not already full/empty). Returns null when no
-	 * figure should be shown, so the caller drops it from the joined detail line.
+	 * Wraps a Latin value (mA, %/h, watts, a duration) as an isolated run so the RTL bidi algorithm can't
+	 * reorder it inside an Arabic detail line (#194) — the garbling seen without it. A no-op in LTR
+	 * locales, so it doesn't perturb the (LTR) values elsewhere.
 	 *
-	 * @param context   The application context
-	 * @param batteryDO Current battery snapshot, or null if unavailable
-	 * @param rate      The precomputed charge/drain rate
-	 * @param showRate  whether the show-rate setting is on (governs the estimate too)
-	 * @return the formatted time segment, or null when no estimate is available
+	 * @param value the Latin value to isolate
+	 * @return the value, bidi-isolated in RTL locales; unchanged in LTR
 	 */
-	private static String timeEstimateSegment(Context context, BatteryDO batteryDO,
-	                                          BatteryRateTracker.BatteryRate rate, boolean showRate) {
-		if (isNull(batteryDO) || isNull(rate) || !rate.hasRate() || !showRate) {
-			return null;
+	private static String isolate(String value) {
+		if (TextUtilsCompat.getLayoutDirectionFromLocale(Locale.getDefault()) == View.LAYOUT_DIRECTION_RTL) {
+			return BidiFormatter.getInstance().unicodeWrap(value);
 		}
-		final int level = batteryDO.getBatteryPercentageInt();
-		final int minutes = rate.charging()
-				? BatteryRateTracker.estimateMinutesToFull(level, rate.percentPerHour())
-				: BatteryRateTracker.estimateMinutesToEmpty(level, rate.percentPerHour());
-		if (minutes <= 0) {
-			return null;
-		}
-		final String duration = BatteryRateTracker.formatDuration(context, minutes);
-		return context.getString(rate.charging()
-				? R.string.notification_status_time_to_full
-				: R.string.notification_status_time_left, duration);
+		return value;
 	}
 
 	/**

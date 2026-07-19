@@ -174,9 +174,14 @@
     <!-- Content line, charging: estimated watts (no tier word — the title already says "Charging").
          %1$s is Western-digit (String.valueOf), 0-9 in every locale (#96). e.g. "~18 W" -->
     <string name="notification_status_watts">~%1$s W</string>
-    <!-- %1$s is the formatted duration estimate ("~9h 27m"), see time_to_full_value_hm -->
-    <string name="notification_status_time_left">%1$s left</string>
+    <!-- Collapsed time segment; %1$s is the formatted duration ("~9h 27m"), see time_to_full_value_hm -->
+    <string name="notification_status_time_remaining">%1$s remaining</string>
     <string name="notification_status_time_to_full">%1$s to full</string>
+    <!-- #194: expanded (pull-down) breakdown — one "label: value" line each. Labels for Time remaining /
+         Time to full / Temperature / Drain rate are reused from the details table. -->
+    <string name="notification_detail_line">%1$s: %2$s</string>
+    <string name="notification_label_now">Now</string>
+    <string name="notification_label_average">Average</string>
 
     <!-- High temperature alert -->
     <string name="notify_high_temperature">High Temperature Alert</string>
