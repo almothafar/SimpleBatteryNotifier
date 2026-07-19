@@ -29,6 +29,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
+import com.almothafar.simplebatterynotifier.model.LevelThresholds;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
@@ -305,7 +306,8 @@ public class MainActivity extends BaseActivity {
 	private void initializeFirstValues() {
 		fillBatteryInfo();
 
-		batteryGauge.setThresholds(AppPrefs.criticalLevel(this), AppPrefs.warningLevel(this));
+		final LevelThresholds levels = AppPrefs.batteryLevels(this);
+		batteryGauge.setThresholds(levels.critical(), levels.warning());
 
 		// Keep the in-fly slider in sync with values that may have changed in Settings.
 		syncThresholdSlider();
@@ -353,12 +355,11 @@ public class MainActivity extends BaseActivity {
 			@Override
 			public void onStopTrackingTouch(@NonNull final RangeSlider slider) {
 				final List<Float> values = slider.getValues();
-				final int critical = Math.round(values.get(0));
-				final int warning = Math.round(values.get(1));
+				final LevelThresholds levels = new LevelThresholds(Math.round(values.get(0)), Math.round(values.get(1)));
 
-				AppPrefs.setBatteryLevels(MainActivity.this, critical, warning);
+				AppPrefs.setBatteryLevels(MainActivity.this, levels);
 
-				batteryGauge.setThresholds(critical, warning);
+				batteryGauge.setThresholds(levels.critical(), levels.warning());
 			}
 		});
 
@@ -373,15 +374,13 @@ public class MainActivity extends BaseActivity {
 		if (isNull(thresholdSlider)) {
 			return;
 		}
-		final int critical = AppPrefs.criticalLevel(this);
-		final int warning = AppPrefs.warningLevel(this);
-		final int[] pair = BatteryRangeSliderHelper.clampPair(critical, warning,
+		final LevelThresholds pair = BatteryRangeSliderHelper.clampPair(AppPrefs.batteryLevels(this),
 				BatteryRangeSliderHelper.LEVEL_FROM, BatteryRangeSliderHelper.LEVEL_TO,
 				BatteryRangeSliderHelper.MIN_SEPARATION);
 
-		thresholdSlider.setValues((float) pair[0], (float) pair[1]);
+		thresholdSlider.setValues((float) pair.critical(), (float) pair.warning());
 		updateThresholdCaptions(findViewById(R.id.thresholdCriticalCaption),
-				findViewById(R.id.thresholdWarningCaption), pair[0], pair[1]);
+				findViewById(R.id.thresholdWarningCaption), pair.critical(), pair.warning());
 	}
 
 	private void updateThresholdCaptions(final TextView criticalCaption, final TextView warningCaption,

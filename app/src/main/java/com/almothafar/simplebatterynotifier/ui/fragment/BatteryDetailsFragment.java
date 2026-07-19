@@ -28,6 +28,7 @@ import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.BatteryRateTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
+import com.almothafar.simplebatterynotifier.util.AppPrefs;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -632,7 +633,7 @@ public class BatteryDetailsFragment extends Fragment {
 		if (rate.charging()) {
 			return 0;
 		}
-		final int limit = BatteryRateTracker.getDrainLimitPercentPerHour(context);
+		final int limit = AppPrefs.drainLimitPph(context);
 		if (rate.percentPerHour() >= limit) {
 			return GeneralHelper.getColor(getResources(), R.color.battery_rate_high);
 		}

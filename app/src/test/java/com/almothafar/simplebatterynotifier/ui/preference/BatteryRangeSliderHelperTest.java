@@ -1,5 +1,7 @@
 package com.almothafar.simplebatterynotifier.ui.preference;
 
+import com.almothafar.simplebatterynotifier.model.LevelThresholds;
+
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
@@ -27,7 +29,7 @@ public class BatteryRangeSliderHelperTest {
 	private static final int SEP = BatteryRangeSliderHelper.MIN_SEPARATION;
 
 	/**
-	 * {@link BatteryRangeSliderHelper#clampPair(int, int, int, int, int)} maps representative
+	 * {@link BatteryRangeSliderHelper#clampPair(LevelThresholds, int, int, int)} maps representative
 	 * (critical, warning) inputs — valid, out-of-range, inverted, and too-close — to the expected
 	 * clamped pair.
 	 */
@@ -56,9 +58,10 @@ public class BatteryRangeSliderHelperTest {
 
 		@Test
 		public void clampsToExpectedPair() {
-			final int[] result = BatteryRangeSliderHelper.clampPair(critical, warning, FROM, TO, SEP);
-			assertEquals("critical", expectedCritical, result[0]);
-			assertEquals("warning", expectedWarning, result[1]);
+			final LevelThresholds result = BatteryRangeSliderHelper.clampPair(
+					new LevelThresholds(critical, warning), FROM, TO, SEP);
+			assertEquals("critical", expectedCritical, result.critical());
+			assertEquals("warning", expectedWarning, result.warning());
 		}
 	}
 
@@ -72,12 +75,13 @@ public class BatteryRangeSliderHelperTest {
 		public void everyInputYieldsAValidPair() {
 			for (int critical = -20; critical <= 80; critical++) {
 				for (int warning = -20; warning <= 80; warning++) {
-					final int[] r = BatteryRangeSliderHelper.clampPair(critical, warning, FROM, TO, SEP);
+					final LevelThresholds r = BatteryRangeSliderHelper.clampPair(
+							new LevelThresholds(critical, warning), FROM, TO, SEP);
 					final String at = "(" + critical + "," + warning + ")";
-					assertTrue("critical in range at " + at, r[0] >= FROM && r[0] <= TO);
-					assertTrue("warning in range at " + at, r[1] >= FROM && r[1] <= TO);
-					assertTrue("separation kept at " + at, r[1] - r[0] >= SEP);
-					assertTrue("critical below warning at " + at, r[0] < r[1]);
+					assertTrue("critical in range at " + at, r.critical() >= FROM && r.critical() <= TO);
+					assertTrue("warning in range at " + at, r.warning() >= FROM && r.warning() <= TO);
+					assertTrue("separation kept at " + at, r.warning() - r.critical() >= SEP);
+					assertTrue("critical below warning at " + at, r.critical() < r.warning());
 				}
 			}
 		}
