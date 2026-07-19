@@ -213,6 +213,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 			return;
 		}
 
+		// Debug-only strings: this block runs only in debuggable builds, so its literals are
+		// deliberately left untranslated (no values-ar). Skip them in i18n sweeps (#165).
 		final String[] options = {
 				"Show Debug Info",
 				"Add 50 Test Cycles",
@@ -388,6 +390,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * Resets all health tracking data, including the first-use date and real charge cycles.
 	 */
 	private void resetHealthData() {
+		// Reached only from the debuggable-only debug menu, so these literals are deliberately
+		// left untranslated (no values-ar). Skip them in i18n sweeps (#165).
 		new MaterialAlertDialogBuilder(this)
 				.setTitle("Reset ALL health data?")
 				.setMessage("This deletes ALL tracked battery health data, including the first-use date "
