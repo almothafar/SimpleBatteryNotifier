@@ -80,6 +80,9 @@ public final class SlowChargeDetector {
 			return;
 		}
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		// Streak state is volatile and device-specific → the backup-excluded transient file (#167); the
+		// enable setting stays in the default (backed-up) prefs.
+		final SharedPreferences transientPrefs = TransientState.prefs(context);
 		final boolean enabled = prefs.getBoolean(context.getString(R.string._pref_key_notify_slow_charge), true);
 		final int status = batteryDO.getStatus();
 
@@ -87,7 +90,7 @@ public final class SlowChargeDetector {
 		// unknown or unplugged ends the session and re-arms for next time.
 		if (!enabled || (status != BatteryManager.BATTERY_STATUS_CHARGING
 				&& status != BatteryManager.BATTERY_STATUS_NOT_CHARGING)) {
-			STORE.clear(prefs);
+			STORE.clear(transientPrefs);
 			return;
 		}
 
@@ -104,10 +107,10 @@ public final class SlowChargeDetector {
 		// notification segment, this detector) must see the same reading (#157).
 		final ChargeSpeed speed = ChargeSpeed.fromMeasurements(batteryDO.getCurrentMicroAmps(), batteryDO.getVoltage());
 		final long now = System.currentTimeMillis();
-		final Streak previous = STORE.load(prefs);
+		final Streak previous = STORE.load(transientPrefs);
 		final Outcome decision = decide(previous, speed.isKnown(), speed.getMilliwatts(), FLOOR_MILLIWATTS, SUSTAINED_MS, now);
 
-		STORE.saveIfChanged(prefs, decision.newState());
+		STORE.saveIfChanged(transientPrefs, decision.newState());
 		if (decision.shouldNotify()) {
 			NotificationService.sendSlowChargeWarning(context, speed.getWatts());
 		}

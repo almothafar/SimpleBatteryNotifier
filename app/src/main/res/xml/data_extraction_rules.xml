@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup / device-transfer rules (API 31+). The volatile, device-specific tracker state (issue #167) —
+  the drain/charge rate sample window and the fast-drain/slow-charge streak state, in the
+  battery_transient prefs file — is excluded from BOTH cloud backup and device transfer, since restoring
+  another device's window/streaks is meaningless (it self-heals within a tick). Health/cycle history and
+  user settings in the default prefs are still carried over.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="battery_transient.xml"/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="battery_transient.xml"/>
+    </device-transfer>
+</data-extraction-rules>
