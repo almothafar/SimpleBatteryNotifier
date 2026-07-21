@@ -90,6 +90,18 @@ final class NotificationConfig {
 	}
 
 	/**
+	 * The display half of this config as an {@link AlertSpec}, so the level alert flows through the same
+	 * builder chain as the other alerts (issue #166) without the dispatcher reaching into these fields.
+	 * The audible base channel is this config's own channel; the caller supplies the level alert's id.
+	 *
+	 * @param notificationId the level alert's notification id
+	 * @return the display spec for this level alert
+	 */
+	AlertSpec toAlertSpec(int notificationId) {
+		return new AlertSpec("level", channelId, notificationId, iconRes, ticker, title, content, bigContent);
+	}
+
+	/**
 	 * The per-type presentation of a battery-level alert, produced by the exhaustive type switch above
 	 * (#160).
 	 *

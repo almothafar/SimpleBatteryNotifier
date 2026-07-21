@@ -139,7 +139,7 @@ public final class AppPrefs {
 	 *
 	 * @return true when vibration is enabled
 	 */
-	public static boolean vibrateEnabled(final Context context) {
+	public static boolean vibrateEnabled(Context context) {
 		return prefs(context).getBoolean(context.getString(R.string._pref_key_notifications_vibrate), DEFAULT_VIBRATE);
 	}
 

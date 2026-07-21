@@ -103,9 +103,7 @@ public final class NotificationService {
 		final NotificationConfig config = new NotificationConfig(context, prefs, type);
 
 		final String channelId = NotificationChannels.channelFor(context, config.alertsAllowed, config.channelId);
-		final AlertSpec display = new AlertSpec("level", config.channelId, NOTIFICATION_ID, config.iconRes,
-				config.ticker, config.title, config.content, config.bigContent);
-		final Notification.Builder builder = alertBuilder(context, channelId, display);
+		final Notification.Builder builder = alertBuilder(context, channelId, config.toAlertSpec(NOTIFICATION_ID));
 		if (!type.alertsEveryTime()) {
 			// Non-critical alerts update quietly when re-posted; only critical alerts alert every time.
 			builder.setOnlyAlertOnce(true);
@@ -356,9 +354,36 @@ public final class NotificationService {
 	 * @param spec    What to show: channel, id, icon and text content
 	 */
 	private static void sendQuietHoursAwareAlert(Context context, AlertSpec spec) {
+		final AlertRouting routing = routeAlert(context, spec);
+		if (isNull(routing)) {
+			return;
+		}
+
+		post(context, spec.notificationId(), alertBuilder(context, routing.channelId(), spec).build());
+
+		if (routing.withinWindow()) {
+			final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+			final String sound = prefs.getString(
+					context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
+					context.getString(R.string._default_notification_sound_uri));
+			AlertSounds.playAlarm(context, sound, QuietHours.shouldIgnoreSilentMode(context, prefs), AppPrefs.vibrateEnabled(context));
+		}
+	}
+
+	/**
+	 * Resolve where an own-channel alert posts: its quiet-hours-aware channel and whether alerts may sound
+	 * now. The single home of the permission guard, channel setup and window resolution shared by
+	 * {@link #sendQuietHoursAwareAlert} and {@link #postChargeNotification}; each caller then differs only
+	 * in its {@code setOnlyAlertOnce} and whether it sounds.
+	 *
+	 * @param context The application context
+	 * @param spec    The alert being routed (its audible base channel and log name)
+	 * @return the resolved channel and window state, or null (already logged) when the alert can't be posted
+	 */
+	private static AlertRouting routeAlert(Context context, AlertSpec spec) {
 		if (lacksNotificationPermission(context)) {
 			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, " + spec.logName() + " alert not sent");
-			return;
+			return null;
 		}
 
 		NotificationChannels.ensureChannels(context);
@@ -366,16 +391,16 @@ public final class NotificationService {
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		// These are not critical battery alerts, so they respect quiet hours (#111).
 		final boolean withinWindow = QuietHours.isWithinNotificationWindow(context, prefs);
-		final String channelId = NotificationChannels.channelFor(context, withinWindow, spec.audibleChannelId());
+		return new AlertRouting(NotificationChannels.channelFor(context, withinWindow, spec.audibleChannelId()), withinWindow);
+	}
 
-		post(context, spec.notificationId(), alertBuilder(context, channelId, spec).build());
-
-		if (withinWindow) {
-			final String sound = prefs.getString(
-					context.getString(R.string._pref_key_notifications_alert_sound_ringtone),
-					context.getString(R.string._default_notification_sound_uri));
-			AlertSounds.playAlarm(context, sound, QuietHours.shouldIgnoreSilentMode(context, prefs), AppPrefs.vibrateEnabled(context));
-		}
+	/**
+	 * Where a quiet-hours-aware alert posts: the resolved channel id and whether alerts may sound now.
+	 *
+	 * @param channelId    the channel to post on (silent channel outside the window, audible inside)
+	 * @param withinWindow whether now falls inside the notification window (so the alarm may sound)
+	 */
+	private record AlertRouting(String channelId, boolean withinWindow) {
 	}
 
 	/**
@@ -390,13 +415,6 @@ public final class NotificationService {
 	 * @param content The charge message to display
 	 */
 	private static void postChargeNotification(Context context, String content) {
-		if (lacksNotificationPermission(context)) {
-			Log.w(TAG, "Missing POST_NOTIFICATIONS permission, notification not sent");
-			return;
-		}
-
-		NotificationChannels.ensureChannels(context);
-
 		final String title = context.getString(R.string.notification_charge_started_title);
 		final String ticker = title.concat(", ").concat(content);
 		final AlertSpec spec = new AlertSpec(
@@ -409,11 +427,13 @@ public final class NotificationService {
 				content,
 				content);
 
-		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-		final boolean withinWindow = QuietHours.isWithinNotificationWindow(context, prefs);
-		final String channelId = NotificationChannels.channelFor(context, withinWindow, spec.audibleChannelId());
+		final AlertRouting routing = routeAlert(context, spec);
+		if (isNull(routing)) {
+			return;
+		}
 
-		final Notification.Builder builder = alertBuilder(context, channelId, spec);
+		// Charge-connected never dings (even inside the window); it just alerts once, quietly.
+		final Notification.Builder builder = alertBuilder(context, routing.channelId(), spec);
 		builder.setOnlyAlertOnce(true);
 		post(context, spec.notificationId(), builder.build());
 	}
