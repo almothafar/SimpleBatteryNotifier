@@ -475,6 +475,14 @@ public class BatteryDetailsFragment extends Fragment {
 
 		valuesMap.put(getResources().getString(R.string.technology), batteryDO.getTechnology());
 
+		// #168: chipset/SoC sits right after Technology, next to the readings it explains — the reporting
+		// quirks this app fights are chipset-correlated (#69/#94/#152). Hidden when the device reports
+		// unknown/blank, consistent with the table's gating of untrustworthy values.
+		final String soc = SystemService.socLabel();
+		if (nonNull(soc)) {
+			valuesMap.put(getResources().getString(R.string.chipset), soc);
+		}
+
 		// Capacity is an estimate from BatteryManager. Show "Unknown" rather than "0 mAh" when the device
 		// doesn't report the charge counter, and also when the reported figure can't be trusted (#94) —
 		// in that case the row binder adds a tappable info icon explaining why. The snapshot's capacity

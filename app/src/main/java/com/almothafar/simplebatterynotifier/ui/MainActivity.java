@@ -505,9 +505,13 @@ public class MainActivity extends BaseActivity {
 	 * A short diagnostic block appended to a feedback email so reports carry the essentials.
 	 */
 	private String deviceInfoBlock() {
+		// SoC included so every bug report carries the chipset — the reporting quirks are chipset-correlated
+		// (#168). Shown even when the table hides it: "unknown" is itself signal in a report.
+		final String soc = SystemService.socLabel();
 		return "\n\n---\n"
 				+ "App: " + AboutDialog.appVersionName(this) + "\n"
 				+ "Device: " + Build.MANUFACTURER + " " + Build.MODEL + "\n"
+				+ "SoC: " + (nonNull(soc) ? soc : Build.UNKNOWN) + "\n"
 				+ "Android: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")";
 	}
 }

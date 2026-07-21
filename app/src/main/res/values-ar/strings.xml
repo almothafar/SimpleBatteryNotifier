@@ -11,6 +11,7 @@
 
     <string name="temperature">الحرارة</string>
     <string name="technology">التكنولوجيا</string>
+    <string name="chipset">المعالج</string>
     <string name="voltage">الفولتية</string>
     <string name="battery_condition">الحالة</string>
     <string name="capacity">السعة</string>

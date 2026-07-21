@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Unit tests for the pure capacity-estimation helpers in {@link SystemService}, and the snapshot's
@@ -151,6 +152,48 @@ public class SystemServiceTest {
 		@Test
 		public void matchesExpected() {
 			assertEquals(label, expectedMah, SystemService.designCapacityMahFromMicroAmpHours(raw));
+		}
+	}
+
+	/**
+	 * The pure SoC-label formatters (#168): combine manufacturer + model on API 31+, fall back to the raw
+	 * hardware string below that, and return null for anything blank or the {@code Build.UNKNOWN}
+	 * ("unknown") placeholder so the caller hides the row. Plain JVM — no Android runtime needed.
+	 */
+	public static class SocFormatting {
+
+		@Test
+		public void modern_combinesManufacturerAndModel() {
+			assertEquals("Qualcomm SM8550", SystemService.formatSocModern("Qualcomm", "SM8550"));
+			assertEquals("HiSilicon Kirin 970", SystemService.formatSocModern("HiSilicon", "Kirin 970"));
+		}
+
+		@Test
+		public void modern_dropsTheUnusablePart() {
+			assertEquals("Qualcomm", SystemService.formatSocModern("Qualcomm", "unknown"));
+			assertEquals("SM8550", SystemService.formatSocModern("", "SM8550"));
+			assertEquals("SM8550", SystemService.formatSocModern(null, "SM8550"));
+		}
+
+		@Test
+		public void modern_trimsWhitespace() {
+			assertEquals("Qualcomm SM8550", SystemService.formatSocModern("  Qualcomm ", " SM8550 "));
+		}
+
+		@Test
+		public void modern_nullWhenNeitherUsable() {
+			assertNull(SystemService.formatSocModern("unknown", "unknown"));
+			assertNull(SystemService.formatSocModern("", "  "));
+			assertNull(SystemService.formatSocModern(null, null));
+		}
+
+		@Test
+		public void legacy_usesHardwareOrNull() {
+			assertEquals("kirin970", SystemService.formatSocLegacy("kirin970"));
+			assertEquals("qcom", SystemService.formatSocLegacy("  qcom "));
+			assertNull(SystemService.formatSocLegacy("unknown"));
+			assertNull(SystemService.formatSocLegacy(""));
+			assertNull(SystemService.formatSocLegacy(null));
 		}
 	}
 }
