@@ -1,0 +1,88 @@
+package com.almothafar.simplebatterynotifier.service;
+
+import android.content.Context;
+import android.media.AudioManager;
+import android.net.Uri;
+import android.provider.Settings;
+import android.util.Log;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static java.util.Objects.isNull;
+
+/**
+ * The alert sound/vibration playback path (issue #166): plays the user's alarm sound (and optionally
+ * vibrates) when the phone is silenced but the user opted to override silent/DND mode. In normal ringer
+ * mode the high-importance notification channel plays its own sound, so this stays out of the way.
+ * <p>
+ * Split out of {@code NotificationService} so it owns its own thread pool. The single-thread executor
+ * runs for the app's lifetime and is reclaimed on process death (there is no {@code Application} to hook
+ * an explicit shutdown to).
+ */
+final class AlertSounds {
+	private static final String TAG = AlertSounds.class.getSimpleName();
+
+	// Do Not Disturb mode constants
+	private static final String ZEN_MODE = "zen_mode";
+	private static final int ZEN_MODE_IMPORTANT_INTERRUPTIONS = 1;
+
+	/**
+	 * Thread pool for async sound playback. This single-thread executor is used throughout the app
+	 * lifetime to play notification sounds asynchronously. Android reclaims it when the process
+	 * terminates.
+	 */
+	private static final ExecutorService soundExecutor = Executors.newSingleThreadExecutor();
+
+	private AlertSounds() {
+		// Utility class - prevent instantiation
+	}
+
+	/**
+	 * Play the alert sound (and optionally vibrate) when the phone is silenced but the user opted
+	 * to override silent mode. In normal ringer mode the notification channel plays its own sound.
+	 * <p>
+	 * Callers must first check that alerts are allowed right now (quiet hours / critical override).
+	 *
+	 * @param context      The application context
+	 * @param soundUriStr  The alarm sound URI string
+	 * @param ignoreSilent Whether the user opted to override silent/DND mode
+	 * @param vibrate      Whether the user enabled vibration
+	 */
+	static void playAlarm(Context context, String soundUriStr, boolean ignoreSilent, boolean vibrate) {
+		final Uri soundUri = Uri.parse(soundUriStr);
+		final AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+		if (isNull(audioManager)) {
+			return;
+		}
+
+		final boolean isNotNormalRingerMode = audioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL || isInDoNotDisturbMode(context);
+
+		if (ignoreSilent && isNotNormalRingerMode) {
+			soundExecutor.execute(() -> {
+				SystemService.playSound(context, soundUri);
+				if (vibrate) {
+					SystemService.vibratePhone(context);
+				}
+			});
+		}
+	}
+
+	/**
+	 * Check if device is in Do Not Disturb mode
+	 *
+	 * @param context The application context
+	 * @return true if in DND mode, false otherwise
+	 */
+	private static boolean isInDoNotDisturbMode(Context context) {
+		try {
+			return ZEN_MODE_IMPORTANT_INTERRUPTIONS == Settings.Global.getInt(context.getContentResolver(), ZEN_MODE);
+		} catch (Settings.SettingNotFoundException e) {
+			// zen_mode has existed since API 21 and minSdk is 26, so its absence is unexpected, not an
+			// expected-validation case — log it rather than swallow. Falling back to "not in DND" keeps
+			// the alert on its normal audible path.
+			Log.w(TAG, "zen_mode setting not found; assuming not in Do Not Disturb", e);
+			return false;
+		}
+	}
+}
