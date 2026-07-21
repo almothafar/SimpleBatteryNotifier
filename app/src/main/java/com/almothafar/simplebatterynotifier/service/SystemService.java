@@ -29,6 +29,7 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 /**
  * System service utilities for battery monitoring, sound, and vibration
@@ -114,6 +115,66 @@ public final class SystemService {
 			case BatteryManager.BATTERY_STATUS_DISCHARGING -> resources.getString(R.string.discharging);
 			default -> resources.getString(R.string.unknown);
 		};
+	}
+
+	/**
+	 * A human-readable chipset / SoC label for the details table and bug reports (issue #168). The
+	 * reporting quirks this app fights are chipset-correlated (the Kirin charge-counter and CURRENT_NOW
+	 * unit bugs — #69/#94/#152), so surfacing the SoC makes it obvious what kind of reporting is in play.
+	 * <p>
+	 * Uses the public, purpose-built {@code Build.SOC_MANUFACTURER}/{@code Build.SOC_MODEL} on API 31+,
+	 * falling back to the raw {@code Build.HARDWARE} identifier below that (minSdk is 26). Returns null when
+	 * the device reports nothing usable, so the caller hides the row / omits it — consistent with the
+	 * table's gating of untrustworthy values.
+	 *
+	 * @return the chipset label (e.g. "Qualcomm SM8550", "kirin970"), or null when unavailable
+	 */
+	public static String socLabel() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			return formatSocModern(Build.SOC_MANUFACTURER, Build.SOC_MODEL);
+		}
+		return formatSocLegacy(Build.HARDWARE);
+	}
+
+	/**
+	 * Combine the API 31+ SoC manufacturer and model into one label, e.g. "Qualcomm SM8550". Drops a part
+	 * that is blank or the {@code Build.UNKNOWN} placeholder; null when neither is usable. Pure so it is
+	 * unit-testable.
+	 *
+	 * @param manufacturer {@code Build.SOC_MANUFACTURER} (may be blank/unknown/null)
+	 * @param model        {@code Build.SOC_MODEL} (may be blank/unknown/null)
+	 * @return the combined label, or null when nothing usable
+	 */
+	static String formatSocModern(final String manufacturer, final String model) {
+		final String mfr = usableSoc(manufacturer);
+		final String mdl = usableSoc(model);
+		if (nonNull(mfr) && nonNull(mdl)) {
+			return mfr + " " + mdl;
+		}
+		return nonNull(mfr) ? mfr : mdl;
+	}
+
+	/**
+	 * The legacy (API 26-30) chipset label from {@code Build.HARDWARE} (e.g. "kirin970", "qcom"), or null
+	 * when it is blank or the {@code Build.UNKNOWN} placeholder. Pure so it is unit-testable.
+	 *
+	 * @param hardware {@code Build.HARDWARE} (may be blank/unknown/null)
+	 * @return the hardware label, or null when nothing usable
+	 */
+	static String formatSocLegacy(final String hardware) {
+		return usableSoc(hardware);
+	}
+
+	/**
+	 * A trimmed Build value, or null when it is blank or the {@code Build.UNKNOWN} ("unknown") placeholder
+	 * that some devices report for unset fields.
+	 */
+	private static String usableSoc(final String value) {
+		if (isNull(value)) {
+			return null;
+		}
+		final String trimmed = value.trim();
+		return (trimmed.isEmpty() || Build.UNKNOWN.equalsIgnoreCase(trimmed)) ? null : trimmed;
 	}
 
 	/**
