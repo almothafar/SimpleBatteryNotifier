@@ -14,7 +14,7 @@ SimpleBatteryNotifier is an Android application that monitors battery status and
   - Records for simple data carriers
 - **Resource Management**: Use try-with-resources for automatic resource cleanup
 - **Null Safety**: Use `isNull()` and `nonNull()` from `java.util.Objects`
-- **Immutability**: Use `final` for all method parameters and local variables where possible
+- **Immutability**: Use `final` for local variables where possible. Do **not** put `final` on method/constructor parameters in new or edited code — effectively-final already covers lambda capture, so the keyword is just noise. Legacy code carries `final` params (an older convention) and migrates incrementally as methods are otherwise touched; a full sweep isn't required.
 - **Static Imports**: Import commonly used static methods (e.g., `isNull`, `nonNull`)
 
 ### Naming Conventions
