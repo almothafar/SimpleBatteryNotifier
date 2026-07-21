@@ -71,13 +71,16 @@ public final class FastDrainDetector {
 			return;
 		}
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		// Streak state is volatile and device-specific → the backup-excluded transient file (#167); the
+		// user settings above/below stay in the default (backed-up) prefs.
+		final SharedPreferences transientPrefs = TransientState.prefs(context);
 
 		final boolean enabled = prefs.getBoolean(context.getString(R.string._pref_key_notify_fast_drain), true);
 		final boolean discharging = !BatteryRateTracker.isChargingDirection(batteryDO.getStatus());
 		// Only while discharging, and only when enabled. Either way the episode is re-armed (charging, or
 		// the feature being off, ends any streak) so a later fast discharge starts fresh.
 		if (!enabled || !discharging) {
-			STORE.clear(prefs);
+			STORE.clear(transientPrefs);
 			return;
 		}
 
@@ -89,11 +92,11 @@ public final class FastDrainDetector {
 		final boolean activelyUsed = SystemService.isActivelyUsed(context);
 		final long now = System.currentTimeMillis();
 
-		final Streak previous = STORE.load(prefs);
+		final Streak previous = STORE.load(transientPrefs);
 		final Outcome decision = decide(previous, rate.hasRate(), rate.percentPerHour(),
 				limit, sustainedMs, reminderGapMs, activelyUsed, now);
 
-		STORE.saveIfChanged(prefs, decision.newState());
+		STORE.saveIfChanged(transientPrefs, decision.newState());
 		if (decision.shouldNotify()) {
 			final int elapsedMinutes = Math.max(1, Math.round(decision.elapsedMs() / (float) MS_PER_MINUTE));
 			NotificationService.sendFastDrainNotification(context, rate.percentPerHour(), limit, elapsedMinutes);

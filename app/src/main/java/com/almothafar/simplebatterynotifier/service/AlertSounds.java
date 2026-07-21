@@ -1,10 +1,9 @@
 package com.almothafar.simplebatterynotifier.service;
 
+import android.app.NotificationManager;
 import android.content.Context;
 import android.media.AudioManager;
 import android.net.Uri;
-import android.provider.Settings;
-import android.util.Log;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,11 +20,6 @@ import static java.util.Objects.isNull;
  * an explicit shutdown to).
  */
 final class AlertSounds {
-	private static final String TAG = AlertSounds.class.getSimpleName();
-
-	// Do Not Disturb mode constants
-	private static final String ZEN_MODE = "zen_mode";
-	private static final int ZEN_MODE_IMPORTANT_INTERRUPTIONS = 1;
 
 	/**
 	 * Thread pool for async sound playback. This single-thread executor is used throughout the app
@@ -69,20 +63,25 @@ final class AlertSounds {
 	}
 
 	/**
-	 * Check if device is in Do Not Disturb mode
+	 * Whether the device is in any Do Not Disturb mode (priority-only, alarms-only or total silence).
+	 * <p>
+	 * Uses the public {@link NotificationManager#getCurrentInterruptionFilter()} instead of the
+	 * undocumented {@code Settings.Global "zen_mode"} (issue #167). Any filter other than
+	 * {@code INTERRUPTION_FILTER_ALL} counts as "silenced": priority-only, alarms-only and total silence
+	 * all suppress the app's alerts, so a user who opted to override silent/DND mode should still be
+	 * alerted — a broader, more correct reading than the old priority-only check. {@code UNKNOWN} (and a
+	 * null service) mean "can't tell", so they are treated as not-DND, leaving the alert on its normal path.
 	 *
 	 * @param context The application context
-	 * @return true if in DND mode, false otherwise
+	 * @return true if the device is in any DND mode
 	 */
 	private static boolean isInDoNotDisturbMode(Context context) {
-		try {
-			return ZEN_MODE_IMPORTANT_INTERRUPTIONS == Settings.Global.getInt(context.getContentResolver(), ZEN_MODE);
-		} catch (Settings.SettingNotFoundException e) {
-			// zen_mode has existed since API 21 and minSdk is 26, so its absence is unexpected, not an
-			// expected-validation case — log it rather than swallow. Falling back to "not in DND" keeps
-			// the alert on its normal audible path.
-			Log.w(TAG, "zen_mode setting not found; assuming not in Do Not Disturb", e);
+		final NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+		if (isNull(manager)) {
 			return false;
 		}
+		final int filter = manager.getCurrentInterruptionFilter();
+		return filter != NotificationManager.INTERRUPTION_FILTER_ALL
+				&& filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN;
 	}
 }

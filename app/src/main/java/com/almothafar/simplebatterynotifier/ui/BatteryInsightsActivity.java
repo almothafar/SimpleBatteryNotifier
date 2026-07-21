@@ -23,6 +23,7 @@ import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryHealthGrade;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
+import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 
 /**
  * Activity displaying battery health insights including charge cycles and estimated health.
@@ -298,7 +299,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 		}
 
 		// Indent the field to match the dialog's message padding
-		final int padding = (int) (24 * getResources().getDisplayMetrics().density);
+		final int padding = GeneralHelper.dpToPixel(getResources(), 24);
 		final FrameLayout container = new FrameLayout(this);
 		final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
 				FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);

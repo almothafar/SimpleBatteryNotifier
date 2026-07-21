@@ -40,6 +40,9 @@ public class BatteryHealthTracker {
 	// (percentage-points, 0-99), persisted so a partial charge survives app/process restarts.
 	private static final String PREF_LAST_LEVEL = "_battery_health_last_level";
 	private static final String PREF_CYCLE_ACCRUAL_POINTS = "_battery_health_cycle_accrual_points";
+	// Intentional legacy name — predates the "_battery_health_*" convention its siblings follow. Left as-is
+	// on purpose (#167): renaming would silently drop every user's stored design capacity, which measured
+	// health depends on, so the mismatch is kept rather than migrated.
 	private static final String PREF_DESIGN_CAPACITY = "key_battery_design_capacity";
 	// Debug-only cycle offset kept separate from real tracking so it can be cleared without
 	// destroying genuine data (see the debug menu in BatteryInsightsActivity).

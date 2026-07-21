@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Legacy full-backup rules (API 26-30). Everything is backed up except the volatile, device-specific
+  tracker state (issue #167): the drain/charge rate sample window and the fast-drain/slow-charge streak
+  state, which live in the battery_transient prefs file. Restoring another device's window/streaks is
+  meaningless (it self-heals within a tick), so exclude that one file; health/cycle history and user
+  settings in the default prefs stay backed up.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="battery_transient.xml"/>
+</full-backup-content>

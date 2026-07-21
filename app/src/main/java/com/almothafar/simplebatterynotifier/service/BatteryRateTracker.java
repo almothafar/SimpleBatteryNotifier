@@ -3,7 +3,6 @@ package com.almothafar.simplebatterynotifier.service;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
-import androidx.preference.PreferenceManager;
 
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
@@ -98,7 +97,8 @@ public final class BatteryRateTracker {
 
 		final long now = System.currentTimeMillis();
 		final boolean charging = isChargingDirection(batteryDO.getStatus());
-		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		// Rate window lives in the backup-excluded transient file (#167), not the default prefs.
+		final SharedPreferences prefs = TransientState.prefs(context);
 
 		final boolean sameDirection = sameDirection(prefs, charging);
 		final List<Sample> window = loadWindow(prefs, charging, now);
@@ -134,7 +134,8 @@ public final class BatteryRateTracker {
 		}
 		final long now = System.currentTimeMillis();
 		final boolean charging = isChargingDirection(batteryDO.getStatus());
-		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		// Rate window lives in the backup-excluded transient file (#167), not the default prefs.
+		final SharedPreferences prefs = TransientState.prefs(context);
 
 		return computeRate(loadWindow(prefs, charging, now), batteryDO.getCapacity(), charging, now, batteryDO.getCurrentMicroAmps());
 	}

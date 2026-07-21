@@ -34,7 +34,7 @@ import static java.util.Objects.isNull;
  * System service utilities for battery monitoring, sound, and vibration
  */
 public final class SystemService {
-	private static final String TAG = "com.almothafar";
+	private static final String TAG = SystemService.class.getSimpleName();
 
 	// A plausible phone-battery full-capacity range (mAh). Some devices (e.g. certain Kirin/HiSilicon)
 	// report BATTERY_PROPERTY_CHARGE_COUNTER in a non-standard unit, yielding absurd single/double-digit

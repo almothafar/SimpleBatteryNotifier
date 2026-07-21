@@ -15,6 +15,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import com.almothafar.simplebatterynotifier.R;
@@ -103,7 +104,7 @@ public final class NotificationService {
 		final NotificationConfig config = new NotificationConfig(context, prefs, type);
 
 		final String channelId = NotificationChannels.channelFor(context, config.alertsAllowed, config.channelId);
-		final Notification.Builder builder = alertBuilder(context, channelId, config.toAlertSpec(NOTIFICATION_ID));
+		final NotificationCompat.Builder builder = alertBuilder(context, channelId, config.toAlertSpec(NOTIFICATION_ID));
 		if (!type.alertsEveryTime()) {
 			// Non-critical alerts update quietly when re-posted; only critical alerts alert every time.
 			builder.setOnlyAlertOnce(true);
@@ -304,20 +305,20 @@ public final class NotificationService {
 
 		final String collapsed = OngoingStatusContent.statusDetail(context, batteryDO, rate);
 		final String expanded = OngoingStatusContent.statusDetailExpanded(context, batteryDO, rate);
-		final Notification.Builder builder = new Notification.Builder(context, NotificationChannels.CHANNEL_ID_STATUS)
+		final NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NotificationChannels.CHANNEL_ID_STATUS)
 				.setSmallIcon(OngoingStatusContent.ongoingIconRes(batteryDO))
 				.setContentTitle(OngoingStatusContent.statusTitle(context, batteryDO))
 				.setContentText(collapsed)
 				.setContentIntent(createMainActivityIntent(context))
 				.setOnlyAlertOnce(true)
 				.setOngoing(true)
-				.setVisibility(Notification.VISIBILITY_PUBLIC)
-				.setCategory(Notification.CATEGORY_STATUS);
+				.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+				.setCategory(NotificationCompat.CATEGORY_STATUS);
 
 		// Make it expandable only when the pull-down actually adds something (a multi-line breakdown);
 		// a single-line expanded view (e.g. temperature only) would show a pointless expand chevron (#194).
 		if (expanded.indexOf('\n') >= 0) {
-			builder.setStyle(new Notification.BigTextStyle().bigText(expanded));
+			builder.setStyle(new NotificationCompat.BigTextStyle().bigText(expanded));
 		}
 		return builder.build();
 	}
@@ -433,7 +434,7 @@ public final class NotificationService {
 		}
 
 		// Charge-connected never dings (even inside the window); it just alerts once, quietly.
-		final Notification.Builder builder = alertBuilder(context, routing.channelId(), spec);
+		final NotificationCompat.Builder builder = alertBuilder(context, routing.channelId(), spec);
 		builder.setOnlyAlertOnce(true);
 		post(context, spec.notificationId(), builder.build());
 	}
@@ -448,10 +449,10 @@ public final class NotificationService {
 	 * @param context   The application context
 	 * @param channelId The resolved channel id to post on
 	 * @param display   What to show: icon + text (an {@link AlertSpec})
-	 * @return a Notification.Builder with the shared content applied
+	 * @return a NotificationCompat.Builder with the shared content applied
 	 */
-	private static Notification.Builder alertBuilder(Context context, String channelId, AlertSpec display) {
-		return new Notification.Builder(context, channelId)
+	private static NotificationCompat.Builder alertBuilder(Context context, String channelId, AlertSpec display) {
+		return new NotificationCompat.Builder(context, channelId)
 				.setSmallIcon(display.iconRes())
 				.setTicker(display.ticker())
 				.setContentTitle(display.title())
@@ -459,8 +460,8 @@ public final class NotificationService {
 				.setWhen(System.currentTimeMillis())
 				.setLargeIcon(getLauncherIcon(context))
 				.setContentIntent(createMainActivityIntent(context))
-				.setVisibility(Notification.VISIBILITY_PUBLIC)
-				.setStyle(new Notification.BigTextStyle().bigText(display.bigContent()));
+				.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+				.setStyle(new NotificationCompat.BigTextStyle().bigText(display.bigContent()));
 	}
 
 	/**

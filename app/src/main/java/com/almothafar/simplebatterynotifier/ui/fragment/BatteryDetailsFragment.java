@@ -433,7 +433,7 @@ public class BatteryDetailsFragment extends Fragment {
 		textView.setTextColor(valueColor != 0
 		                      ? valueColor
 		                      : GeneralHelper.getColor(getResources(), R.color.battery_details_value_color));
-		final int iconPadding = (int) (6 * getResources().getDisplayMetrics().density);
+		final int iconPadding = GeneralHelper.dpToPixel(getResources(), 6);
 		if (unreliable) {
 			// #94: amber warning affordance after the value; tap to learn why the reading can't be trusted.
 			// Same mark as the insights health figure, so the two screens read consistently.
