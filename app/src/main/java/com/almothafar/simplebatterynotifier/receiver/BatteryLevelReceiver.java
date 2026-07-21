@@ -291,7 +291,7 @@ public class BatteryLevelReceiver extends BroadcastReceiver {
 
 	/**
 	 * The user's alert thresholds and toggles (reduces parameter count, like
-	 * {@code NotificationService.NotificationConfig}).
+	 * {@code NotificationConfig}).
 	 *
 	 * @param criticalLevel     critical alert threshold in percent
 	 * @param warningLevel      warning alert threshold in percent
