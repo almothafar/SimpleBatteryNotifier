@@ -242,6 +242,19 @@ final int age = 25;
 
 **Why?** Improves readability and prevents accidental reassignment.
 
+> **Parameters are the exception — do not mark method/constructor parameters `final`** in new or edited code. Effectively-final already covers lambda capture, so the keyword only adds noise. Legacy code still carries `final` params (an older convention) and migrates as methods are otherwise touched — a full sweep isn't required.
+>
+> ```java
+> // ❌ BAD - final on parameters
+> public int criticalLevel(final Context context) { ... }
+>
+> // ✅ GOOD - final on locals, not parameters
+> public int criticalLevel(Context context) {
+> 	final SharedPreferences prefs = getPrefs(context);
+> 	// ...
+> }
+> ```
+
 ### 2. Declare Variables Close to Usage
 
 ```java
@@ -278,7 +291,7 @@ public void process(String input) {
 }
 
 // ✅ GOOD - Early returns
-public void process(final String input) {
+public void process(String input) {
 	if (isNull(input)) {
 		return;
 	}
@@ -308,12 +321,12 @@ public void processUserDataAndSendEmail(User user) {
 }
 
 // ✅ GOOD - Separate concerns
-public void processUser(final User user) {
+public void processUser(User user) {
 	validateUser(user);
 	saveToDatabase(user);
 }
 
-public void sendWelcomeEmail(final User user) {
+public void sendWelcomeEmail(User user) {
 	// Email logic only
 }
 ```
@@ -331,7 +344,7 @@ final NotificationManager manager2 = (NotificationManager) context.getSystemServ
 manager2.notify(id2, notification2);
 
 // ✅ GOOD - Extracted to method
-private void sendNotification(final Context context, final int id, final Notification notification) {
+private void sendNotification(Context context, int id, Notification notification) {
 	final NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 	if (nonNull(manager)) {
 		manager.notify(id, notification);
@@ -371,7 +384,7 @@ public void unusedMethod() {
 notificationManager.notify(id, notification);
 
 // ✅ GOOD - Check permission first (Android 13+)
-private boolean hasNotificationPermission(final Context context) {
+private boolean hasNotificationPermission(Context context) {
 	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 		return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
 				== PackageManager.PERMISSION_GRANTED;
@@ -534,7 +547,7 @@ public void method2() {
 }
 
 // ✅ GOOD - Extract to helper
-private NotificationManager getNotificationManager(final Context context) {
+private NotificationManager getNotificationManager(Context context) {
 	return (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 }
 ```
@@ -603,7 +616,7 @@ private boolean isInDoNotDisturbMode() {
  * @param context The application context
  * @param type    Notification type (CRITICAL_TYPE, WARNING_TYPE, or FULL_LEVEL_TYPE)
  */
-public static void sendNotification(final Context context, final int type) {
+public static void sendNotification(Context context, int type) {
 	// Implementation
 }
 ```
@@ -646,7 +659,7 @@ When reviewing code, check:
 
 - [ ] Uses `isNull()`/`nonNull()` instead of `== null`/`!= null`
 - [ ] All curly brackets present (even single-line)
-- [ ] Variables marked `final` where appropriate
+- [ ] Locals marked `final` where appropriate; parameters **not** marked `final`
 - [ ] No FQNs (uses imports)
 - [ ] Line width ≤ 160 characters
 - [ ] Early returns instead of deep nesting

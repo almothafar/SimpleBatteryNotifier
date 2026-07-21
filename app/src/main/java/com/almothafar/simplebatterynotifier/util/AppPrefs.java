@@ -54,7 +54,7 @@ public final class AppPrefs {
 	 *
 	 * @return the configured critical level
 	 */
-	public static int criticalLevel(final Context context) {
+	public static int criticalLevel(Context context) {
 		return prefs(context).getInt(context.getString(R.string._pref_key_critical_battery_level), DEFAULT_CRITICAL_LEVEL);
 	}
 
@@ -66,7 +66,7 @@ public final class AppPrefs {
 	 *
 	 * @return the configured warning level
 	 */
-	public static int warningLevel(final Context context) {
+	public static int warningLevel(Context context) {
 		return prefs(context).getInt(context.getString(R.string._pref_key_warn_battery_level), DEFAULT_WARNING_LEVEL);
 	}
 
@@ -78,7 +78,7 @@ public final class AppPrefs {
 	 *
 	 * @return the configured {@code (critical, warning)} thresholds
 	 */
-	public static LevelThresholds batteryLevels(final Context context) {
+	public static LevelThresholds batteryLevels(Context context) {
 		return new LevelThresholds(criticalLevel(context), warningLevel(context));
 	}
 
@@ -89,7 +89,7 @@ public final class AppPrefs {
 	 * @param context Application context
 	 * @param levels  the thresholds to store
 	 */
-	public static void setBatteryLevels(final Context context, final LevelThresholds levels) {
+	public static void setBatteryLevels(Context context, LevelThresholds levels) {
 		prefs(context).edit()
 		              .putInt(context.getString(R.string._pref_key_critical_battery_level), levels.critical())
 		              .putInt(context.getString(R.string._pref_key_warn_battery_level), levels.warning())
@@ -106,7 +106,7 @@ public final class AppPrefs {
 	 *
 	 * @return the configured limit in %/h
 	 */
-	public static int drainLimitPph(final Context context) {
+	public static int drainLimitPph(Context context) {
 		return clampDrainLimit(prefs(context).getInt(
 				context.getString(R.string._pref_key_fast_drain_limit), DEFAULT_DRAIN_LIMIT_PPH));
 	}
@@ -120,11 +120,11 @@ public final class AppPrefs {
 	 *
 	 * @return the limit clamped to {@code [MIN_DRAIN_LIMIT_PPH, MAX_DRAIN_LIMIT_PPH]}
 	 */
-	public static int clampDrainLimit(final int stored) {
+	public static int clampDrainLimit(int stored) {
 		return Math.max(MIN_DRAIN_LIMIT_PPH, Math.min(MAX_DRAIN_LIMIT_PPH, stored));
 	}
 
-	private static SharedPreferences prefs(final Context context) {
+	private static SharedPreferences prefs(Context context) {
 		return PreferenceManager.getDefaultSharedPreferences(context);
 	}
 }
