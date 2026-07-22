@@ -2,34 +2,62 @@ plugins {
     id 'com.android.application'
 }
 
-// Load version from properties file
-def versionPropsFile = file('../version.properties')
-def versionProps = new Properties()
+// ---------------------------------------------------------------------------
+// Versioning: single source of truth is the latest `v<semver>` git tag.
+//
+//   * On the exact release commit  -> versionName "3.0.0"
+//   * N commits after the tag       -> versionName "3.0.0-N-g<sha>"  (distinct per build)
+//   * Uncommitted changes           -> "...-dirty"
+//   * No tag / shallow checkout      -> falls back to VERSION_FALLBACK below
+//
+// versionCode is derived from the same tag by positional notation so the name
+// and the code always match and only ever increase:
+//   MAJOR*1_000_000 + MINOR*10_000 + PATCH*100 + commitsSinceTag
+//
+// release-please creates the tags; this build only ever *reads* them, so there
+// is no version state committed to source that can drift.
+// ---------------------------------------------------------------------------
+def VERSION_FALLBACK = [major: 3, minor: 0, patch: 0]
 
-if (versionPropsFile.exists()) {
-    versionProps.load(new FileInputStream(versionPropsFile))
-} else {
-    // Fallback defaults if file doesn't exist
-    versionProps['versionCode'] = '70'
-    versionProps['versionPrefix'] = '2.0'
-}
-
-// Auto-increment version code on release builds
-tasks.register('incrementVersion') {
-    doLast {
-        def currentCode = versionProps['versionCode'].toInteger()
-        versionProps['versionCode'] = (currentCode + 1).toString()
-        versionProps.store(versionPropsFile.newWriter(), "Auto-incremented by build")
-        println("Version incremented to ${versionProps['versionCode']}")
+def gitDescribe = { ->
+    try {
+        return providers.exec {
+            commandLine 'git', 'describe', '--tags', '--long', '--dirty', '--always'
+            ignoreExitValue = true
+        }.standardOutput.asText.get().trim()
+    } catch (ignored) {
+        return ''
     }
 }
 
-// Hook into assembleRelease to auto-increment
-afterEvaluate {
-    tasks.named('assembleRelease').configure {
-        dependsOn 'incrementVersion'
+def resolveVersion = { ->
+    def describe = gitDescribe()
+    // e.g. "v3.0.0-5-gabc1234", "v3.0.0-0-gabc1234-dirty", "abc1234" (no tag), "" (no git)
+    def m = describe =~ /^v?(\d+)\.(\d+)\.(\d+)-(\d+)-g([0-9a-f]+)(-dirty)?$/
+    if (!m) {
+        // No parseable tag reachable (fresh repo, shallow CI clone, or tags not fetched).
+        def f = VERSION_FALLBACK
+        def code = f.major * 1_000_000 + f.minor * 10_000 + f.patch * 100
+        return [name: "${f.major}.${f.minor}.${f.patch}".toString(), code: code]
     }
+    def major = m.group(1).toInteger()
+    def minor = m.group(2).toInteger()
+    def patch = m.group(3).toInteger()
+    def commits = m.group(4).toInteger()
+    def sha = m.group(5)
+    def dirty = m.group(6) != null
+
+    def code = major * 1_000_000 + minor * 10_000 + patch * 100 + commits
+    def name
+    if (commits == 0 && !dirty) {
+        name = "${major}.${minor}.${patch}".toString()
+    } else {
+        name = "${major}.${minor}.${patch}-${commits}-g${sha}${dirty ? '-dirty' : ''}".toString()
+    }
+    return [name: name, code: code]
 }
+
+def appVersion = resolveVersion()
 
 android {
     namespace = 'com.almothafar.simplebatterynotifier'
@@ -40,8 +68,8 @@ android {
         applicationId = "com.almothafar.simplebatterynotifier"
         minSdk = 26
         targetSdk = 36
-        versionCode = versionProps['versionCode'].toInteger()
-        versionName = "${versionProps['versionPrefix']}.${versionProps['versionCode']}"
+        versionCode = appVersion.code
+        versionName = appVersion.name
     }
 
     buildTypes {

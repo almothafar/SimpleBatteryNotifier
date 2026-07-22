@@ -14,6 +14,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # Full history + tags so `git describe` in app/build.gradle can resolve
+          # versionName / versionCode from the latest v<semver> tag.
+          fetch-depth: 0
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
