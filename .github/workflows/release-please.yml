@@ -14,6 +14,14 @@ permissions:
   contents: write
   pull-requests: write
 
+# Only one release-please run at a time. It maintains a single standing Release PR, so
+# parallel runs (from rapid successive merges to master) could race and duplicate or
+# clobber it. Don't cancel-in-progress — let the running one finish; GitHub keeps only
+# the latest queued run, which sees all the merged commits anyway.
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release-please:
     name: Release PR & tag

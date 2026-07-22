@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ master, main ]
 
+# Cancel superseded runs on a PR branch when new commits are pushed (saves minutes),
+# but never cancel a master build — every commit on master should build.
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build-and-test:
     name: Build & Test
