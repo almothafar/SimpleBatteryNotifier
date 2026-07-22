@@ -2,34 +2,41 @@ plugins {
     id 'com.android.application'
 }
 
-// Load version from properties file
-def versionPropsFile = file('../version.properties')
-def versionProps = new Properties()
+// ---------------------------------------------------------------------------
+// Versioning: one source of truth — the version in .release-please-manifest.json.
+//
+// release-please bumps that single number on each release (a `feat` PR -> minor,
+// a `fix` PR -> patch, a breaking change -> major). Both versionName and
+// versionCode are derived from it here, so the two ALWAYS move together and no
+// commit hash ever appears in the version.
+//
+//   manifest 3.0.0  -> versionName "3.0.0"   versionCode 300000
+//   manifest 3.0.1  -> versionName "3.0.1"   versionCode 300001
+//   manifest 3.1.55 -> versionName "3.1.55"  versionCode 301055
+//
+// versionCode = MAJOR*100000 + MINOR*1000 + PATCH  (so the name and the number
+// line up; keeps minor < 1000 and patch < 1000, which is plenty for this app).
+// ---------------------------------------------------------------------------
+def resolveVersion = { ->
+    def manifestFile = file('../.release-please-manifest.json')
+    // The manifest is committed to the repo, so it is normally present. If it is
+    // somehow missing (e.g. a partial checkout), fall back to the seed baseline.
+    def semver = manifestFile.exists() ? (new groovy.json.JsonSlurper().parse(manifestFile)['.'] ?: '3.0.0') : '3.0.0'
 
-if (versionPropsFile.exists()) {
-    versionProps.load(new FileInputStream(versionPropsFile))
-} else {
-    // Fallback defaults if file doesn't exist
-    versionProps['versionCode'] = '70'
-    versionProps['versionPrefix'] = '2.0'
-}
-
-// Auto-increment version code on release builds
-tasks.register('incrementVersion') {
-    doLast {
-        def currentCode = versionProps['versionCode'].toInteger()
-        versionProps['versionCode'] = (currentCode + 1).toString()
-        versionProps.store(versionPropsFile.newWriter(), "Auto-incremented by build")
-        println("Version incremented to ${versionProps['versionCode']}")
+    def m = (semver =~ /^(\d+)\.(\d+)\.(\d+)/)
+    if (!m.find()) {
+        // Present but not a version we can parse -> fail loudly rather than ship a wrong number.
+        throw new GradleException("Cannot parse version '${semver}' from .release-please-manifest.json")
     }
+    def major = m.group(1).toInteger()
+    def minor = m.group(2).toInteger()
+    def patch = m.group(3).toInteger()
+
+    def code = major * 100_000 + minor * 1_000 + patch
+    return [name: "${major}.${minor}.${patch}".toString(), code: code]
 }
 
-// Hook into assembleRelease to auto-increment
-afterEvaluate {
-    tasks.named('assembleRelease').configure {
-        dependsOn 'incrementVersion'
-    }
-}
+def appVersion = resolveVersion()
 
 android {
     namespace = 'com.almothafar.simplebatterynotifier'
@@ -40,8 +47,8 @@ android {
         applicationId = "com.almothafar.simplebatterynotifier"
         minSdk = 26
         targetSdk = 36
-        versionCode = versionProps['versionCode'].toInteger()
-        versionName = "${versionProps['versionPrefix']}.${versionProps['versionCode']}"
+        versionCode = appVersion.code
+        versionName = appVersion.name
     }
 
     buildTypes {
