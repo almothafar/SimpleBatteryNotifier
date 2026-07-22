@@ -173,6 +173,11 @@
     <!-- المدة المنسقة ("~9h 27m") في سطر الوقت المطوي؛ انظر time_to_full_value_hm -->
     <string name="notification_status_time_remaining">يتبقّى %1$s</string>
     <string name="notification_status_time_to_full">%1$s حتى الاكتمال</string>
+    <!-- #207: سطر التيار المطوي بصيغة موصوفة كي تبقى القيمة المنفردة مفهومة (بدون إشارة +/- — الفعل
+         يدل على الاتجاه). %1$s هو battery_current_value بلا إشارة ("199 mA")، معزول اتجاهياً من المُستدعي.
+         "استهلاك" أثناء التفريغ، "شحن" أثناء الشحن. مثل "استهلاك 199 mA" / "شحن 1500 mA" -->
+    <string name="notification_status_current_using">استهلاك %1$s</string>
+    <string name="notification_status_current_charging">شحن %1$s</string>
     <!-- #194: التفصيل الموسّع (عند السحب للأسفل) — سطر "التسمية: القيمة". تسميات الوقت المتبقي/الوقت
          حتى الاكتمال/الحرارة/معدل الاستهلاك مُعاد استخدامها من جدول التفاصيل. -->
     <string name="notification_detail_line">%1$s: %2$s</string>

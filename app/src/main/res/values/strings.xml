@@ -178,6 +178,11 @@
     <!-- Collapsed time segment; %1$s is the formatted duration ("~9h 27m"), see time_to_full_value_hm -->
     <string name="notification_status_time_remaining">%1$s remaining</string>
     <string name="notification_status_time_to_full">%1$s to full</string>
+    <!-- #207: collapsed current segment, worded so a lone value still reads clearly (no +/- sign — the verb
+         carries the direction). %1$s is the unsigned battery_current_value ("199 mA"), bidi-isolated by the
+         caller. "Using" while discharging, "Charging" while charging. e.g. "Using 199 mA" / "Charging 1500 mA" -->
+    <string name="notification_status_current_using">Using %1$s</string>
+    <string name="notification_status_current_charging">Charging %1$s</string>
     <!-- #194: expanded (pull-down) breakdown — one "label: value" line each. Labels for Time remaining /
          Time to full / Temperature / Drain rate are reused from the details table. -->
     <string name="notification_detail_line">%1$s: %2$s</string>
