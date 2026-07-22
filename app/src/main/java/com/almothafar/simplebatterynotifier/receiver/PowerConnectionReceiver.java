@@ -33,10 +33,21 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	private static final String TAG = PowerConnectionReceiver.class.getSimpleName();
 
 	/**
-	 * Delay before sampling the charging current, giving it time to stabilise after plug-in.
+	 * Delay between charge-current samples, giving it time to stabilise after plug-in.
 	 * Package-visible so tests can advance the main looper by exactly this amount.
 	 */
 	static final long CHARGE_SAMPLE_DELAY_MS = 2000L;
+
+	/**
+	 * How many times to sample the charging current before giving up on a speed estimate.
+	 * <p>
+	 * A single sample two seconds after plug-in is too eager for a slow charger: its current is often
+	 * still 0 or ramping then, which reads as an unknown speed and reports the bare "Wired charging"
+	 * with no tier or wattage. Re-sampling a few times and taking the first usable reading lets the
+	 * slow/normal/fast tier actually surface. Package-visible so the test can idle the looper across
+	 * the whole retry window.
+	 */
+	static final int MAX_CHARGE_SAMPLE_ATTEMPTS = 4;
 
 	/**
 	 * Previous plugged state to prevent duplicate notifications for the same state.
@@ -122,16 +133,13 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 		// Charging resolves a shown low-battery (or stale full) alert, so dismiss it deliberately —
 		// in every charge-notification style, and immediately rather than after the sample delay (#155).
 		NotificationService.clearLevelAlert(appContext);
+		// A "battery draining fast" warning is a discharge fact; charging makes it stale, so clear it now
+		// rather than leaving it to linger until the next drain episode re-posts (it never would).
+		NotificationService.clearFastDrainAlert(appContext);
 
 		// Sample the charging speed after a short delay (the current is 0/noisy right at plug-in), then
-		// notify. Re-check that we're still plugged in, in case the charger was pulled during the delay.
-		scheduleSample(() -> {
-			if (!isStillPlugged(appContext)) {
-				return;
-			}
-			final ChargeSpeed speed = SystemService.getChargeSpeed(appContext);
-			NotificationService.notifyChargeConnected(appContext, speed, wireless);
-		});
+		// notify. Slow chargers ramp gradually, so re-sample a few times before settling for "unknown".
+		scheduleChargeSample(appContext, wireless, 1);
 
 		Log.i(TAG, String.format("Charger connected (Battery: %d%%, Wireless: %s)", percentage, wireless));
 	}
@@ -164,6 +172,42 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 		final Intent batteryStatus = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 		final int plugged = batteryStatus == null ? 0 : batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
 		return plugged > 0;
+	}
+
+	/**
+	 * Schedule the next charge-speed sample attempt after {@link #CHARGE_SAMPLE_DELAY_MS}.
+	 *
+	 * @param appContext The application context
+	 * @param wireless   Whether charging over a wireless charger
+	 * @param attempt    1-based attempt number (see {@link #MAX_CHARGE_SAMPLE_ATTEMPTS})
+	 */
+	private static void scheduleChargeSample(Context appContext, boolean wireless, int attempt) {
+		scheduleSample(() -> sampleChargeSpeed(appContext, wireless, attempt));
+	}
+
+	/**
+	 * Read the charging speed and notify — retrying while it's still unknown.
+	 * <p>
+	 * The current is 0/noisy right at plug-in and, on a slow charger, can stay that way for several
+	 * seconds. Rather than misreport the first blank reading as "Wired charging" with no tier, keep
+	 * re-sampling up to {@link #MAX_CHARGE_SAMPLE_ATTEMPTS} times and notify with the first usable
+	 * speed; if none of the attempts land, notify once with the unknown speed (the plain message).
+	 * Each attempt re-checks we're still plugged in, in case the charger was pulled during the delay.
+	 *
+	 * @param appContext The application context
+	 * @param wireless   Whether charging over a wireless charger
+	 * @param attempt    1-based attempt number
+	 */
+	private static void sampleChargeSpeed(Context appContext, boolean wireless, int attempt) {
+		if (!isStillPlugged(appContext)) {
+			return;
+		}
+		final ChargeSpeed speed = SystemService.getChargeSpeed(appContext);
+		if (!speed.isKnown() && attempt < MAX_CHARGE_SAMPLE_ATTEMPTS) {
+			scheduleChargeSample(appContext, wireless, attempt + 1);
+			return;
+		}
+		NotificationService.notifyChargeConnected(appContext, speed, wireless);
 	}
 
 	/**

@@ -102,6 +102,18 @@ public class PowerConnectionReceiverTest {
 	}
 
 	@Test
+	public void connected_clearsStaleFastDrainAlert() {
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 40, 100);
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class)) {
+			receive();
+			// Charging makes a "battery draining fast" warning stale, so it's dismissed at plug-in —
+			// immediately, alongside the level alert, not after the speed-sample delay.
+			ns.verify(() -> NotificationService.clearFastDrainAlert(any(Context.class)));
+		}
+	}
+
+	@Test
 	public void samePluggedState_sendsNoNotification() {
 		PowerConnectionReceiver.setCurrentState(BatteryManager.BATTERY_PLUGGED_AC);
 		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 50, 100);
@@ -178,10 +190,14 @@ public class PowerConnectionReceiverTest {
 	}
 
 	/**
-	 * Advance the main looper past the sampling delay so the deferred charge-connected task runs.
+	 * Advance the main looper past the whole sampling window so the deferred charge-connected task
+	 * runs. The speed is re-sampled up to {@link PowerConnectionReceiver#MAX_CHARGE_SAMPLE_ATTEMPTS}
+	 * times (Robolectric reports no charging current, so every attempt reads "unknown"), then notifies
+	 * once with that unknown speed — so the looper must be idled across all of them.
 	 */
 	private void runPendingSample() {
-		shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(PowerConnectionReceiver.CHARGE_SAMPLE_DELAY_MS));
+		shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(
+				PowerConnectionReceiver.CHARGE_SAMPLE_DELAY_MS * PowerConnectionReceiver.MAX_CHARGE_SAMPLE_ATTEMPTS));
 	}
 
 	/**

@@ -75,12 +75,19 @@ public final class FastDrainDetector {
 		// user settings above/below stay in the default (backed-up) prefs.
 		final SharedPreferences transientPrefs = TransientState.prefs(context);
 
+		// A shown warning corresponds to a persisted streak that has alerted; used below to tell when an
+		// episode ends so the now-stale notification can be dismissed rather than left lingering.
+		final Streak previous = STORE.load(transientPrefs);
+
 		final boolean enabled = prefs.getBoolean(context.getString(R.string._pref_key_notify_fast_drain), true);
 		final boolean discharging = !BatteryRateTracker.isChargingDirection(batteryDO.getStatus());
 		// Only while discharging, and only when enabled. Either way the episode is re-armed (charging, or
 		// the feature being off, ends any streak) so a later fast discharge starts fresh.
 		if (!enabled || !discharging) {
 			STORE.clear(transientPrefs);
+			// Charging/disabling ends the episode, so a warning shown from the previous discharge is stale.
+			// (Charging also clears it at plug-in via PowerConnectionReceiver; this covers the other exits.)
+			clearAlertIfShown(context, previous);
 			return;
 		}
 
@@ -92,7 +99,6 @@ public final class FastDrainDetector {
 		final boolean activelyUsed = SystemService.isActivelyUsed(context);
 		final long now = System.currentTimeMillis();
 
-		final Streak previous = STORE.load(transientPrefs);
 		final Outcome decision = decide(previous, rate.hasRate(), rate.percentPerHour(),
 				limit, sustainedMs, reminderGapMs, activelyUsed, now);
 
@@ -100,6 +106,26 @@ public final class FastDrainDetector {
 		if (decision.shouldNotify()) {
 			final int elapsedMinutes = Math.max(1, Math.round(decision.elapsedMs() / (float) MS_PER_MINUTE));
 			NotificationService.sendFastDrainNotification(context, rate.percentPerHour(), limit, elapsedMinutes);
+		} else if (previous.alerted() && !decision.newState().alerted()) {
+			// The episode ended: the drain calmed back below the limit (hysteresis re-arm), or a long
+			// observation gap lapsed the streak — the shown %/h is stale either way. Dismiss it, the same
+			// "don't leave a stale alert alive" cleanup as the plug-in and charging paths, for when the
+			// phone stays on battery. A fresh episode still has to re-sustain the full window before it can
+			// alert again, so this can't flicker.
+			clearAlertIfShown(context, previous);
+		}
+	}
+
+	/**
+	 * Dismiss the fast-drain warning when a prior episode had alerted — i.e. a notification is showing.
+	 * No-op otherwise, so an ineligible tick (charging with nothing shown) doesn't touch the UI.
+	 *
+	 * @param context  Application context
+	 * @param previous The streak loaded before this tick's decision
+	 */
+	private static void clearAlertIfShown(Context context, Streak previous) {
+		if (previous.alerted()) {
+			NotificationService.clearFastDrainAlert(context);
 		}
 	}
 
