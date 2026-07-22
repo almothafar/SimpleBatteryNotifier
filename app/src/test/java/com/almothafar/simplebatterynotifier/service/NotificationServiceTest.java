@@ -92,6 +92,17 @@ public class NotificationServiceTest {
 		}
 
 		@Test
+		public void clearFastDrainAlert_dismissesOnlyTheFastDrainAlert() {
+			NotificationService.sendFastDrainNotification(context, 27, 20, 6);
+			NotificationService.notifyChargeConnected(context, ChargeSpeed.unknown(), false);
+
+			NotificationService.clearFastDrainAlert(context);
+
+			// The plug-in dismissal targets the stale drain warning; "Charging started" keeps showing.
+			assertEquals(1, shadowOf(manager).size());
+		}
+
+		@Test
 		public void nullAlertType_postsNothing() {
 			// The old int API's default branch posted a completely BLANK notification for an invalid
 			// type (#160). With the enum, the only invalid value left is null — and it must be a no-op.

@@ -257,6 +257,24 @@ public final class NotificationService {
 	}
 
 	/**
+	 * Dismiss a shown "battery draining fast" alert (#109).
+	 * <p>
+	 * Called when a charger is connected: the drain warning reports a discharge %/h that stops being
+	 * true the moment charging begins, so a lingering "Losing ~27% per hour" reads as stale. The
+	 * notification only ever updates in place while a fresh drain episode keeps firing, so nothing
+	 * would otherwise clear it once the drain stops — hence the explicit dismissal here, the
+	 * charging-side counterpart to {@link FastDrainDetector} re-arming its streak while charging.
+	 *
+	 * @param context The application context
+	 */
+	public static void clearFastDrainAlert(Context context) {
+		final NotificationManager manager = getNotificationManager(context);
+		if (nonNull(manager)) {
+			manager.cancel(FAST_DRAIN_NOTIFICATION_ID);
+		}
+	}
+
+	/**
 	 * Re-create the alert channels so a changed "Vibrate" preference takes effect (issue #153).
 	 * Delegates to {@link NotificationChannels#refreshAlertChannels(Context)}.
 	 *
