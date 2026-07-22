@@ -6,9 +6,10 @@ package com.almothafar.simplebatterynotifier.model;
  */
 public final class BatteryDO {
 
-	// The synthesized sub-percent fraction is clamped into the OS whole-percent bucket so the two
-	// sources can't visibly disagree; 0.99 (not 1.0) keeps the two-decimal rendering from rounding
-	// up into the next whole percent (#158).
+	// Ceiling for an in-bucket synthesized fraction: 0.99 (not 1.0) keeps the two-decimal rendering
+	// from rounding up into the next whole percent (#158). Since #204 this is only that rounding
+	// guard — a fraction outside the OS bucket falls back to the whole percent instead of being
+	// squashed onto a bucket boundary.
 	private static final float MAX_SUB_PERCENT_FRACTION = 0.99f;
 
 	private int level;
@@ -22,6 +23,11 @@ public final class BatteryDO {
 	// Remaining charge in µAh from BATTERY_PROPERTY_CHARGE_COUNTER, already gated for
 	// trustworthiness at read time (see SystemService); 0 when unavailable or untrusted (#69/#94).
 	private int chargeCounterMicroAmpHours;
+	// Learned stable full capacity in mAh (BatteryCapacityTracker, #204): the denominator that gives
+	// the synthesized sub-percent fraction real movement. Deliberately NOT this tick's counter-derived
+	// estimate (capacity above) — dividing the counter by itself pinned the decimals at .00. 0 while
+	// the learner is warming up or the counter is untrusted; the display then shows the whole percent.
+	private int stableCapacityMah;
 	// Instantaneous current in µA from BATTERY_PROPERTY_CURRENT_NOW; Integer.MIN_VALUE when the device
 	// doesn't report it. Sign convention varies by OEM, so callers derive direction from the status.
 	private int currentMicroAmps = Integer.MIN_VALUE;
@@ -66,8 +72,8 @@ public final class BatteryDO {
 
 	/**
 	 * Whether {@link #getPrecisePercentage()} carries genuine sub-percent resolution: either the OS
-	 * reports a fine-grained scale (&gt; 100), or a trusted charge counter and full-capacity
-	 * estimate allow the fraction to be synthesized. When false, callers must show the whole
+	 * reports a fine-grained scale (&gt; 100), or a trusted charge counter and a warm stable-capacity
+	 * average allow the fraction to be synthesized. When false, callers must show the whole
 	 * percent — an artificial ".00" would be fake precision (#69/#94).
 	 *
 	 * @return true when the precise percentage genuinely resolves below one percent
@@ -77,13 +83,17 @@ public final class BatteryDO {
 	}
 
 	/**
-	 * The battery percentage with genuine sub-percent resolution where available (#158).
+	 * The battery percentage with genuine sub-percent resolution where available (#158/#204).
 	 * <p>
 	 * Preference order: the plain {@code level/scale} fraction when the OS scale is finer than
-	 * whole percent; else a fraction synthesized from the charge counter divided by the estimated
-	 * full capacity (AccuBattery-style), clamped into the OS whole-percent bucket
-	 * {@code [percent, percent + 0.99]} (and to 100) so the two sources can't visibly disagree.
-	 * Without a trusted counter it falls back to the whole percent
+	 * whole percent; else a fraction synthesized from the charge counter divided by the learned
+	 * <b>stable</b> full capacity (AccuBattery-style). The OS whole percent stays authoritative for
+	 * the integer part: a synthesized value inside the OS bucket {@code [percent, percent + 1)}
+	 * genuinely refines it and passes through (capped at {@code .99} so the two-decimal rendering
+	 * can't round into the next percent), while a value outside the bucket — the stable
+	 * denominator's phase error near a percent boundary — falls back to the plain whole percent,
+	 * which then renders as a clean integer instead of a pinned fake {@code .00}/{@code .99} (#204).
+	 * Without a trusted counter or a warm learner it falls back to the whole percent
 	 * ({@link #hasPrecisePercentage()} then reads false).
 	 *
 	 * @return Battery percentage, fractional when genuine sub-percent data exists
@@ -92,19 +102,22 @@ public final class BatteryDO {
 		if (scale > 100 || !hasSynthesizedFraction()) {
 			return getBatteryPercentage();
 		}
-		// capacity is mAh; ×1000 puts it in the counter's µAh unit.
-		final float synthesized = chargeCounterMicroAmpHours / (capacity * 1000f) * 100f;
+		// stableCapacityMah is mAh; ×1000 puts it in the counter's µAh unit.
+		final float synthesized = chargeCounterMicroAmpHours / (stableCapacityMah * 1000f) * 100f;
 		final int whole = getBatteryPercentageInt();
-		final float clamped = Math.max(whole, Math.min(whole + MAX_SUB_PERCENT_FRACTION, synthesized));
-		return Math.min(100f, clamped);
+		if (synthesized < whole || synthesized >= whole + 1f) {
+			return getBatteryPercentage();
+		}
+		return Math.min(100f, Math.min(whole + MAX_SUB_PERCENT_FRACTION, synthesized));
 	}
 
 	/**
 	 * Whether the fraction can be synthesized from the charge counter: a real OS level reading plus
-	 * a trusted counter and full-capacity estimate (both already gated at read time, #69/#94).
+	 * a trusted counter (gated at read time, #69/#94) and a warm stable-capacity average
+	 * ({@code BatteryCapacityTracker}, #204).
 	 */
 	private boolean hasSynthesizedFraction() {
-		return scale > 0 && level >= 0 && chargeCounterMicroAmpHours > 0 && capacity > 0;
+		return scale > 0 && level >= 0 && chargeCounterMicroAmpHours > 0 && stableCapacityMah > 0;
 	}
 
 	public String getHealth() {
@@ -203,6 +216,15 @@ public final class BatteryDO {
 
 	public BatteryDO setChargeCounterMicroAmpHours(final int chargeCounterMicroAmpHours) {
 		this.chargeCounterMicroAmpHours = chargeCounterMicroAmpHours;
+		return this;
+	}
+
+	public int getStableCapacityMah() {
+		return stableCapacityMah;
+	}
+
+	public BatteryDO setStableCapacityMah(int stableCapacityMah) {
+		this.stableCapacityMah = stableCapacityMah;
 		return this;
 	}
 

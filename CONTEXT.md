@@ -26,5 +26,10 @@ _Avoid_: amperage, draw, consumption.
 The battery's rated full capacity when new (mAh), from the manufacturer's spec. User-entered or
 best-effort auto-detected from the kernel. Distinct from the measured current full capacity.
 _Avoid_: rated capacity (in prose only), max capacity.
-</content>
-</invoke>
+
+**Stable capacity**:
+The learned running average of the measured full capacity (mAh), built from spaced, trusted
+per-tick estimates. Slow-moving by design: it is the denominator of the sub-percent battery
+display, so the charge counter's live movement shows up in the decimals instead of cancelling out.
+Distinct from design capacity and from the single-tick estimate.
+_Avoid_: averaged capacity, smoothed capacity.

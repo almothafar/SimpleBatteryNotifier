@@ -91,7 +91,16 @@ public final class SystemService {
 		final int currentMicroAmps = getInstantaneousCurrentMicroAmps(context);
 		final int chargeCounterUah = getTrustedChargeCounterUah(context, batteryCapacity);
 
-		return buildBatteryDataObject(extras, chargerType, batteryCapacity, currentMicroAmps, chargeCounterUah, resources);
+		// The sub-percent display divides the counter by a STABLE learned capacity, never by this
+		// tick's counter-derived estimate — dividing the counter by itself is what pinned the
+		// decimals at .00 (#204). Only ticks whose counter passed the trust gates feed the learner,
+		// so wrong-unit readings (#69/#94) can't poison the average.
+		final int levelPercent = extras.scale > 0 ? (int) (extras.level * 100L / extras.scale) : -1;
+		final int stableCapacityMah = chargeCounterUah > 0
+				? BatteryCapacityTracker.observeAndAverage(context, batteryCapacity, levelPercent)
+				: 0;
+
+		return buildBatteryDataObject(extras, chargerType, batteryCapacity, currentMicroAmps, chargeCounterUah, stableCapacityMah, resources);
 	}
 
 	/**
@@ -253,12 +262,14 @@ public final class SystemService {
 	/**
 	 * Build the BatteryDO object from extracted data
 	 *
-	 * @param extras           Extracted battery extras
-	 * @param chargerType      Charger type string
-	 * @param batteryCapacity  Battery capacity in mAh
-	 * @param currentMicroAmps Instantaneous current in µA
-	 * @param chargeCounterUah Trusted remaining-charge counter in µAh (0 when unavailable/untrusted)
-	 * @param resources        Resources for string lookup
+	 * @param extras            Extracted battery extras
+	 * @param chargerType       Charger type string
+	 * @param batteryCapacity   Battery capacity in mAh
+	 * @param currentMicroAmps  Instantaneous current in µA
+	 * @param chargeCounterUah  Trusted remaining-charge counter in µAh (0 when unavailable/untrusted)
+	 * @param stableCapacityMah Learned stable full capacity in mAh, the sub-percent denominator; 0
+	 *                          while the learner warms up or the counter is untrusted (#204)
+	 * @param resources         Resources for string lookup
 	 *
 	 * @return Populated BatteryDO object
 	 */
@@ -267,6 +278,7 @@ public final class SystemService {
 	                                                final int batteryCapacity,
 	                                                final int currentMicroAmps,
 	                                                final int chargeCounterUah,
+	                                                int stableCapacityMah,
 	                                                final Resources resources) {
 		final BatteryDO batteryDO = new BatteryDO();
 		batteryDO.setLevel(extras.level)
@@ -281,6 +293,7 @@ public final class SystemService {
 		         .setCapacity(batteryCapacity)
 		         .setCurrentMicroAmps(currentMicroAmps)
 		         .setChargeCounterMicroAmpHours(chargeCounterUah)
+		         .setStableCapacityMah(stableCapacityMah)
 		         .setCycleCount(extras.cycleCount)
 		         .setIntHealth(extras.health);
 

@@ -11,8 +11,11 @@ import static java.util.Objects.isNull;
  * <p>
  * One home for the two display forms so the gauge and the ongoing status notification can't drift:
  * <ul>
- *   <li><b>Precise</b> — two decimals ({@code 2.01%}, {@code 48.00%}, {@code 88.88%}), no leading
- *       zero, except a full battery which reads {@code 100%} (never {@code 100.00%}).</li>
+ *   <li><b>Precise</b> — two decimals ({@code 2.01%}, {@code 88.88%}), no leading zero. A value
+ *       whose fraction is zero self-heals to the whole form ({@code 48.00} reads {@code 48%}) — a
+ *       zero fraction carries no sub-percent information, so on any device or tick that can't
+ *       produce a real fraction the display degrades to an honest integer instead of a fake
+ *       {@code .00} (#204). A full battery reads {@code 100%} (never {@code 100.00%}).</li>
  *   <li><b>Whole</b> — the plain integer form ({@code 48%}) used when the device provides no
  *       genuine sub-percent resolution, and by every integer surface (alerts, details table).</li>
  * </ul>
@@ -46,8 +49,9 @@ public final class BatteryPercentFormatter {
 	}
 
 	/**
-	 * The two-decimal form, e.g. {@code "2.01%"} / {@code "48.00%"} — except full, which reads
-	 * {@code "100%"}. Negative input is clamped to 0 defensively.
+	 * The two-decimal form, e.g. {@code "2.01%"} / {@code "88.88%"} — except a zero fraction, which
+	 * self-heals to the whole form ({@code "48%"}, never a fake {@code "48.00%"}, #204), and full,
+	 * which reads {@code "100%"}. Negative input is clamped to 0 defensively.
 	 *
 	 * @param percentage the fractional percentage (0-100)
 	 *
@@ -57,7 +61,13 @@ public final class BatteryPercentFormatter {
 		if (percentage >= FULL_DISPLAY_THRESHOLD) {
 			return formatWhole(100);
 		}
-		return String.format(Locale.ROOT, "%.2f%%", Math.max(0f, percentage));
+		// Round to hundredths once and format from that integer, so the zero-fraction check and the
+		// rendered digits can never disagree on rounding.
+		final long hundredths = Math.round(Math.max(0f, percentage) * 100.0);
+		if (hundredths % 100 == 0) {
+			return formatWhole((int) (hundredths / 100));
+		}
+		return String.format(Locale.ROOT, "%d.%02d%%", hundredths / 100, hundredths % 100);
 	}
 
 	/**
