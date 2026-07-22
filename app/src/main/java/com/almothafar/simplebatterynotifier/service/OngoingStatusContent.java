@@ -60,8 +60,9 @@ final class OngoingStatusContent {
 
 	/**
 	 * The collapsed content line — the volatile numbers under the stable title, joined by
-	 * "{@value #DETAIL_SEPARATOR}": rate/power · current · time, e.g. "9%/h · −250 mA · ~9h 27m remaining"
-	 * or "~18 W · +1500 mA · ~45m to full" (#194). Temperature moves to the expanded view. Each segment is
+	 * "{@value #DETAIL_SEPARATOR}": rate/power · current · time, e.g. "9%/h · Using 250 mA · ~9h 27m remaining"
+	 * or "~18 W · Charging 1500 mA · ~45m to full" (#194, #207). The current is worded so it stays meaningful
+	 * even alone. Temperature moves to the expanded view. Each segment is
 	 * shown only when available and only when the show-rate setting is on; if nothing qualifies (setting
 	 * off, or a warm-up tick) it falls back to the temperature so the line is never empty.
 	 *
@@ -202,9 +203,22 @@ final class OngoingStatusContent {
 		return rate.hasRate() ? isolate(BatteryRateTracker.formatRateValue(context, rate.percentPerHour())) : null;
 	}
 
-	/** The collapsed current segment (bidi-isolated), or null when no trustworthy current is available. */
+	/**
+	 * The collapsed current segment, worded so it reads clearly even when it's the only surviving segment
+	 * (#207): "Using 199 mA" while discharging, "Charging 1500 mA" while charging. The verb carries the
+	 * direction, so the value is shown unsigned; the (Latin) magnitude is bidi-isolated inside the worded
+	 * phrase (like the time segment) so it can't reorder in an RTL line. Null when no trustworthy current is
+	 * available. The expanded "Live" line keeps the precise signed value under its label.
+	 */
 	private static String collapsedCurrentSegment(Context context, BatteryRateTracker.BatteryRate rate) {
-		return rate.hasCurrent() ? isolate(BatteryRateTracker.formatCurrentValue(context, rate.currentMilliAmps())) : null;
+		if (!rate.hasCurrent()) {
+			return null;
+		}
+		final String magnitude = isolate(context.getString(R.string.battery_current_value,
+				String.valueOf(Math.abs(rate.currentMilliAmps()))));
+		return context.getString(rate.charging()
+				? R.string.notification_status_current_charging
+				: R.string.notification_status_current_using, magnitude);
 	}
 
 	/**

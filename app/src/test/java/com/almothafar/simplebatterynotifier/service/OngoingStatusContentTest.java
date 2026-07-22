@@ -68,6 +68,14 @@ public class OngoingStatusContentTest {
 		return BatteryRateTracker.formatCurrentValue(context, mA);
 	}
 
+	/** The worded collapsed current segment (#207): "Using 250 mA" / "Charging 2000 mA", unsigned magnitude. */
+	private String curCollapsed(boolean charging, int mA) {
+		final String magnitude = context.getString(R.string.battery_current_value, String.valueOf(Math.abs(mA)));
+		return context.getString(charging
+				? R.string.notification_status_current_charging
+				: R.string.notification_status_current_using, magnitude);
+	}
+
 	private String line(int labelRes, String value) {
 		return context.getString(R.string.notification_detail_line, context.getString(labelRes), value);
 	}
@@ -86,7 +94,7 @@ public class OngoingStatusContentTest {
 	public void collapsed_isRateCurrentRemaining_whileDischarging() {
 		// 85% at 9 %/h → 566.67 → 567 min → "~9h 27m".
 		final String remaining = context.getString(R.string.notification_status_time_remaining, "~9h 27m");
-		final String expected = "9%/h" + SEP + cur(-250) + SEP + remaining;
+		final String expected = "9%/h" + SEP + curCollapsed(false, -250) + SEP + remaining;
 		assertEquals(expected, OngoingStatusContent.statusDetail(context, discharging85(), rateFull(false, 9, -250, -338)));
 	}
 
@@ -94,7 +102,7 @@ public class OngoingStatusContentTest {
 	public void collapsed_isWattsCurrentToFull_whileCharging() {
 		// 20 points to full at 20 %/h → exactly 60 min → "~1h 0m".
 		final String toFull = context.getString(R.string.notification_status_time_to_full, "~1h 0m");
-		final String expected = "~10 W" + SEP + cur(2000) + SEP + toFull;
+		final String expected = "~10 W" + SEP + curCollapsed(true, 2000) + SEP + toFull;
 		assertEquals(expected, OngoingStatusContent.statusDetail(context, charging80(), rateFull(true, 20, 2000, 1900)));
 	}
 
@@ -104,6 +112,16 @@ public class OngoingStatusContentTest {
 		final String remaining = context.getString(R.string.notification_status_time_remaining, "~9h 27m");
 		assertEquals("9%/h" + SEP + remaining,
 				OngoingStatusContent.statusDetail(context, discharging85(), rate(false, 9)));
+	}
+
+	@Test
+	public void collapsed_wordsLoneCurrent_whenNoRateYet() {
+		// #207: warm-up with an instantaneous current but no rate/time — the segment that used to read as a
+		// bare, meaningless "−199 mA". It must now stand alone as the worded "Using 199 mA".
+		final BatteryRateTracker.BatteryRate loneCurrent =
+				new BatteryRateTracker.BatteryRate(false, 0, false, true, -199, false, 0);
+		assertEquals(curCollapsed(false, -199),
+				OngoingStatusContent.statusDetail(context, discharging85(), loneCurrent));
 	}
 
 	@Test
