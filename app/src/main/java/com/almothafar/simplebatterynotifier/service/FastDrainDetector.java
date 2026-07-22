@@ -107,11 +107,12 @@ public final class FastDrainDetector {
 			final int elapsedMinutes = Math.max(1, Math.round(decision.elapsedMs() / (float) MS_PER_MINUTE));
 			NotificationService.sendFastDrainNotification(context, rate.percentPerHour(), limit, elapsedMinutes);
 		} else if (previous.alerted() && !decision.newState().alerted()) {
-			// The drain calmed back below the limit (hysteresis re-arm), so the warning is no longer true.
-			// Dismiss it — the same "don't leave a stale alert alive" cleanup as the plug-in path, but for
-			// the case where the phone stays on battery and the drain simply stops. A fresh episode still
-			// has to re-sustain the full window before it can alert again, so this can't flicker.
-			NotificationService.clearFastDrainAlert(context);
+			// The episode ended: the drain calmed back below the limit (hysteresis re-arm), or a long
+			// observation gap lapsed the streak — the shown %/h is stale either way. Dismiss it, the same
+			// "don't leave a stale alert alive" cleanup as the plug-in and charging paths, for when the
+			// phone stays on battery. A fresh episode still has to re-sustain the full window before it can
+			// alert again, so this can't flicker.
+			clearAlertIfShown(context, previous);
 		}
 	}
 

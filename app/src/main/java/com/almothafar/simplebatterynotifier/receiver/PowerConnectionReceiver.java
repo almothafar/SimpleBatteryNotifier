@@ -181,7 +181,7 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	 * @param wireless   Whether charging over a wireless charger
 	 * @param attempt    1-based attempt number (see {@link #MAX_CHARGE_SAMPLE_ATTEMPTS})
 	 */
-	private static void scheduleChargeSample(final Context appContext, final boolean wireless, final int attempt) {
+	private static void scheduleChargeSample(Context appContext, boolean wireless, int attempt) {
 		scheduleSample(() -> sampleChargeSpeed(appContext, wireless, attempt));
 	}
 
@@ -198,7 +198,7 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	 * @param wireless   Whether charging over a wireless charger
 	 * @param attempt    1-based attempt number
 	 */
-	private static void sampleChargeSpeed(final Context appContext, final boolean wireless, final int attempt) {
+	private static void sampleChargeSpeed(Context appContext, boolean wireless, int attempt) {
 		if (!isStillPlugged(appContext)) {
 			return;
 		}

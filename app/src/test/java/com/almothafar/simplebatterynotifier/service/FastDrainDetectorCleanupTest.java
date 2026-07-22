@@ -103,7 +103,7 @@ public class FastDrainDetectorCleanupTest {
 		return new BatteryDO().setStatus(BatteryManager.BATTERY_STATUS_CHARGING).setLevel(50).setScale(100);
 	}
 
-	private static BatteryRate rate(final int percentPerHour) {
+	private static BatteryRate rate(int percentPerHour) {
 		return new BatteryRate(true, percentPerHour, false, false, 0, false, 0);
 	}
 }
