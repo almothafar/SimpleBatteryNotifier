@@ -5,7 +5,11 @@ name: PR Title
 # every PR title in Conventional Commit form (`type: description`).
 
 on:
-  pull_request_target:
+  # pull_request (not pull_request_target): pull_request_target silently never fires for a PR the
+  # Actions bot opens, which left the required check stuck "expected" forever on release-please's PR.
+  # On pull_request the check also creates a run there — held for approval — that passes once you
+  # click "Approve workflows to run". This is a pinned third-party action, so pull_request is safe.
+  pull_request:
     types: [ opened, edited, synchronize, reopened ]
     branches: [ master ]
 
