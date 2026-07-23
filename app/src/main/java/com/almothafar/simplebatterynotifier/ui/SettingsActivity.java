@@ -8,6 +8,9 @@ import androidx.fragment.app.Fragment;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.ui.fragment.CardPreferenceFragment;
+
+import java.util.Set;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -129,7 +132,18 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
 	/**
 	 * Root settings fragment showing preference categories
 	 */
-	public static class HeaderFragment extends PreferenceFragmentCompat {
+	public static class HeaderFragment extends CardPreferenceFragment {
+		/**
+		 * The About/Version footer shares the root screen's parent with the nav entries, so force it
+		 * onto its own card instead of joining their group (#222).
+		 *
+		 * @return the About footer key, so it starts its own card
+		 */
+		@Override
+		protected Set<String> cardBreakKeys() {
+			return Set.of(getString(R.string._pref_key_about));
+		}
+
 		/**
 		 * Create the preference hierarchy from XML
 		 *

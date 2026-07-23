@@ -22,7 +22,6 @@ import androidx.preference.ListPreference;
 import androidx.preference.MultiSelectListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
-import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SeekBarPreference;
 
@@ -45,7 +44,7 @@ import static java.util.Objects.nonNull;
  * Uses modern Activity Result API for ringtone picker and provides accessible
  * error feedback via Snackbar.
  */
-public class GenericPreferenceFragment extends PreferenceFragmentCompat
+public class GenericPreferenceFragment extends CardPreferenceFragment
 		implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 	private static final String TAG = "GenericPreferenceFrag";
