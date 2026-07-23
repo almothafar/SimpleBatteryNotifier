@@ -43,8 +43,11 @@ public class BatteryInsightsActivity extends BaseActivity {
 	private TextView daysInUseText;
 	private TextView healthDescriptionText;
 	private TextView designCapacityText;
+	private ImageView healthMeasuredInfoIcon;
 	private TextView measuredCapacityText;
-	private TextView measuredCapacityRangeText;
+	private View measuredCapacityRange;
+	private TextView measuredCapacityMinText;
+	private TextView measuredCapacityMaxText;
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
@@ -70,11 +73,17 @@ public class BatteryInsightsActivity extends BaseActivity {
 		daysInUseText = findViewById(R.id.daysInUseText);
 		healthDescriptionText = findViewById(R.id.healthDescriptionText);
 		designCapacityText = findViewById(R.id.designCapacityText);
+		healthMeasuredInfoIcon = findViewById(R.id.healthMeasuredInfoIcon);
 		measuredCapacityText = findViewById(R.id.measuredCapacityText);
-		measuredCapacityRangeText = findViewById(R.id.measuredCapacityRangeText);
+		measuredCapacityRange = findViewById(R.id.measuredCapacityRange);
+		measuredCapacityMinText = findViewById(R.id.measuredCapacityMinText);
+		measuredCapacityMaxText = findViewById(R.id.measuredCapacityMaxText);
 
 		// Tap the warning icon (shown only when the reading can't be trusted, #94) to explain why
 		healthWarningIcon.setOnClickListener(v -> showUnreliableReadingDialog());
+
+		// Tap the info icon (shown only when health is measured, #116) to explain the averaging
+		healthMeasuredInfoIcon.setOnClickListener(v -> showMeasuredHealthInfoDialog());
 
 		// Tap the design-capacity card to set/edit the rated capacity
 		findViewById(R.id.designCapacityCard).setOnClickListener(v -> showDesignCapacityDialog());
@@ -165,6 +174,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 		                       ? R.string.health_basis_estimated_os
 		                       : R.string.health_basis_estimated_tracked;
 		healthBasisText.setText(basisRes);
+		// The averaging explainer only applies to the measured figure (#116); hide it for the estimate.
+		healthMeasuredInfoIcon.setVisibility(measured ? View.VISIBLE : View.GONE);
 
 		healthDescriptionText.setText(BatteryHealthTracker.describeHealthGrade(this, grade));
 	}
@@ -181,14 +192,26 @@ public class BatteryInsightsActivity extends BaseActivity {
 	private void showMeasuredCapacity(final BatteryCapacityTracker.CapacitySummary capacity, final boolean unreliable) {
 		if (capacity == null) {
 			measuredCapacityText.setText(unreliable ? R.string.unknown : R.string.battery_value_calculating);
-			measuredCapacityRangeText.setVisibility(View.GONE);
+			measuredCapacityRange.setVisibility(View.GONE);
 			return;
 		}
 		// Pass the numbers as Strings so they render in Western digits (0-9) in every locale (#96).
 		measuredCapacityText.setText(getString(R.string.design_capacity_value, String.valueOf(capacity.averageMah())));
-		measuredCapacityRangeText.setText(getString(R.string.measured_capacity_range,
-				String.valueOf(capacity.minMah()), String.valueOf(capacity.maxMah())));
-		measuredCapacityRangeText.setVisibility(View.VISIBLE);
+		measuredCapacityMinText.setText(String.valueOf(capacity.minMah()));
+		measuredCapacityMaxText.setText(String.valueOf(capacity.maxMah()));
+		measuredCapacityRange.setVisibility(View.VISIBLE);
+	}
+
+	/**
+	 * Explains that the measured health figure is derived from the battery's capacity averaged over
+	 * many spaced readings, so it stays stable instead of tracking a single fluctuating sample (#116).
+	 */
+	private void showMeasuredHealthInfoDialog() {
+		new MaterialAlertDialogBuilder(this)
+				.setTitle(R.string.health_measured_info_dialog_title)
+				.setMessage(R.string.health_measured_info_dialog_message)
+				.setPositiveButton(android.R.string.ok, null)
+				.show();
 	}
 
 	/**

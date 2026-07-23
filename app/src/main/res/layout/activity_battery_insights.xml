@@ -101,14 +101,36 @@
                                 tools:visibility="visible"/>
                     </LinearLayout>
 
-                    <TextView
-                            android:id="@+id/healthBasisText"
+                    <!-- Basis line + (when measured, #116) a tappable info icon explaining the averaging -->
+                    <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/health_basis_estimated_os"
-                            android:textSize="12sp"
-                            android:textColor="@color/battery_details_label_color"
-                            android:layout_marginTop="4dp"/>
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="4dp">
+
+                        <TextView
+                                android:id="@+id/healthBasisText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/health_basis_estimated_os"
+                                android:textSize="12sp"
+                                android:textColor="@color/battery_details_label_color"/>
+
+                        <ImageView
+                                android:id="@+id/healthMeasuredInfoIcon"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:layout_marginStart="4dp"
+                                android:src="@drawable/ic_info"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:contentDescription="@string/health_measured_info_cd"
+                                android:visibility="gone"
+                                tools:visibility="visible"/>
+
+                    </LinearLayout>
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -153,16 +175,64 @@
                                 android:textStyle="bold"
                                 android:textColor="@color/battery_details_value_color"/>
 
-                        <TextView
-                                android:id="@+id/measuredCapacityRangeText"
+                        <!-- min / max spread as a compact two-column mini-table (label above value) -->
+                        <LinearLayout
+                                android:id="@+id/measuredCapacityRange"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:textSize="12sp"
-                                android:textColor="@color/battery_details_label_color"
-                                android:layout_marginTop="4dp"
+                                android:orientation="horizontal"
+                                android:weightSum="2"
+                                android:layout_marginTop="8dp"
                                 android:visibility="gone"
-                                tools:text="min / max: 4420 / 4580 mAh"
-                                tools:visibility="visible"/>
+                                tools:visibility="visible">
+
+                            <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/capacity_min_label"
+                                        android:textSize="11sp"
+                                        android:textColor="@color/battery_details_label_color"/>
+
+                                <TextView
+                                        android:id="@+id/measuredCapacityMinText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:textSize="14sp"
+                                        android:textColor="@color/battery_details_value_color"
+                                        tools:text="4420"/>
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/capacity_max_label"
+                                        android:textSize="11sp"
+                                        android:textColor="@color/battery_details_label_color"/>
+
+                                <TextView
+                                        android:id="@+id/measuredCapacityMaxText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:textSize="14sp"
+                                        android:textColor="@color/battery_details_value_color"
+                                        tools:text="4580"/>
+
+                            </LinearLayout>
+
+                        </LinearLayout>
 
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
