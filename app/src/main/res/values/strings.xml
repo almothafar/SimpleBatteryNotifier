@@ -274,7 +274,7 @@
     <!-- Info icon (#116) explaining that the measured health/capacity is averaged over many readings -->
     <string name="health_measured_info_cd">How battery health is measured</string>
     <string name="health_measured_info_dialog_title">How this is measured</string>
-    <string name="health_measured_info_dialog_message">This health figure compares your battery\'s measured capacity against the rated capacity you entered. The measured capacity is averaged over many readings taken over time, so it stays steady instead of jumping with each refresh. The min and max show the spread of those readings.</string>
+    <string name="health_measured_info_dialog_message">This health figure compares your battery\'s measured capacity against the design capacity you entered. The measured capacity is averaged over many readings taken over time, so it stays steady instead of jumping with each refresh. The min and max show the spread of those readings.</string>
     <string name="set_design_capacity_action">Set rated capacity for accurate health</string>
     <string name="design_capacity_dialog_title">Battery design capacity</string>
     <string name="design_capacity_dialog_message">Enter your battery\'s rated capacity in mAh from the manufacturer\'s specs. We\'ve prefilled a measured estimate — confirm or correct it for an accurate health figure.</string>
@@ -286,7 +286,7 @@
     <string name="save">Save</string>
     <string name="clear">Clear</string>
     <string name="error_design_capacity_range">Enter a capacity between %1$d and %2$d mAh</string>
-    <string name="health_basis_measured">Averaged measured capacity vs rated</string>
+    <string name="health_basis_measured">Averaged measured capacity vs design</string>
     <!-- #114: the cycle-based estimate is labelled by its source. OS-reported cycles cover the
          battery's whole life; app-tracked cycles start at install, so they understate real wear. -->
     <string name="health_basis_estimated_os">Estimated from charge cycles (reported by Android)</string>

@@ -26,6 +26,9 @@ import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+
 /**
  * Activity displaying battery health insights including charge cycles and estimated health.
  */
@@ -113,7 +116,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 		final int osCycles = SystemService.getChargeCycleCount(this);
 		final int cycles = BatteryHealthTracker.getEffectiveCycleCount(this, osCycles);
 		final BatteryCapacityTracker.CapacitySummary capacity = BatteryCapacityTracker.getCapacitySummary(this);
-		final int capacityMah = capacity != null ? capacity.averageMah() : SystemService.getBatteryCapacity(this);
+		final int capacityMah = stableOrLiveCapacityMah(capacity);
 
 		// Always show the resolved health figure (measured, else cycle-based).
 		showResolvedHealth(cycles, BatteryHealthTracker.isCycleCountFromOs(osCycles), capacityMah);
@@ -189,8 +192,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * @param capacity   the learned capacity summary, or null when none has formed yet
 	 * @param unreliable whether this device's charge-counter reading can't be trusted (#94)
 	 */
-	private void showMeasuredCapacity(final BatteryCapacityTracker.CapacitySummary capacity, final boolean unreliable) {
-		if (capacity == null) {
+	private void showMeasuredCapacity(BatteryCapacityTracker.CapacitySummary capacity, boolean unreliable) {
+		if (isNull(capacity)) {
 			measuredCapacityText.setText(unreliable ? R.string.unknown : R.string.battery_value_calculating);
 			measuredCapacityRange.setVisibility(View.GONE);
 			return;
@@ -391,8 +394,20 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * @return a measured capacity in mAh, or 0 when none is available
 	 */
 	private int measuredCapacityForPrefill() {
-		final BatteryCapacityTracker.CapacitySummary capacity = BatteryCapacityTracker.getCapacitySummary(this);
-		return capacity != null ? capacity.averageMah() : SystemService.getBatteryCapacity(this);
+		return stableOrLiveCapacityMah(BatteryCapacityTracker.getCapacitySummary(this));
+	}
+
+	/**
+	 * The capacity figure to display and measure health from: the stable learned average once one has
+	 * formed (#116), else this tick's live estimate while the learner warms up (or on untrusted-counter
+	 * devices, where no average forms).
+	 *
+	 * @param capacity the learned capacity summary, or null when none has formed yet
+	 *
+	 * @return a capacity in mAh, or 0 when neither the average nor a live estimate is available
+	 */
+	private int stableOrLiveCapacityMah(BatteryCapacityTracker.CapacitySummary capacity) {
+		return nonNull(capacity) ? capacity.averageMah() : SystemService.getBatteryCapacity(this);
 	}
 
 	/**
