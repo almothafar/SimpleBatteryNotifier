@@ -62,6 +62,22 @@ public final class ChargeSpeed {
 	}
 
 	/**
+	 * The higher-power of two estimates. {@link #unknown()} reports {@link #UNKNOWN_POWER_MW}
+	 * (&minus;1&nbsp;mW), so it loses to any real reading — a seed unknown is replaced by the first
+	 * usable sample. Used to carry the best reading across a series of samples (the plug-in speed sample
+	 * in {@code PowerConnectionReceiver}) so mid-ramp jitter can't drag the result back down. Pure so it
+	 * is unit-testable.
+	 *
+	 * @param a one estimate (typically the best carried forward)
+	 * @param b the other (typically a fresh reading)
+	 *
+	 * @return whichever estimate reports the higher power (ties keep {@code b}, the fresher reading)
+	 */
+	public static ChargeSpeed higherPowerOf(ChargeSpeed a, ChargeSpeed b) {
+		return b.milliwatts >= a.milliwatts ? b : a;
+	}
+
+	/**
 	 * Estimate charging power (milliwatts) from current and voltage. Pure and Android-free.
 	 * <p>
 	 * Handles the awkward real-world inputs: unsupported readings ({@link Integer#MIN_VALUE}) and the
@@ -119,6 +135,17 @@ public final class ChargeSpeed {
 	 */
 	public boolean isKnown() {
 		return tier != ChargeSpeedTier.UNKNOWN;
+	}
+
+	/**
+	 * Whether the tier is {@link ChargeSpeedTier#FAST} or above — clearly past the ~2&nbsp;W trickle a
+	 * charger draws while negotiating at plug-in, as opposed to unknown/trickle/normal.
+	 *
+	 * @return true for {@code FAST}, {@code SUPER_FAST}, or {@code SUPER_FAST_PLUS}
+	 */
+	public boolean isFastOrAbove() {
+		return tier == ChargeSpeedTier.FAST || tier == ChargeSpeedTier.SUPER_FAST
+				|| tier == ChargeSpeedTier.SUPER_FAST_PLUS;
 	}
 
 	/**

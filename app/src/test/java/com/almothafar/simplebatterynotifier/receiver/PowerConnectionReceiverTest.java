@@ -8,7 +8,9 @@ import android.os.Looper;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
+import com.almothafar.simplebatterynotifier.model.ChargeSpeedTier;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
+import com.almothafar.simplebatterynotifier.service.SystemService;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -21,6 +23,7 @@ import java.time.Duration;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -183,6 +186,79 @@ public class PowerConnectionReceiverTest {
 		}
 	}
 
+	@Test
+	public void fastChargerRampingThroughHandshake_reportsRampedTierNotTrickle() {
+		// A fast charger draws the ~2 W USB default while negotiating, then jumps to full power (#227).
+		// The sampler must keep going through the early trickle readings and report the ramped tier.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 30, 100);
+		final ChargeSpeed handshake = ChargeSpeed.fromMeasurements(400_000, 5_000); // ~2 W  -> trickle
+		final ChargeSpeed ramped = ChargeSpeed.fromMeasurements(4_000_000, 5_000);  // ~20 W -> fast
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class);
+		     MockedStatic<SystemService> ss = mockStatic(SystemService.class)) {
+			ss.when(() -> SystemService.getChargeSpeed(any(Context.class))).thenReturn(handshake, handshake, ramped);
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					argThat(speed -> speed.getTier() == ChargeSpeedTier.FAST), eq(false)));
+		}
+	}
+
+	@Test
+	public void sustainedTrickle_reportsSlowChargingAfterWindow() {
+		// A genuinely weak charger stays at trickle for the whole window: the last-resort path still
+		// surfaces "Slow charging" rather than an unknown/plain message.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 30, 100);
+		final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000); // ~2 W -> trickle
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class);
+		     MockedStatic<SystemService> ss = mockStatic(SystemService.class)) {
+			ss.when(() -> SystemService.getChargeSpeed(any(Context.class))).thenReturn(trickle);
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					argThat(speed -> speed.getTier() == ChargeSpeedTier.TRICKLE), eq(false)));
+		}
+	}
+
+	@Test
+	public void fastChargerClimbingThroughNormal_reportsFastNotNormal() {
+		// While the reading is still climbing (trickle -> normal -> fast), a mid-ramp normal must not
+		// settle the result early: the sampler keeps going and reports the fast tier it climbs to.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 30, 100);
+		final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000);   // ~2 W  -> trickle
+		final ChargeSpeed normal = ChargeSpeed.fromMeasurements(1_200_000, 5_000);  // ~6 W  -> normal
+		final ChargeSpeed fast = ChargeSpeed.fromMeasurements(4_000_000, 5_000);    // ~20 W -> fast
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class);
+		     MockedStatic<SystemService> ss = mockStatic(SystemService.class)) {
+			ss.when(() -> SystemService.getChargeSpeed(any(Context.class))).thenReturn(trickle, normal, fast);
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					argThat(speed -> speed.getTier() == ChargeSpeedTier.FAST), eq(false)));
+		}
+	}
+
+	@Test
+	public void steadyNormalCharger_settlesAtNormalBeforeWindowEnds() {
+		// A normal-tier reading that stops climbing (two equal normals) settles early: the result is
+		// normal even though a later attempt would have read fast — proving it stopped before the window.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 30, 100);
+		final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000);   // ~2 W -> trickle
+		final ChargeSpeed normal = ChargeSpeed.fromMeasurements(1_400_000, 5_000);  // ~7 W -> normal
+		final ChargeSpeed fast = ChargeSpeed.fromMeasurements(4_000_000, 5_000);    // ~20 W (never reached)
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class);
+		     MockedStatic<SystemService> ss = mockStatic(SystemService.class)) {
+			ss.when(() -> SystemService.getChargeSpeed(any(Context.class))).thenReturn(trickle, normal, normal, fast);
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					argThat(speed -> speed.getTier() == ChargeSpeedTier.NORMAL), eq(false)));
+		}
+	}
+
 	// --- helpers -------------------------------------------------------------
 
 	private void receive() {
@@ -190,10 +266,11 @@ public class PowerConnectionReceiverTest {
 	}
 
 	/**
-	 * Advance the main looper past the whole sampling window so the deferred charge-connected task
-	 * runs. The speed is re-sampled up to {@link PowerConnectionReceiver#MAX_CHARGE_SAMPLE_ATTEMPTS}
-	 * times (Robolectric reports no charging current, so every attempt reads "unknown"), then notifies
-	 * once with that unknown speed — so the looper must be idled across all of them.
+	 * Advance the main looper past the whole sampling window so the deferred charge-connected task runs.
+	 * Sampling repeats up to {@link PowerConnectionReceiver#MAX_CHARGE_SAMPLE_ATTEMPTS} times — fewer when
+	 * a reading settles early — so idling across the full window covers every case: tests that leave
+	 * {@link SystemService} unmocked read "unknown" every attempt (Robolectric reports no charging
+	 * current) and notify once at the end, while tests that stub {@code getChargeSpeed} may settle sooner.
 	 */
 	private void runPendingSample() {
 		shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(
