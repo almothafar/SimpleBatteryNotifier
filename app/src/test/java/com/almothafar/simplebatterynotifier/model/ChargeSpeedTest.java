@@ -12,6 +12,7 @@ import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -151,6 +152,55 @@ public class ChargeSpeedTest {
 			final ChargeSpeed speed = ChargeSpeed.unknown();
 			assertFalse(speed.isKnown());
 			assertEquals(ChargeSpeedTier.UNKNOWN, speed.getTier());
+		}
+	}
+
+	/**
+	 * {@link ChargeSpeed#higherPowerOf(ChargeSpeed, ChargeSpeed)} — picks the higher-power estimate so a
+	 * series of samples can carry the best reading forward; {@link ChargeSpeed#unknown()} loses to any
+	 * real reading.
+	 */
+	public static class HigherPowerOf {
+
+		private final ChargeSpeed unknown = ChargeSpeed.unknown();
+		private final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000);   // ~2 W
+		private final ChargeSpeed fast = ChargeSpeed.fromMeasurements(4_000_000, 5_000);    // ~20 W
+
+		@Test
+		public void anyRealReadingBeatsUnknown() {
+			// The seed unknown must be replaced by the first usable sample, either argument order.
+			assertSame(trickle, ChargeSpeed.higherPowerOf(unknown, trickle));
+			assertSame(trickle, ChargeSpeed.higherPowerOf(trickle, unknown));
+		}
+
+		@Test
+		public void higherPowerWins() {
+			// A ramp can't be dragged back down by an earlier low sample, either order.
+			assertSame(fast, ChargeSpeed.higherPowerOf(trickle, fast));
+			assertSame(fast, ChargeSpeed.higherPowerOf(fast, trickle));
+		}
+
+		@Test
+		public void tiePrefersTheFresherSecondArgument() {
+			final ChargeSpeed carried = ChargeSpeed.fromMeasurements(1_400_000, 5_000); // 7 W
+			final ChargeSpeed fresh = ChargeSpeed.fromMeasurements(1_400_000, 5_000);   // 7 W, equal power
+			assertSame(fresh, ChargeSpeed.higherPowerOf(carried, fresh));
+		}
+	}
+
+	/**
+	 * {@link ChargeSpeed#isFastOrAbove()} — true only from the fast tier up, so a plug-in sample can tell
+	 * a clearly-ramped charger from one still drawing the negotiation trickle.
+	 */
+	public static class IsFastOrAbove {
+
+		@Test
+		public void trueOnlyFromFastTierUp() {
+			assertFalse(ChargeSpeed.unknown().isFastOrAbove());
+			assertFalse(ChargeSpeed.fromMeasurements(400_000, 5_000).isFastOrAbove());   // ~2 W  trickle
+			assertFalse(ChargeSpeed.fromMeasurements(1_400_000, 5_000).isFastOrAbove()); // ~7 W  normal
+			assertTrue(ChargeSpeed.fromMeasurements(4_000_000, 5_000).isFastOrAbove());  // ~20 W fast
+			assertTrue(ChargeSpeed.fromMeasurements(8_000_000, 5_000).isFastOrAbove());  // ~40 W super fast
 		}
 	}
 }

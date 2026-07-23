@@ -186,66 +186,70 @@ public class PowerConnectionReceiver extends BroadcastReceiver {
 	 * @param attempt    1-based attempt number (see {@link #MAX_CHARGE_SAMPLE_ATTEMPTS})
 	 * @param bestSoFar  the highest-power speed seen across the earlier attempts (carried forward)
 	 */
-	private static void scheduleChargeSample(Context appContext, boolean wireless, int attempt, ChargeSpeed bestSoFar) {
+	private static void scheduleChargeSample(Context appContext,
+	                                         boolean wireless,
+	                                         int attempt,
+	                                         ChargeSpeed bestSoFar) {
 		scheduleSample(() -> sampleChargeSpeed(appContext, wireless, attempt, bestSoFar));
 	}
 
 	/**
-	 * Read the charging speed and notify — re-sampling while it hasn't clearly ramped yet.
+	 * Read the charging speed and notify — re-sampling while the reading might still climb.
 	 * <p>
 	 * The current is 0/noisy right at plug-in, and a fast charger then draws at the ~2 W USB default
 	 * while it negotiates, so an early sample reads either unknown or a misleading trickle (#227).
-	 * Rather than freeze on that, carry the best (highest-power) reading forward and keep re-sampling up
-	 * to {@link #MAX_CHARGE_SAMPLE_ATTEMPTS} times: stop early once a reading has clearly ramped (fast+),
-	 * otherwise notify with the best speed once the window ends — a genuine slow charger reports trickle,
-	 * a device without a current reading falls back to the plain "Wired charging" message. Each attempt
-	 * re-checks we're still plugged in, in case the charger was pulled during the delay.
+	 * Rather than freeze on that, carry the best (highest-power) reading forward across up to
+	 * {@link #MAX_CHARGE_SAMPLE_ATTEMPTS} attempts and stop as soon as it has {@link #settled}, otherwise
+	 * notify with the best speed once the window ends — a genuine slow charger reports trickle, a device
+	 * without a current reading falls back to the plain "Wired charging" message. Each attempt re-checks
+	 * we're still plugged in, in case the charger was pulled during the delay.
 	 *
 	 * @param appContext The application context
 	 * @param wireless   Whether charging over a wireless charger
 	 * @param attempt    1-based attempt number
 	 * @param bestSoFar  the highest-power speed seen across the earlier attempts
 	 */
-	private static void sampleChargeSpeed(Context appContext, boolean wireless, int attempt, ChargeSpeed bestSoFar) {
+	private static void sampleChargeSpeed(Context appContext,
+	                                      boolean wireless,
+	                                      int attempt,
+	                                      ChargeSpeed bestSoFar) {
 		if (!isStillPlugged(appContext)) {
 			return;
 		}
-		final ChargeSpeed best = higherPowerOf(bestSoFar, SystemService.getChargeSpeed(appContext));
-		if (!isRamped(best) && attempt < MAX_CHARGE_SAMPLE_ATTEMPTS) {
-			scheduleChargeSample(appContext, wireless, attempt + 1, best);
+		final ChargeSpeed sample = SystemService.getChargeSpeed(appContext);
+		final ChargeSpeed best = ChargeSpeed.higherPowerOf(bestSoFar, sample);
+		if (settled(best, sample, bestSoFar) || attempt >= MAX_CHARGE_SAMPLE_ATTEMPTS) {
+			NotificationService.notifyChargeConnected(appContext, best, wireless);
 			return;
 		}
-		NotificationService.notifyChargeConnected(appContext, best, wireless);
+		scheduleChargeSample(appContext, wireless, attempt + 1, best);
 	}
 
 	/**
-	 * The higher-power of two charge-speed estimates. {@link ChargeSpeed#unknown()} reports
-	 * {@link ChargeSpeed#UNKNOWN_POWER_MW} (−1&nbsp;mW), so it loses to any real reading and the seed
-	 * unknown is replaced by the first usable sample. Pure so it is unit-testable.
+	 * Whether charge-speed sampling can stop before the whole {@link #MAX_CHARGE_SAMPLE_ATTEMPTS} window
+	 * is spent, because the reading won't meaningfully climb further. Two ways to be sure:
+	 * <ul>
+	 *   <li><b>Clearly ramped</b> — a fast-or-above reading is unambiguous (a plug-in handshake never
+	 *       draws that much), so stop immediately.</li>
+	 *   <li><b>Plateaued at normal</b> — a normal-tier reading that no longer beats the previous best has
+	 *       stopped rising: a steady normal charger, so stop rather than wait out the rest of the window.</li>
+	 * </ul>
+	 * Unknown and trickle deliberately never settle early: a fast charger draws the ~2 W trickle default
+	 * while negotiating (#227), so those must keep looking; a genuinely weak charger stays trickle and is
+	 * reported once the window ends. Pure so it is unit-testable.
 	 *
-	 * @param a one estimate (typically the best carried forward)
-	 * @param b the other (typically this attempt's fresh reading)
+	 * @param best         the best (highest-power) speed seen so far, this attempt's sample included
+	 * @param sample       this attempt's fresh reading
+	 * @param previousBest the best seen before this attempt — tells a plateau from a still-rising ramp
 	 *
-	 * @return whichever estimate reports the higher power (ties keep {@code b}, the fresher reading)
+	 * @return true when sampling can stop and notify with {@code best}
 	 */
-	static ChargeSpeed higherPowerOf(ChargeSpeed a, ChargeSpeed b) {
-		return b.getMilliwatts() >= a.getMilliwatts() ? b : a;
-	}
-
-	/**
-	 * Whether a speed has clearly ramped past the plug-in negotiation trickle — a fast tier or above.
-	 * Sub-fast readings (unknown / trickle / normal) keep the sampler going so a still-ramping charger
-	 * isn't settled too early, while a fast+ reading is unambiguous enough to stop on. Pure so it is
-	 * unit-testable.
-	 *
-	 * @param speed the speed estimate
-	 *
-	 * @return true when the tier is {@code FAST}, {@code SUPER_FAST}, or {@code SUPER_FAST_PLUS}
-	 */
-	static boolean isRamped(ChargeSpeed speed) {
-		final ChargeSpeedTier tier = speed.getTier();
-		return tier == ChargeSpeedTier.FAST || tier == ChargeSpeedTier.SUPER_FAST
-				|| tier == ChargeSpeedTier.SUPER_FAST_PLUS;
+	static boolean settled(ChargeSpeed best, ChargeSpeed sample, ChargeSpeed previousBest) {
+		if (best.isFastOrAbove()) {
+			return true;
+		}
+		return sample.getTier() == ChargeSpeedTier.NORMAL
+				&& sample.getMilliwatts() <= previousBest.getMilliwatts();
 	}
 
 	/**

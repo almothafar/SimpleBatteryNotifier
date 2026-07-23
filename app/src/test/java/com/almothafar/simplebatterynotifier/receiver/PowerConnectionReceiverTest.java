@@ -21,9 +21,6 @@ import org.robolectric.annotation.Config;
 
 import java.time.Duration;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -225,26 +222,41 @@ public class PowerConnectionReceiverTest {
 	}
 
 	@Test
-	public void higherPowerOf_prefersTheStrongerReadingAndDropsUnknown() {
-		final ChargeSpeed unknown = ChargeSpeed.unknown();
-		final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000);  // ~2 W
-		final ChargeSpeed fast = ChargeSpeed.fromMeasurements(4_000_000, 5_000);   // ~20 W
+	public void fastChargerClimbingThroughNormal_reportsFastNotNormal() {
+		// While the reading is still climbing (trickle -> normal -> fast), a mid-ramp normal must not
+		// settle the result early: the sampler keeps going and reports the fast tier it climbs to.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 30, 100);
+		final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000);   // ~2 W  -> trickle
+		final ChargeSpeed normal = ChargeSpeed.fromMeasurements(1_200_000, 5_000);  // ~6 W  -> normal
+		final ChargeSpeed fast = ChargeSpeed.fromMeasurements(4_000_000, 5_000);    // ~20 W -> fast
 
-		// Any real reading beats the seed unknown, regardless of order.
-		assertSame(trickle, PowerConnectionReceiver.higherPowerOf(unknown, trickle));
-		assertSame(trickle, PowerConnectionReceiver.higherPowerOf(trickle, unknown));
-		// The higher-power reading wins, so a ramp can't be lost to an earlier low sample.
-		assertSame(fast, PowerConnectionReceiver.higherPowerOf(trickle, fast));
-		assertSame(fast, PowerConnectionReceiver.higherPowerOf(fast, trickle));
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class);
+		     MockedStatic<SystemService> ss = mockStatic(SystemService.class)) {
+			ss.when(() -> SystemService.getChargeSpeed(any(Context.class))).thenReturn(trickle, normal, fast);
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					argThat(speed -> speed.getTier() == ChargeSpeedTier.FAST), eq(false)));
+		}
 	}
 
 	@Test
-	public void isRamped_isTrueOnlyFromFastTierUp() {
-		assertFalse(PowerConnectionReceiver.isRamped(ChargeSpeed.unknown()));
-		assertFalse(PowerConnectionReceiver.isRamped(ChargeSpeed.fromMeasurements(400_000, 5_000)));   // ~2 W  trickle
-		assertFalse(PowerConnectionReceiver.isRamped(ChargeSpeed.fromMeasurements(1_400_000, 5_000))); // ~7 W  normal
-		assertTrue(PowerConnectionReceiver.isRamped(ChargeSpeed.fromMeasurements(4_000_000, 5_000)));  // ~20 W fast
-		assertTrue(PowerConnectionReceiver.isRamped(ChargeSpeed.fromMeasurements(8_000_000, 5_000)));  // ~40 W super fast
+	public void steadyNormalCharger_settlesAtNormalBeforeWindowEnds() {
+		// A normal-tier reading that stops climbing (two equal normals) settles early: the result is
+		// normal even though a later attempt would have read fast — proving it stopped before the window.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 30, 100);
+		final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000);   // ~2 W -> trickle
+		final ChargeSpeed normal = ChargeSpeed.fromMeasurements(1_400_000, 5_000);  // ~7 W -> normal
+		final ChargeSpeed fast = ChargeSpeed.fromMeasurements(4_000_000, 5_000);    // ~20 W (never reached)
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class);
+		     MockedStatic<SystemService> ss = mockStatic(SystemService.class)) {
+			ss.when(() -> SystemService.getChargeSpeed(any(Context.class))).thenReturn(trickle, normal, normal, fast);
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					argThat(speed -> speed.getTier() == ChargeSpeedTier.NORMAL), eq(false)));
+		}
 	}
 
 	// --- helpers -------------------------------------------------------------
@@ -254,10 +266,11 @@ public class PowerConnectionReceiverTest {
 	}
 
 	/**
-	 * Advance the main looper past the whole sampling window so the deferred charge-connected task
-	 * runs. The speed is re-sampled up to {@link PowerConnectionReceiver#MAX_CHARGE_SAMPLE_ATTEMPTS}
-	 * times (Robolectric reports no charging current, so every attempt reads "unknown"), then notifies
-	 * once with that unknown speed — so the looper must be idled across all of them.
+	 * Advance the main looper past the whole sampling window so the deferred charge-connected task runs.
+	 * Sampling repeats up to {@link PowerConnectionReceiver#MAX_CHARGE_SAMPLE_ATTEMPTS} times — fewer when
+	 * a reading settles early — so idling across the full window covers every case: tests that leave
+	 * {@link SystemService} unmocked read "unknown" every attempt (Robolectric reports no charging
+	 * current) and notify once at the end, while tests that stub {@code getChargeSpeed} may settle sooner.
 	 */
 	private void runPendingSample() {
 		shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(
