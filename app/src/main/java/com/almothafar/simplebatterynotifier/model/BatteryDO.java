@@ -6,11 +6,11 @@ package com.almothafar.simplebatterynotifier.model;
  */
 public final class BatteryDO {
 
-	// Ceiling for an in-bucket synthesized fraction: 0.99 (not 1.0) keeps the two-decimal rendering
-	// from rounding up into the next whole percent (#158). Since #204 this is only that rounding
-	// guard — a fraction outside the OS bucket falls back to the whole percent instead of being
-	// squashed onto a bucket boundary.
-	private static final float MAX_SUB_PERCENT_FRACTION = 0.99f;
+	// How far the synthesized sub-percent value may sit from the OS percentage before it is distrusted
+	// and the plain whole percent is shown instead (#204). Wide enough that the small counter lag at a
+	// percent crossing shows through smoothly (no snap to a bare whole); tight enough that a stale
+	// counter or a mid-relearn stable capacity can't drift the display away from the real charge.
+	private static final float MAX_SYNTHESIZED_DRIFT = 1.0f;
 
 	private int level;
 	private int plugged;
@@ -85,15 +85,14 @@ public final class BatteryDO {
 	/**
 	 * The battery percentage with genuine sub-percent resolution where available (#158/#204).
 	 * <p>
-	 * Preference order: the plain {@code level/scale} fraction when the OS scale is finer than
-	 * whole percent; else a fraction synthesized from the charge counter divided by the learned
-	 * <b>stable</b> full capacity (AccuBattery-style). The OS whole percent stays authoritative for
-	 * the integer part: a synthesized value inside the OS bucket {@code [percent, percent + 1)}
-	 * genuinely refines it and passes through (capped at {@code .99} so the two-decimal rendering
-	 * can't round into the next percent), while a value outside the bucket — the stable
-	 * denominator's phase error near a percent boundary — falls back to the plain whole percent,
-	 * which then renders as a clean integer instead of a pinned fake {@code .00}/{@code .99} (#204).
-	 * Without a trusted counter or a warm learner it falls back to the whole percent
+	 * Preference order: the plain {@code level/scale} fraction when the OS scale is finer than whole
+	 * percent; else a fraction synthesized from the charge counter divided by the learned
+	 * <b>stable</b> full capacity (AccuBattery-style). The synthesized value is shown directly —
+	 * including when it drifts a hair across a whole-number line, so the display glides instead of
+	 * snapping to a bare whole at each percent crossing — as long as it stays within
+	 * {@link #MAX_SYNTHESIZED_DRIFT} of the OS percentage; beyond that (a stale counter or a
+	 * mid-relearn capacity) it falls back to the plain whole percent. A full battery is pinned to a
+	 * clean 100. Without a trusted counter or a warm learner it falls back to the whole percent
 	 * ({@link #hasPrecisePercentage()} then reads false).
 	 *
 	 * @return Battery percentage, fractional when genuine sub-percent data exists
@@ -102,13 +101,20 @@ public final class BatteryDO {
 		if (scale > 100 || !hasSynthesizedFraction()) {
 			return getBatteryPercentage();
 		}
+		final float osPercent = getBatteryPercentage();
+		// At a full battery the OS percentage is authoritative — a clean 100, never a lagging 99.x.
+		if (osPercent >= 100f) {
+			return 100f;
+		}
 		// stableCapacityMah is mAh; ×1000 puts it in the counter's µAh unit.
 		final float synthesized = chargeCounterMicroAmpHours / (stableCapacityMah * 1000f) * 100f;
-		final int whole = getBatteryPercentageInt();
-		if (synthesized < whole || synthesized >= whole + 1f) {
-			return getBatteryPercentage();
+		// Distrust a synthesized value a full percent or more off the OS level (a stale counter or a
+		// mid-relearn capacity) and show the plain percent. Within that band show it directly, letting
+		// the decimals glide across a whole-number line rather than snap to a bare whole (#204).
+		if (Math.abs(synthesized - osPercent) >= MAX_SYNTHESIZED_DRIFT) {
+			return osPercent;
 		}
-		return Math.min(100f, Math.min(whole + MAX_SUB_PERCENT_FRACTION, synthesized));
+		return Math.min(100f, synthesized);
 	}
 
 	/**

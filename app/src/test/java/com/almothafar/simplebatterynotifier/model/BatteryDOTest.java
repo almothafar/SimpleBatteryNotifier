@@ -92,9 +92,10 @@ public class BatteryDOTest {
 
 	/**
 	 * {@link BatteryDO#getPrecisePercentage()} / {@link BatteryDO#hasPrecisePercentage()} (#158/#204):
-	 * the free fine-scale path; the synthesized path (counter ÷ <b>stable</b> capacity) with its
-	 * in-bucket pass-through and out-of-bucket whole-percent fallback; and the integer fallback when
-	 * the counter or the stable capacity is missing (#69/#94/#204).
+	 * the free fine-scale path; the synthesized path (counter ÷ <b>stable</b> capacity) shown directly
+	 * near the OS level (gliding across whole-number lines) but distrusted and replaced by the whole
+	 * percent when it drifts too far; and the integer fallback when the counter or the stable capacity
+	 * is missing (#69/#94/#204).
 	 */
 	public static class PrecisePercentage {
 
@@ -120,8 +121,8 @@ public class BatteryDOTest {
 		}
 
 		@Test
-		public void chargeCounter_synthesizesFractionWithinOsBucket() {
-			// 3,525,000 µAh of a 4000 mAh stable capacity = 88.125%, inside the OS bucket [88, 89).
+		public void chargeCounter_synthesizesFractionNearOsLevel() {
+			// 3,525,000 µAh of a 4000 mAh stable capacity = 88.125%, close to the OS 88 — shown directly.
 			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
 					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_525_000);
 			assertTrue(battery.hasPrecisePercentage());
@@ -129,30 +130,30 @@ public class BatteryDOTest {
 		}
 
 		@Test
-		public void chargeCounter_belowOsPercent_fallsBackToWholePercent() {
-			// 3,480,000 µAh / 4000 mAh = 87.0% — outside the OS bucket [88, 89). No pinned fake
-			// "88.00" anymore: the plain whole percent comes back and renders as a clean "88" (#204).
+		public void chargeCounter_justAcrossWholeLine_showsThroughSmoothly() {
+			// The #204 smoothness fix: the counter reads 70.79% while the OS has already ticked to 71.
+			// A hair below the whole-number line, so it shows through (70.79) instead of snapping to a
+			// bare "71" — the small drift near a percent crossing is exactly what should glide.
+			final BatteryDO battery = new BatteryDO().setLevel(71).setScale(100)
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(2_831_600);
+			assertEquals(70.79f, battery.getPrecisePercentage(), 0.001f);
+		}
+
+		@Test
+		public void chargeCounter_aFullPercentBelow_distrustsAndShowsWhole() {
+			// 3,480,000 µAh / 4000 mAh = 87.0% — a full point below the OS 88. That much disagreement is
+			// a stale counter or a mid-relearn capacity, not crossing lag, so the plain percent wins.
 			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
 					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_480_000);
 			assertEquals(88.0f, battery.getPrecisePercentage(), 0.001f);
 		}
 
 		@Test
-		public void chargeCounter_aboveOsBucket_fallsBackToWholePercent() {
-			// 3,580,000 µAh / 4000 mAh = 89.5% — outside the OS bucket [88, 89). Was pinned to a
-			// fake 88.99 ceiling before #204; now the whole percent comes back instead.
+		public void chargeCounter_wellAboveOsLevel_distrustsAndShowsWhole() {
+			// 3,580,000 µAh / 4000 mAh = 89.5% — 1.5 points above the OS 88; distrusted, whole percent shown.
 			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
 					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_580_000);
 			assertEquals(88.0f, battery.getPrecisePercentage(), 0.001f);
-		}
-
-		@Test
-		public void chargeCounter_fractionJustBelowNextPercent_cappedAtPointNinetyNine() {
-			// 88.9975% is genuinely in-bucket; the .99 cap only keeps the two-decimal rendering from
-			// rounding up into the next whole percent.
-			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
-					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_559_900);
-			assertEquals(88.99f, battery.getPrecisePercentage(), 0.001f);
 		}
 
 		@Test
