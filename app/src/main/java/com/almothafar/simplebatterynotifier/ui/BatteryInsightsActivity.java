@@ -21,6 +21,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryHealthGrade;
+import com.almothafar.simplebatterynotifier.service.BatteryCapacityTracker;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.util.GeneralHelper;
@@ -42,6 +43,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 	private TextView daysInUseText;
 	private TextView healthDescriptionText;
 	private TextView designCapacityText;
+	private TextView measuredCapacityText;
+	private TextView measuredCapacityRangeText;
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
@@ -67,6 +70,8 @@ public class BatteryInsightsActivity extends BaseActivity {
 		daysInUseText = findViewById(R.id.daysInUseText);
 		healthDescriptionText = findViewById(R.id.healthDescriptionText);
 		designCapacityText = findViewById(R.id.designCapacityText);
+		measuredCapacityText = findViewById(R.id.measuredCapacityText);
+		measuredCapacityRangeText = findViewById(R.id.measuredCapacityRangeText);
 
 		// Tap the warning icon (shown only when the reading can't be trusted, #94) to explain why
 		healthWarningIcon.setOnClickListener(v -> showUnreliableReadingDialog());
@@ -92,19 +97,25 @@ public class BatteryInsightsActivity extends BaseActivity {
 	 * Updates all health data displays with current values from BatteryHealthTracker.
 	 */
 	private void updateHealthData() {
-		// One sticky read and one capacity estimate per refresh (#161): every cycle- and
-		// capacity-derived figure below is computed from these two values.
+		// One sticky read per refresh (#161): every cycle- and capacity-derived figure below is computed
+		// from these values. The capacity figure prefers the STABLE learned average (#116) so both the
+		// health % and the shown capacity stay steady across refreshes; it falls back to this tick's
+		// estimate while the learner warms up (or on untrusted-counter devices, where it never forms).
 		final int osCycles = SystemService.getChargeCycleCount(this);
 		final int cycles = BatteryHealthTracker.getEffectiveCycleCount(this, osCycles);
-		final int capacityMah = SystemService.getBatteryCapacity(this);
+		final BatteryCapacityTracker.CapacitySummary capacity = BatteryCapacityTracker.getCapacitySummary(this);
+		final int capacityMah = capacity != null ? capacity.averageMah() : SystemService.getBatteryCapacity(this);
 
 		// Always show the resolved health figure (measured, else cycle-based).
 		showResolvedHealth(cycles, BatteryHealthTracker.isCycleCountFromOs(osCycles), capacityMah);
 
 		// When the device's charge counter can't be trusted (#94) the figure may be wrong: keep showing
 		// it, but flag it with a tappable warning that explains why (and the failing-battery edge case).
-		healthWarningIcon.setVisibility(BatteryHealthTracker.isBatteryReadingUnreliable(this, capacityMah)
-		                                ? View.VISIBLE : View.GONE);
+		final boolean unreliable = BatteryHealthTracker.isBatteryReadingUnreliable(this, capacityMah);
+		healthWarningIcon.setVisibility(unreliable ? View.VISIBLE : View.GONE);
+
+		// Averaged measured capacity with its min/max spread (#116).
+		showMeasuredCapacity(capacity, unreliable);
 
 		// Metrics and the design-capacity row are shown the same way in every state.
 		chargeCyclesText.setText(String.valueOf(cycles));
@@ -156,6 +167,28 @@ public class BatteryInsightsActivity extends BaseActivity {
 		healthBasisText.setText(basisRes);
 
 		healthDescriptionText.setText(BatteryHealthTracker.describeHealthGrade(this, grade));
+	}
+
+	/**
+	 * Shows the averaged measured capacity with its min/max spread (#116). The learner averages many
+	 * spaced, trust-gated samples, so the figure is stable across refreshes instead of tracking the
+	 * live counter. Before the average forms, shows "Unknown" when the counter can't be trusted on this
+	 * device (#94) and "calculating" while a trusted device is still warming up.
+	 *
+	 * @param capacity   the learned capacity summary, or null when none has formed yet
+	 * @param unreliable whether this device's charge-counter reading can't be trusted (#94)
+	 */
+	private void showMeasuredCapacity(final BatteryCapacityTracker.CapacitySummary capacity, final boolean unreliable) {
+		if (capacity == null) {
+			measuredCapacityText.setText(unreliable ? R.string.unknown : R.string.battery_value_calculating);
+			measuredCapacityRangeText.setVisibility(View.GONE);
+			return;
+		}
+		// Pass the numbers as Strings so they render in Western digits (0-9) in every locale (#96).
+		measuredCapacityText.setText(getString(R.string.design_capacity_value, String.valueOf(capacity.averageMah())));
+		measuredCapacityRangeText.setText(getString(R.string.measured_capacity_range,
+				String.valueOf(capacity.minMah()), String.valueOf(capacity.maxMah())));
+		measuredCapacityRangeText.setVisibility(View.VISIBLE);
 	}
 
 	/**
@@ -292,7 +325,7 @@ public class BatteryInsightsActivity extends BaseActivity {
 		inputLayout.addView(input);
 
 		final int stored = BatteryHealthTracker.getDesignCapacity(this);
-		final int prefill = stored > 0 ? stored : SystemService.getBatteryCapacity(this);
+		final int prefill = stored > 0 ? stored : measuredCapacityForPrefill();
 		if (prefill > 0) {
 			input.setText(String.valueOf(prefill));
 			input.setSelection(String.valueOf(prefill).length());
@@ -326,6 +359,17 @@ public class BatteryInsightsActivity extends BaseActivity {
 			}
 		});
 		dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> lookUpBatteryModel());
+	}
+
+	/**
+	 * The measured capacity to prefill the design-capacity field with when the user hasn't set one:
+	 * the stable learned average (#116) when available, else this tick's estimate, else 0 (no prefill).
+	 *
+	 * @return a measured capacity in mAh, or 0 when none is available
+	 */
+	private int measuredCapacityForPrefill() {
+		final BatteryCapacityTracker.CapacitySummary capacity = BatteryCapacityTracker.getCapacitySummary(this);
+		return capacity != null ? capacity.averageMah() : SystemService.getBatteryCapacity(this);
 	}
 
 	/**

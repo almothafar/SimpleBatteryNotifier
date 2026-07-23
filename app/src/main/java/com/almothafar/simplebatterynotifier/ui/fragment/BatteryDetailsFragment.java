@@ -489,11 +489,14 @@ public class BatteryDetailsFragment extends Fragment {
 			valuesMap.put(getResources().getString(R.string.chipset), soc);
 		}
 
-		// Capacity is an estimate from BatteryManager. Show "Unknown" rather than "0 mAh" when the device
-		// doesn't report the charge counter, and also when the reported figure can't be trusted (#94) —
-		// in that case the row binder adds a tappable info icon explaining why. The snapshot's capacity
-		// is passed down so no second capacity estimate is read this tick (#161).
-		final int capacity = batteryDO.getCapacity();
+		// Capacity is an estimate from BatteryManager. Prefer the STABLE learned average (#116) so the row
+		// doesn't jump between refreshes; fall back to this tick's estimate while the learner warms up or on
+		// untrusted-counter devices (where the average never forms). Show "Unknown" rather than "0 mAh" when
+		// the device doesn't report the charge counter, and also when the reported figure can't be trusted
+		// (#94) — in that case the row binder adds a tappable info icon explaining why. The snapshot's
+		// capacity is passed down so no second capacity estimate is read this tick (#161).
+		final int stableCapacity = batteryDO.getStableCapacityMah();
+		final int capacity = stableCapacity > 0 ? stableCapacity : batteryDO.getCapacity();
 		capacityUnreliable = BatteryHealthTracker.isBatteryReadingUnreliable(view.getContext(), capacity);
 		final String capacityText = (capacity > 0 && !capacityUnreliable)
 		                            ? capacity + " mAh"

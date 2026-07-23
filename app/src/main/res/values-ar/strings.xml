@@ -254,6 +254,8 @@
     <string name="battery_health_description_placeholder">ستظهر معلومات صحة بطاريتك هنا.</string>
     <string name="design_capacity">السعة التصميمية</string>
     <string name="design_capacity_value">%1$s mAh</string>
+    <string name="measured_capacity">السعة المقاسة</string>
+    <string name="measured_capacity_range">الأدنى / الأعلى: %1$s / %2$s mAh</string>
     <string name="set_design_capacity_action">أدخل السعة المقدّرة لحساب صحة أدق</string>
     <string name="design_capacity_dialog_title">السعة التصميمية للبطارية</string>
     <string name="design_capacity_dialog_message">أدخل السعة المقدّرة لبطاريتك بوحدة mAh من مواصفات الشركة المصنّعة. لقد عبّأنا تقديراً مقاساً — أكّده أو صحّحه للحصول على قيمة صحة دقيقة.</string>

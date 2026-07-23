@@ -267,6 +267,10 @@
     <string name="design_capacity">Design Capacity</string>
     <!-- %1$s is a Western-digit number (passed via String.valueOf) so it stays 0-9 in every locale (#96) -->
     <string name="design_capacity_value">%1$s mAh</string>
+    <!-- #116: averaged measured capacity shown in Insights, with its min/max spread as a caption -->
+    <string name="measured_capacity">Measured Capacity</string>
+    <!-- %1$s / %2$s are Western-digit numbers (via String.valueOf) so they stay 0-9 in every locale (#96) -->
+    <string name="measured_capacity_range">min / max: %1$s / %2$s mAh</string>
     <string name="set_design_capacity_action">Set rated capacity for accurate health</string>
     <string name="design_capacity_dialog_title">Battery design capacity</string>
     <string name="design_capacity_dialog_message">Enter your battery\'s rated capacity in mAh from the manufacturer\'s specs. We\'ve prefilled a measured estimate — confirm or correct it for an accurate health figure.</string>
