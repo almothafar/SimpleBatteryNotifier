@@ -44,9 +44,13 @@
     <string name="gauge_info_message">This percentage is shown to two decimals and slides smoothly every second.\n\nYour phone only measures the exact battery charge every several seconds, so the value in between is estimated from the current charge or drain speed and corrected when the next real measurement arrives. It can differ slightly from the percentage in your status bar.\n\nOn phones that don\'t report fine-grained charge data, a plain whole number is shown instead.</string>
     <string name="gauge_info_content_description">About the live percentage</string>
 
-    <!-- #188: the rate/time/current rows stay put; a not-yet-available value shows this dash with a
-         tappable info icon. Punctuation, identical in every locale. -->
+    <!-- #188/#216: the rate/time/current rows stay put; each no-value row carries a tappable info icon.
+         The dash marks a value that is genuinely unavailable; a value still warming up shows the small
+         "calculating" hint instead, and the unset Design capacity row a "tap to set" nudge. The dash is
+         punctuation, identical in every locale. -->
     <string name="battery_value_pending">—</string>
+    <string name="battery_value_calculating">calculating</string>
+    <string name="battery_value_tap_to_set">tap to set</string>
     <string name="battery_value_info_cd">More information</string>
     <string name="battery_rate_pending_dialog_title">Rate is still settling</string>
     <string name="battery_rate_pending_dialog_message">The charge/drain rate is averaged over the last few minutes of readings, so it needs a minute or two after you plug in, unplug, or open the app before it can show a reliable figure.</string>
