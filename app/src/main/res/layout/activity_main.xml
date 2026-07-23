@@ -22,13 +22,9 @@
             app:titleTextAppearance="@style/ToolBarStyle.Title"
             app:titleTextColor="@android:color/white"/>
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:baselineAligned="false"
-        android:clickable="false"
-        android:gravity="center"
         android:background="@color/top_background_color"
         android:id="@+id/percentageLayout">
 
@@ -37,11 +33,27 @@
             style="@style/Widget.App.BatteryGauge"
             android:layout_width="wrap_content"
             android:layout_height="160dp"
+            android:layout_gravity="center"
             tools:gaugeTitle="100%"
             tools:gaugeStatusText="Charging"
             android:layout_marginTop="-2dp"
             android:layout_marginBottom="-10dp" />
-    </LinearLayout>
+
+        <!-- Honest info affordance for the smoothed/estimated live percentage (#217). Overlaid in the
+             top corner of the gauge area; tinted white for the coloured header. -->
+        <ImageButton
+            android:id="@+id/gaugeInfoButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="6dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_info"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/gauge_info_content_description"
+            app:tint="@android:color/white" />
+    </FrameLayout>
 
     <!-- In-fly critical/warning threshold adjuster, placed directly under the gauge it controls.
          Mirrors the Settings range slider and writes the same preference keys, so changes here

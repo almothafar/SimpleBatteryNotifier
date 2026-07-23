@@ -38,6 +38,12 @@
     <!-- #188: estimated time until the battery runs out, shown while discharging -->
     <string name="time_remaining">Time remaining</string>
 
+    <!-- #217: honest explanation of the smoothed/estimated live gauge percentage, opened from a small
+         info icon in the gauge corner. -->
+    <string name="gauge_info_title">About the live percentage</string>
+    <string name="gauge_info_message">This percentage is shown to two decimals and slides smoothly every second.\n\nYour phone only measures the exact battery charge every several seconds, so the value in between is estimated from the current charge or drain speed and corrected when the next real measurement arrives. It can differ slightly from the percentage in your status bar.\n\nOn phones that don\'t report fine-grained charge data, a plain whole number is shown instead.</string>
+    <string name="gauge_info_content_description">About the live percentage</string>
+
     <!-- #188: the rate/time/current rows stay put; a not-yet-available value shows this dash with a
          tappable info icon. Punctuation, identical in every locale. -->
     <string name="battery_value_pending">—</string>

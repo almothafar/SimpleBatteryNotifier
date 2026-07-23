@@ -14,6 +14,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.almothafar.simplebatterynotifier.ui.fragment.BatteryDetailsFragment;
@@ -31,6 +32,7 @@ import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.model.BatteryDO;
 import com.almothafar.simplebatterynotifier.model.LevelThresholds;
 import com.almothafar.simplebatterynotifier.service.BatteryHealthTracker;
+import com.almothafar.simplebatterynotifier.service.BatteryRateTracker;
 import com.almothafar.simplebatterynotifier.service.PowerConnectionService;
 import com.almothafar.simplebatterynotifier.service.SystemService;
 import com.almothafar.simplebatterynotifier.ui.widget.HorseshoeProgressBar;
@@ -49,7 +51,11 @@ public class MainActivity extends BaseActivity {
 
 	private static final String TAG = "MainActivity";
 	private static final long UPDATER_DELAY = 300;
-	private static final long UPDATER_PERIOD = 3000;
+	// Gauge refresh cadence. 1 s (not 3) so the live percentage — including the synthesized sub-percent
+	// decimals — tracks fast charge/discharge closely instead of lurching between updates. This loop
+	// runs only while the screen is foreground (started onPostResume, stopped onPause), so it adds no
+	// background or notification cost.
+	private static final long UPDATER_PERIOD = 1000;
 
 	// Use Handler(Looper) constructor - Handler() deprecated to prevent null Looper
 	private final Handler handler = new Handler(Looper.getMainLooper());
@@ -58,10 +64,14 @@ public class MainActivity extends BaseActivity {
 	private String batteryPercentageText;
 	private String subTitle;
 	private BatteryDO batteryDO;
+	// Glides the displayed percentage between the device's infrequent counter updates (#217); a no-op
+	// on devices without genuine sub-percent data or a trustworthy rate. Bound to this activity, since
+	// it only smooths the on-screen gauge.
+	private final GaugeValueSmoother gaugeSmoother = new GaugeValueSmoother();
 	private ActivityResultLauncher<Intent> settingsLauncher;
 	private ActivityResultLauncher<String> notificationPermissionLauncher;
 
-	// UI elements, looked up once in onCreate — the refresh loop runs every 3 s, so per-tick
+	// UI elements, looked up once in onCreate — the refresh loop runs every second, so per-tick
 	// findViewById/findFragmentById traversals are pointless work (#161).
 	private MaterialButton batteryInsightsButton;
 	private RangeSlider thresholdSlider;
@@ -174,6 +184,16 @@ public class MainActivity extends BaseActivity {
 		// Set up button click listeners
 		batteryInsightsButton.setOnClickListener(v -> openBatteryInsights());
 
+		// Info affordance in the gauge corner: explains that the live percentage is smoothed/estimated
+		// between the phone's less-frequent real readings, so users know why it can differ from the
+		// system percentage (#217).
+		final ImageButton gaugeInfoButton = findViewById(R.id.gaugeInfoButton);
+		gaugeInfoButton.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)
+				.setTitle(R.string.gauge_info_title)
+				.setMessage(R.string.gauge_info_message)
+				.setPositiveButton(android.R.string.ok, null)
+				.show());
+
 		// Wire the in-fly critical/warning threshold slider (portrait home screen).
 		setupThresholdSlider();
 
@@ -243,9 +263,31 @@ public class MainActivity extends BaseActivity {
 		}
 
 		batteryPercentage = batteryDO.getBatteryPercentageInt();
-		// Two decimals when the device genuinely resolves below one percent, whole otherwise (#158).
-		batteryPercentageText = BatteryPercentFormatter.formatLive(batteryDO);
+		// Two decimals when the device genuinely resolves below one percent, whole otherwise (#158),
+		// smoothed between the device's infrequent counter updates when a rate is available (#217).
+		batteryPercentageText = smoothedPercentageText(batteryDO);
 		subTitle = SystemService.getStatusLabel(this, batteryDO.getStatus());
+	}
+
+	/**
+	 * The gauge percentage text: the whole percent on devices without genuine sub-percent data, else
+	 * the two-decimal value glided between the device's infrequent counter updates from the current
+	 * charge/drain rate ({@link GaugeValueSmoother}, #217). When no trustworthy rate is available the
+	 * smoother passes the measured value through unchanged.
+	 *
+	 * @param batteryDO the current snapshot (non-null)
+	 *
+	 * @return the formatted percentage text for the gauge
+	 */
+	private String smoothedPercentageText(final BatteryDO batteryDO) {
+		if (!batteryDO.hasPrecisePercentage()) {
+			gaugeSmoother.reset();
+			return BatteryPercentFormatter.formatLive(batteryDO);
+		}
+		final BatteryRateTracker.BatteryRate rate = BatteryRateTracker.getRate(this, batteryDO);
+		final float shown = gaugeSmoother.displayValue(
+				batteryDO.getPrecisePercentage(), rate.hasRate(), rate.percentPerHour(), rate.charging(), System.currentTimeMillis());
+		return BatteryPercentFormatter.formatPrecise(shown);
 	}
 
 	/**
