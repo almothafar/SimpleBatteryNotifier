@@ -123,10 +123,10 @@ public class BatteryCapacityTrackerTest {
 		@Parameters(name = "{0}")
 		public static Collection<Object[]> data() {
 			return Arrays.asList(new Object[][]{
-					{"nothing learned", 0f, 0, 0},
-					{"one sample short of warm", 4400f, MIN_SAMPLES - 1, 0},
-					{"warm at the threshold", 4390.4f, MIN_SAMPLES, 4390},
+					{"nothing learned yet", 0f, 0, 0},
+					{"first sample shows immediately", 4390.4f, MIN_SAMPLES, 4390},
 					{"rounds to nearest mAh", 4390.6f, MIN_SAMPLES, 4391},
+					{"keeps showing as the average settles", 4400f, 3, 4400},
 					{"full window", 4444.4f, CAP, 4444},
 			});
 		}
@@ -158,8 +158,9 @@ public class BatteryCapacityTrackerTest {
 		}
 
 		@Test
-		public void firstSampleIsLearnedButNotYetStable() {
-			assertEquals(0, BatteryCapacityTracker.observeAndAverage(context, 4400, 50));
+		public void firstSampleShowsImmediately() {
+			// One trusted reading is enough — no blank warm-up before the decimals go live (#204).
+			assertEquals(4400, BatteryCapacityTracker.observeAndAverage(context, 4400, 50));
 
 			final CapacityStats stored = BatteryCapacityTracker.loadStats(prefs);
 			assertEquals(4400f, stored.averageMah(), 0f);

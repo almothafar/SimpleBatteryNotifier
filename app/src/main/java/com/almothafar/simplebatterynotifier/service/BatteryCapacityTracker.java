@@ -22,7 +22,11 @@ import android.content.SharedPreferences;
  * adapting as the battery ages. The running minimum/maximum ride along for the Insights capacity
  * display (#116).
  * <p>
- * <b>Warm-up.</b> Until {@link #MIN_STABLE_SAMPLES} spaced samples have been folded in,
+ * <b>Shows immediately, refines quietly.</b> The very first trusted estimate is enough to break the
+ * self-cancellation — dividing the live counter by a <em>frozen</em> capacity already moves — so the
+ * decimals go live on the first sample ({@link #MIN_STABLE_SAMPLES} = 1), the way other battery apps
+ * do. Later spaced samples only nudge the average toward the true capacity; the user never waits on
+ * them. Until that first sample (or on untrusted-counter devices, where the caller never calls in)
  * {@link #observeAndAverage} returns 0 and the display honestly stays on whole percents.
  * <p>
  * <b>Storage.</b> The stats live in the backup-excluded transient file ({@link TransientState}):
@@ -45,9 +49,12 @@ public final class BatteryCapacityTracker {
 	// Minimum spacing between folded samples, so a burst of battery broadcasts (plug-in, screen-on)
 	// contributes one sample, not a correlated pile taken at the same charge state.
 	static final long SAMPLE_SPACING_MS = 5L * 60 * 1000;
-	// How many spaced samples must be folded in before the average counts as stable. Before that the
-	// display falls back to whole percents rather than trusting a barely-seeded average.
-	static final int MIN_STABLE_SAMPLES = 6;
+	// How many trusted samples before the average is shown. One is enough: a single frozen capacity
+	// already breaks the self-cancellation, so the decimals appear on the first trusted reading
+	// instead of after a blank warm-up. The plausibility gates (#69/#94) and the OS-bucket clamp
+	// bound any first-sample error; later samples refine the average silently. Bump only if device
+	// testing shows the first estimate is too noisy to show.
+	static final int MIN_STABLE_SAMPLES = 1;
 	// The incremental average's effective sample count is capped here, which floors every later
 	// sample's weight at 1/60 — the average keeps following the battery as it ages instead of
 	// freezing on ancient samples, while no single reading can jerk it around.
@@ -67,7 +74,7 @@ public final class BatteryCapacityTracker {
 	 * @param estimateMah  this tick's full-capacity estimate in mAh (already plausibility-gated, #69)
 	 * @param levelPercent the battery level as a whole percent, for the low-level noise gate
 	 *
-	 * @return the stable full capacity in mAh, or 0 while the learner is still warming up
+	 * @return the stable full capacity in mAh, or 0 before the first trusted sample has been folded in
 	 */
 	public static int observeAndAverage(Context context, int estimateMah, int levelPercent) {
 		final SharedPreferences prefs = TransientState.prefs(context);
