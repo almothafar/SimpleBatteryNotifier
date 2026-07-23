@@ -14,9 +14,10 @@ import java.util.Collection;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Tests for {@link BatteryPercentFormatter} (#158): the exact display formats from the issue —
- * {@code 2.01%} (no leading zero), {@code 48.00%}, {@code 88.88%}, {@code 100%} (never
- * {@code 100.00%}) — and the whole-percent fallback used when sub-percent data isn't genuine.
+ * Tests for {@link BatteryPercentFormatter} (#158/#204): the exact display formats — {@code 2.01%}
+ * (no leading zero), {@code 88.88%}, {@code 100%} (never {@code 100.00%}) — the zero-fraction
+ * suppression ({@code 48.00} self-heals to {@code 48%}, #204), and the whole-percent fallback used
+ * when sub-percent data isn't genuine.
  */
 @RunWith(Enclosed.class)
 public class BatteryPercentFormatterTest {
@@ -32,14 +33,16 @@ public class BatteryPercentFormatterTest {
 		@Parameters(name = "{0}")
 		public static Collection<Object[]> data() {
 			return Arrays.asList(new Object[][]{
-					{"empty battery", 0f, "0.00%"},
+					{"empty battery suppresses zero fraction", 0f, "0%"},
 					{"low, no leading zero", 2.01f, "2.01%"},
-					{"whole value keeps decimals", 48f, "48.00%"},
+					{"zero fraction self-heals to whole", 48f, "48%"},
+					{"real fraction keeps decimals", 40.5f, "40.50%"},
 					{"mid fraction", 88.88f, "88.88%"},
+					{"rounds onto a whole shows clean integer", 39.9996f, "40%"},
 					{"just below full", 99.99f, "99.99%"},
 					{"rounds into full shows clean 100", 99.996f, "100%"},
 					{"full, no decimals", 100f, "100%"},
-					{"negative clamped defensively", -1.5f, "0.00%"},
+					{"negative clamped defensively", -1.5f, "0%"},
 			});
 		}
 
@@ -66,10 +69,19 @@ public class BatteryPercentFormatterTest {
 
 		@Test
 		public void formatLive_withTrustedCounter_showsTwoDecimals() {
-			// 3,525,000 µAh of 4000 mAh = 88.125% → rendered at two decimals.
+			// 3,525,000 µAh of a 4000 mAh stable capacity = 88.125% → rendered at two decimals.
 			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
-					.setCapacity(4000).setChargeCounterMicroAmpHours(3_525_000);
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_525_000);
 			assertEquals("88.13%", BatteryPercentFormatter.formatLive(battery));
+		}
+
+		@Test
+		public void formatLive_zeroFraction_selfHealsToWhole() {
+			// 3,520,000 µAh of 4000 mAh = exactly 88.00% — genuine sub-percent data, zero fraction:
+			// the display degrades to the clean whole form instead of a fake "88.00%" (#204).
+			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_520_000);
+			assertEquals("88%", BatteryPercentFormatter.formatLive(battery));
 		}
 
 		@Test
@@ -81,7 +93,7 @@ public class BatteryPercentFormatterTest {
 		@Test
 		public void formatLive_fullBattery_readsCleanHundred() {
 			final BatteryDO battery = new BatteryDO().setLevel(100).setScale(100)
-					.setCapacity(4000).setChargeCounterMicroAmpHours(4_000_000);
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(4_000_000);
 			assertEquals("100%", BatteryPercentFormatter.formatLive(battery));
 		}
 	}

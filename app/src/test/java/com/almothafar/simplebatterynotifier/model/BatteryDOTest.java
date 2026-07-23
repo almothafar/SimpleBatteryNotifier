@@ -91,9 +91,11 @@ public class BatteryDOTest {
 	}
 
 	/**
-	 * {@link BatteryDO#getPrecisePercentage()} / {@link BatteryDO#hasPrecisePercentage()} (#158):
-	 * the free fine-scale path, the synthesized charge-counter path with its clamp into the OS
-	 * whole-percent bucket, and the integer fallback when the counter can't be trusted (#69/#94).
+	 * {@link BatteryDO#getPrecisePercentage()} / {@link BatteryDO#hasPrecisePercentage()} (#158/#204):
+	 * the free fine-scale path; the synthesized path (counter ÷ <b>stable</b> capacity) shown directly
+	 * near the OS level (gliding across whole-number lines) but distrusted and replaced by the whole
+	 * percent when it drifts too far; and the integer fallback when the counter or the stable capacity
+	 * is missing (#69/#94/#204).
 	 */
 	public static class PrecisePercentage {
 
@@ -105,50 +107,87 @@ public class BatteryDOTest {
 		}
 
 		@Test
-		public void chargeCounter_synthesizesFractionWithinOsBucket() {
-			// 3,525,000 µAh of a 4000 mAh full capacity = 88.125%, inside the OS bucket [88, 89).
+		public void chargeCounter_fractionMovesAgainstFixedStableCapacity() {
+			// The #204 regression pin: against a FIXED stable denominator the fraction must move as
+			// the counter moves — the old per-tick denominator cancelled the counter out, so the
+			// decimals were stuck at .00 forever.
+			final BatteryDO battery = new BatteryDO().setLevel(40).setScale(100)
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(1_620_000);
+			assertTrue(battery.hasPrecisePercentage());
+			assertEquals(40.5f, battery.getPrecisePercentage(), 0.001f);
+
+			battery.setChargeCounterMicroAmpHours(1_630_000);
+			assertEquals(40.75f, battery.getPrecisePercentage(), 0.001f);
+		}
+
+		@Test
+		public void chargeCounter_synthesizesFractionNearOsLevel() {
+			// 3,525,000 µAh of a 4000 mAh stable capacity = 88.125%, close to the OS 88 — shown directly.
 			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
-					.setCapacity(4000).setChargeCounterMicroAmpHours(3_525_000);
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_525_000);
 			assertTrue(battery.hasPrecisePercentage());
 			assertEquals(88.125f, battery.getPrecisePercentage(), 0.001f);
 		}
 
 		@Test
-		public void chargeCounter_belowOsPercent_clampsUpToBucketFloor() {
-			// 3,480,000 µAh / 4000 mAh = 87.0% — below the OS 88 — clamped up to 88.00.
+		public void chargeCounter_justAcrossWholeLine_showsThroughSmoothly() {
+			// The #204 smoothness fix: the counter reads 70.79% while the OS has already ticked to 71.
+			// A hair below the whole-number line, so it shows through (70.79) instead of snapping to a
+			// bare "71" — the small drift near a percent crossing is exactly what should glide.
+			final BatteryDO battery = new BatteryDO().setLevel(71).setScale(100)
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(2_831_600);
+			assertEquals(70.79f, battery.getPrecisePercentage(), 0.001f);
+		}
+
+		@Test
+		public void chargeCounter_aFullPercentBelow_distrustsAndShowsWhole() {
+			// 3,480,000 µAh / 4000 mAh = 87.0% — a full point below the OS 88. That much disagreement is
+			// a stale counter or a mid-relearn capacity, not crossing lag, so the plain percent wins.
 			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
-					.setCapacity(4000).setChargeCounterMicroAmpHours(3_480_000);
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_480_000);
 			assertEquals(88.0f, battery.getPrecisePercentage(), 0.001f);
 		}
 
 		@Test
-		public void chargeCounter_aboveOsBucket_clampsDownToBucketCeiling() {
-			// 3,580,000 µAh / 4000 mAh = 89.5% — above the OS bucket [88, 89) — clamped to 88.99.
+		public void chargeCounter_wellAboveOsLevel_distrustsAndShowsWhole() {
+			// 3,580,000 µAh / 4000 mAh = 89.5% — 1.5 points above the OS 88; distrusted, whole percent shown.
 			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
-					.setCapacity(4000).setChargeCounterMicroAmpHours(3_580_000);
-			assertEquals(88.99f, battery.getPrecisePercentage(), 0.001f);
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_580_000);
+			assertEquals(88.0f, battery.getPrecisePercentage(), 0.001f);
 		}
 
 		@Test
 		public void chargeCounter_atFull_neverExceedsHundred() {
-			// OS says 100; a lagging counter (99.75%) must still read exactly 100, never 100.99.
+			// OS says 100; a lagging counter (99.75%) is out of bucket and must still read exactly
+			// 100, never 100.99.
 			final BatteryDO battery = new BatteryDO().setLevel(100).setScale(100)
-					.setCapacity(4000).setChargeCounterMicroAmpHours(3_990_000);
+					.setStableCapacityMah(4000).setChargeCounterMicroAmpHours(3_990_000);
 			assertEquals(100.0f, battery.getPrecisePercentage(), 0.001f);
 		}
 
 		@Test
 		public void noChargeCounter_fallsBackToWholePercent() {
-			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100).setCapacity(4000);
+			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100).setStableCapacityMah(4000);
 			assertFalse(battery.hasPrecisePercentage());
 			assertEquals(88.0f, battery.getPrecisePercentage(), 0.001f);
 		}
 
 		@Test
-		public void untrustedCapacity_fallsBackToWholePercent() {
-			// Capacity 0 = the counter estimate was implausible (#69) — no fake precision.
+		public void noStableCapacity_fallsBackToWholePercent() {
+			// Stable capacity 0 = the learner is still warming up, or the counter is untrusted on
+			// this device (#69/#94) — no fake precision either way.
 			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
-					.setCapacity(0).setChargeCounterMicroAmpHours(3_525_000);
+					.setStableCapacityMah(0).setChargeCounterMicroAmpHours(3_525_000);
+			assertFalse(battery.hasPrecisePercentage());
+			assertEquals(88.0f, battery.getPrecisePercentage(), 0.001f);
+		}
+
+		@Test
+		public void instantCapacityAloneDoesNotSynthesize() {
+			// The per-tick counter-derived estimate must never feed the fraction again — dividing
+			// the counter by itself is the #204 bug.
+			final BatteryDO battery = new BatteryDO().setLevel(88).setScale(100)
+					.setCapacity(4000).setChargeCounterMicroAmpHours(3_525_000);
 			assertFalse(battery.hasPrecisePercentage());
 			assertEquals(88.0f, battery.getPrecisePercentage(), 0.001f);
 		}
