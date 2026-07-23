@@ -286,7 +286,7 @@
     <string name="save">Save</string>
     <string name="clear">Clear</string>
     <string name="error_design_capacity_range">Enter a capacity between %1$d and %2$d mAh</string>
-    <string name="health_basis_measured">Measured from rated capacity</string>
+    <string name="health_basis_measured">Averaged measured capacity vs rated</string>
     <!-- #114: the cycle-based estimate is labelled by its source. OS-reported cycles cover the
          battery's whole life; app-tracked cycles start at install, so they understate real wear. -->
     <string name="health_basis_estimated_os">Estimated from charge cycles (reported by Android)</string>

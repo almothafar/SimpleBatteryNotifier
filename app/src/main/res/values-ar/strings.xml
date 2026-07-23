@@ -271,7 +271,7 @@
     <string name="save">حفظ</string>
     <string name="clear">مسح</string>
     <string name="error_design_capacity_range">أدخل سعة بين %1$d و %2$d mAh</string>
-    <string name="health_basis_measured">مقاسة من السعة المقدّرة</string>
+    <string name="health_basis_measured">متوسط السعة المقاسة مقابل المقدّرة</string>
     <!-- #114: cycle-based estimate labelled by its source -->
     <string name="health_basis_estimated_os">مقدّرة من دورات الشحن (كما يبلغ عنها أندرويد)</string>
     <string name="health_basis_estimated_tracked">مقدّرة من الدورات المتتبَّعة منذ التثبيت — التآكل الفعلي قد يكون أعلى</string>
