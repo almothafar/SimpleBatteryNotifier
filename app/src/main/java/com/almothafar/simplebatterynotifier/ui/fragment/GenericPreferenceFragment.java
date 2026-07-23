@@ -10,7 +10,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -23,13 +22,11 @@ import androidx.preference.ListPreference;
 import androidx.preference.MultiSelectListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
-import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SeekBarPreference;
 
 import com.almothafar.simplebatterynotifier.R;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
-import com.almothafar.simplebatterynotifier.ui.preference.PreferenceCardDecoration;
 import com.almothafar.simplebatterynotifier.ui.preference.RingtonePreference;
 import com.almothafar.simplebatterynotifier.util.TemperatureUtils;
 import com.almothafar.simplebatterynotifier.ui.preference.TimePickerPreference;
@@ -47,7 +44,7 @@ import static java.util.Objects.nonNull;
  * Uses modern Activity Result API for ringtone picker and provides accessible
  * error feedback via Snackbar.
  */
-public class GenericPreferenceFragment extends PreferenceFragmentCompat
+public class GenericPreferenceFragment extends CardPreferenceFragment
 		implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 	private static final String TAG = "GenericPreferenceFrag";
@@ -130,20 +127,6 @@ public class GenericPreferenceFragment extends PreferenceFragmentCompat
 				}
 			}
 		}
-	}
-
-	/**
-	 * Apply the card-group (Material You) style to the preference list (#222). Done here, not in
-	 * onCreateRecyclerView, because clearing the divider touches the fragment's list which isn't
-	 * assigned until the view is created.
-	 *
-	 * @param view               the fragment's root view
-	 * @param savedInstanceState saved state from a previous instance
-	 */
-	@Override
-	public void onViewCreated(@NonNull final View view, final Bundle savedInstanceState) {
-		super.onViewCreated(view, savedInstanceState);
-		PreferenceCardDecoration.apply(this, getListView());
 	}
 
 	/**

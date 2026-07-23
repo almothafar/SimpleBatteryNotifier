@@ -2,14 +2,13 @@ package com.almothafar.simplebatterynotifier.ui;
 
 import android.os.Bundle;
 import android.view.MenuItem;
-import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import com.almothafar.simplebatterynotifier.R;
-import com.almothafar.simplebatterynotifier.ui.preference.PreferenceCardDecoration;
+import com.almothafar.simplebatterynotifier.ui.fragment.CardPreferenceFragment;
 
 import java.util.Set;
 
@@ -133,21 +132,16 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
 	/**
 	 * Root settings fragment showing preference categories
 	 */
-	public static class HeaderFragment extends PreferenceFragmentCompat {
+	public static class HeaderFragment extends CardPreferenceFragment {
 		/**
-		 * Apply the card-group (Material You) style to the root preference list (#222). Done here, not
-		 * in onCreateRecyclerView, because clearing the divider touches the fragment's list which isn't
-		 * assigned until the view is created.
+		 * The About/Version footer shares the root screen's parent with the nav entries, so force it
+		 * onto its own card instead of joining their group (#222).
 		 *
-		 * @param view               the fragment's root view
-		 * @param savedInstanceState saved state from a previous instance
+		 * @return the About footer key, so it starts its own card
 		 */
 		@Override
-		public void onViewCreated(@NonNull final View view, final Bundle savedInstanceState) {
-			super.onViewCreated(view, savedInstanceState);
-			// The About/Version footer shares the root screen's parent with the nav entries, so force it
-			// onto its own card instead of joining their group (#222).
-			PreferenceCardDecoration.apply(this, getListView(), Set.of(getString(R.string._pref_key_about)));
+		protected Set<String> cardBreakKeys() {
+			return Set.of(getString(R.string._pref_key_about));
 		}
 
 		/**

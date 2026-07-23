@@ -13,7 +13,6 @@ import androidx.core.content.ContextCompat;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
-import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceGroupAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -86,6 +85,11 @@ public class PreferenceCardDecoration extends RecyclerView.ItemDecoration {
 		list.addItemDecoration(new PreferenceCardDecoration(context, breakBeforeKeys));
 	}
 
+	/**
+	 * Insets every row so the card outline and row content share one margin, adds a gap above each new
+	 * section (and the opening card) so the cards read as separate blocks, and leaves matching room
+	 * below the last row so the final card floats off the bottom edge.
+	 */
 	@Override
 	public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent,
 	                           @NonNull RecyclerView.State state) {
@@ -115,6 +119,12 @@ public class PreferenceCardDecoration extends RecyclerView.ItemDecoration {
 		}
 	}
 
+	/**
+	 * Paints each card as one rounded, filled rectangle behind the run of rows that share it. Each
+	 * run's true extent is read from the adapter, not just the visible children, so a card that
+	 * continues past the top or bottom edge extends its rounded corner off-screen — clipping to a
+	 * straight edge at the viewport instead of leaving a stray corner mid-card while scrolling.
+	 */
 	@Override
 	public void onDraw(@NonNull Canvas canvas, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
 		final PreferenceGroupAdapter adapter = adapterOf(parent);
@@ -127,33 +137,66 @@ public class PreferenceCardDecoration extends RecyclerView.ItemDecoration {
 		final int childCount = parent.getChildCount();
 		int i = 0;
 		while (i < childCount) {
-			final View child = parent.getChildAt(i);
-			final int position = parent.getChildAdapterPosition(child);
-			if (position == RecyclerView.NO_POSITION || !isCardRow(adapter, position)) {
+			final View firstChild = parent.getChildAt(i);
+			final int startPosition = parent.getChildAdapterPosition(firstChild);
+			if (startPosition == RecyclerView.NO_POSITION || !isCardRow(adapter, startPosition)) {
 				i++;
 				continue;
 			}
-			// Extend the run over every following card row in the same group; those rows share one card.
-			final PreferenceGroup group = adapter.getItem(position).getParent();
-			View lastChild = child;
-			int runEnd = i;
-			for (int j = i + 1; j < childCount; j++) {
-				final View next = parent.getChildAt(j);
-				final int nextPosition = parent.getChildAdapterPosition(next);
-				if (nextPosition != position + (j - i) || !isCardRow(adapter, nextPosition)
-						|| adapter.getItem(nextPosition).getParent() != group
-						|| breakBeforeKeys.contains(adapter.getItem(nextPosition).getKey())) {
-					break;
-				}
-				lastChild = next;
-				runEnd = j;
-			}
-			final float top = child.getTop() + child.getTranslationY();
-			final float bottom = lastChild.getBottom() + lastChild.getTranslationY();
+			final int endIndex = lastVisibleIndexOfCard(parent, adapter, i);
+			final View lastChild = parent.getChildAt(endIndex);
+			final int endPosition = parent.getChildAdapterPosition(lastChild);
+			// Extend a corner off-screen (it clips to a straight edge) whenever the card runs past an edge.
+			final boolean openTop = sameCard(adapter, startPosition - 1, startPosition);
+			final boolean openBottom = sameCard(adapter, endPosition, endPosition + 1);
+			final float top = openTop ? -cornerRadius : firstChild.getTop() + firstChild.getTranslationY();
+			final float bottom = openBottom ? parent.getHeight() + cornerRadius : lastChild.getBottom() + lastChild.getTranslationY();
 			cardRect.set(left, top, right, bottom);
 			canvas.drawRoundRect(cardRect, cornerRadius, cornerRadius, cardPaint);
-			i = runEnd + 1;
+			i = endIndex + 1;
 		}
+	}
+
+	/**
+	 * Walk the visible children after {@code startIndex} while they keep continuing the same card, so
+	 * the card can be painted as a single rectangle across its visible rows.
+	 *
+	 * @param parent     the preference RecyclerView
+	 * @param adapter    the preference adapter
+	 * @param startIndex the index, among the visible children, of the card's first visible row
+	 * @return the index of the card's last visible row
+	 */
+	private int lastVisibleIndexOfCard(RecyclerView parent, PreferenceGroupAdapter adapter, int startIndex) {
+		final int childCount = parent.getChildCount();
+		int endIndex = startIndex;
+		int endPosition = parent.getChildAdapterPosition(parent.getChildAt(startIndex));
+		for (int j = startIndex + 1; j < childCount; j++) {
+			final int nextPosition = parent.getChildAdapterPosition(parent.getChildAt(j));
+			if (nextPosition != endPosition + 1 || !sameCard(adapter, endPosition, nextPosition)) {
+				break;
+			}
+			endPosition = nextPosition;
+			endIndex = j;
+		}
+		return endIndex;
+	}
+
+	/**
+	 * @param adapter       the preference adapter
+	 * @param upperPosition the adapter position of the upper row (may be out of range)
+	 * @param lowerPosition the adapter position directly below it (may be out of range)
+	 * @return whether the two adjacent positions belong to the same card: both are card rows sharing a
+	 *         parent, and the lower one isn't forced onto its own card
+	 */
+	private boolean sameCard(PreferenceGroupAdapter adapter, int upperPosition, int lowerPosition) {
+		if (!isCardRow(adapter, upperPosition) || !isCardRow(adapter, lowerPosition)) {
+			return false;
+		}
+		final Preference lower = adapter.getItem(lowerPosition);
+		if (breakBeforeKeys.contains(lower.getKey())) {
+			return false;
+		}
+		return adapter.getItem(upperPosition).getParent() == lower.getParent();
 	}
 
 	/**
@@ -173,11 +216,10 @@ public class PreferenceCardDecoration extends RecyclerView.ItemDecoration {
 		if (breakBeforeKeys.contains(pref.getKey())) {
 			return true;
 		}
-		final Preference previous = adapter.getItem(position - 1);
-		if (previous instanceof PreferenceCategory) {
+		if (adapter.getItem(position - 1) instanceof PreferenceCategory) {
 			return false;
 		}
-		return previous.getParent() != pref.getParent();
+		return !sameCard(adapter, position - 1, position);
 	}
 
 	/**
