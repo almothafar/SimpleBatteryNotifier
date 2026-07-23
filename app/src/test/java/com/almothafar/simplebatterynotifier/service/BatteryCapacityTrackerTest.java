@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
 /**
@@ -135,6 +136,28 @@ public class BatteryCapacityTrackerTest {
 		public void matchesExpected() {
 			final CapacityStats stats = new CapacityStats(averageMah, sampleCount, 0, 0, 0L);
 			assertEquals(label, expected, BatteryCapacityTracker.stableCapacityMah(stats));
+		}
+	}
+
+	/**
+	 * {@link BatteryCapacityTracker#summarize(CapacityStats)}: the display summary (#116) — null until
+	 * enough spaced samples are in, then the average (rounded) with its min/max carried through.
+	 */
+	public static class Summarize {
+
+		@Test
+		public void nullBeforeFirstSample() {
+			assertNull(BatteryCapacityTracker.summarize(NOTHING_LEARNED));
+		}
+
+		@Test
+		public void carriesRoundedAverageWithMinMax() {
+			final CapacityStats stats = new CapacityStats(4390.6f, MIN_SAMPLES, 4300, 4480, 1_000_000L);
+			final BatteryCapacityTracker.CapacitySummary summary = BatteryCapacityTracker.summarize(stats);
+
+			assertEquals(4391, summary.averageMah());
+			assertEquals(4300, summary.minMah());
+			assertEquals(4480, summary.maxMah());
 		}
 	}
 

@@ -135,6 +135,36 @@ public final class BatteryCapacityTracker {
 	}
 
 	/**
+	 * Reads the learned capacity stats for display <em>without</em> folding a new sample — the
+	 * read-only companion to {@link #observeAndAverage}, for the Insights measured-capacity display
+	 * (#116). Returns the averaged capacity with its running min/max so the shown figure is stable
+	 * across refreshes instead of tracking the live counter.
+	 *
+	 * @param context Application context
+	 *
+	 * @return the averaged capacity summary, or {@code null} before the first trusted sample has been
+	 * learned (or on untrusted-counter devices, where the learner is never fed)
+	 */
+	public static CapacitySummary getCapacitySummary(Context context) {
+		return summarize(loadStats(TransientState.prefs(context)));
+	}
+
+	/**
+	 * The display summary under the warm-up rule. Pure so the boundary is unit-testable.
+	 *
+	 * @param stats the stats so far
+	 *
+	 * @return the averaged capacity and its min/max once {@link #MIN_STABLE_SAMPLES} samples are in,
+	 * else {@code null}
+	 */
+	static CapacitySummary summarize(CapacityStats stats) {
+		if (stats.sampleCount() < MIN_STABLE_SAMPLES) {
+			return null;
+		}
+		return new CapacitySummary(Math.round(stats.averageMah()), stats.minMah(), stats.maxMah());
+	}
+
+	/**
 	 * Loads the persisted stats; package-private so the state tests can assert what was stored.
 	 */
 	static CapacityStats loadStats(SharedPreferences prefs) {
@@ -169,5 +199,16 @@ public final class BatteryCapacityTracker {
 	 * @param lastSampleAt when the last sample was folded in, for the spacing rule
 	 */
 	record CapacityStats(float averageMah, int sampleCount, int minMah, int maxMah, long lastSampleAt) {
+	}
+
+	/**
+	 * The read-only view of the learned capacity for display (#116): the averaged full capacity with
+	 * the spread of accepted samples around it.
+	 *
+	 * @param averageMah the running average, rounded to whole mAh — the stable figure to display
+	 * @param minMah     smallest accepted estimate, in mAh
+	 * @param maxMah     largest accepted estimate, in mAh
+	 */
+	public record CapacitySummary(int averageMah, int minMah, int maxMah) {
 	}
 }
