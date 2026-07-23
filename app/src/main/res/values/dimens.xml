@@ -11,4 +11,10 @@
     <!-- Small content breathing room at the bottom. On API < 35 the system already insets content
          above the navigation bar, so a large fixed value here just wastes space (see issue #70). -->
     <dimen name="content_navigation_bar_padding">16dp</dimen>
+
+    <!-- Settings "card group" style (#222). horizontal_margin insets both the card outline and the
+         row content so they share one edge; group_gap is the space above each section. -->
+    <dimen name="settings_card_corner_radius">20dp</dimen>
+    <dimen name="settings_card_horizontal_margin">16dp</dimen>
+    <dimen name="settings_card_group_gap">14dp</dimen>
 </resources>

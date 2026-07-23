@@ -32,4 +32,9 @@
          at/above it. Reuse the circular gauge's warning/alert hues so the app reads as one system. -->
     <color name="battery_rate_warn">#FFB100</color>
     <color name="battery_rate_high">#E01A00</color>
+
+    <!-- Settings "card group" style (#222): a subtle neutral behind the preference list so the white
+         grouped cards stand out, Material-You style. -->
+    <color name="settings_group_background">#F0F1F4</color>
+    <color name="settings_group_card">#FFFFFF</color>
 </resources>

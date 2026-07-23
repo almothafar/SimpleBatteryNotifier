@@ -2,12 +2,16 @@ package com.almothafar.simplebatterynotifier.ui;
 
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import com.almothafar.simplebatterynotifier.R;
+import com.almothafar.simplebatterynotifier.ui.preference.PreferenceCardDecoration;
+
+import java.util.Set;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -130,6 +134,22 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
 	 * Root settings fragment showing preference categories
 	 */
 	public static class HeaderFragment extends PreferenceFragmentCompat {
+		/**
+		 * Apply the card-group (Material You) style to the root preference list (#222). Done here, not
+		 * in onCreateRecyclerView, because clearing the divider touches the fragment's list which isn't
+		 * assigned until the view is created.
+		 *
+		 * @param view               the fragment's root view
+		 * @param savedInstanceState saved state from a previous instance
+		 */
+		@Override
+		public void onViewCreated(@NonNull final View view, final Bundle savedInstanceState) {
+			super.onViewCreated(view, savedInstanceState);
+			// The About/Version footer shares the root screen's parent with the nav entries, so force it
+			// onto its own card instead of joining their group (#222).
+			PreferenceCardDecoration.apply(this, getListView(), Set.of(getString(R.string._pref_key_about)));
+		}
+
 		/**
 		 * Create the preference hierarchy from XML
 		 *
