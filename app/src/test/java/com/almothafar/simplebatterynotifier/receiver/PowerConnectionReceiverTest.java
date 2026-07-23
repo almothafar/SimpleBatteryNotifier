@@ -8,7 +8,9 @@ import android.os.Looper;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.almothafar.simplebatterynotifier.model.ChargeSpeed;
+import com.almothafar.simplebatterynotifier.model.ChargeSpeedTier;
 import com.almothafar.simplebatterynotifier.service.NotificationService;
+import com.almothafar.simplebatterynotifier.service.SystemService;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -19,8 +21,12 @@ import org.robolectric.annotation.Config;
 
 import java.time.Duration;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -181,6 +187,64 @@ public class PowerConnectionReceiverTest {
 			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
 					any(ChargeSpeed.class), anyBoolean()), never());
 		}
+	}
+
+	@Test
+	public void fastChargerRampingThroughHandshake_reportsRampedTierNotTrickle() {
+		// A fast charger draws the ~2 W USB default while negotiating, then jumps to full power (#227).
+		// The sampler must keep going through the early trickle readings and report the ramped tier.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 30, 100);
+		final ChargeSpeed handshake = ChargeSpeed.fromMeasurements(400_000, 5_000); // ~2 W  -> trickle
+		final ChargeSpeed ramped = ChargeSpeed.fromMeasurements(4_000_000, 5_000);  // ~20 W -> fast
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class);
+		     MockedStatic<SystemService> ss = mockStatic(SystemService.class)) {
+			ss.when(() -> SystemService.getChargeSpeed(any(Context.class))).thenReturn(handshake, handshake, ramped);
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					argThat(speed -> speed.getTier() == ChargeSpeedTier.FAST), eq(false)));
+		}
+	}
+
+	@Test
+	public void sustainedTrickle_reportsSlowChargingAfterWindow() {
+		// A genuinely weak charger stays at trickle for the whole window: the last-resort path still
+		// surfaces "Slow charging" rather than an unknown/plain message.
+		publishBattery(BatteryManager.BATTERY_PLUGGED_AC, 30, 100);
+		final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000); // ~2 W -> trickle
+
+		try (MockedStatic<NotificationService> ns = mockStatic(NotificationService.class);
+		     MockedStatic<SystemService> ss = mockStatic(SystemService.class)) {
+			ss.when(() -> SystemService.getChargeSpeed(any(Context.class))).thenReturn(trickle);
+			receive();
+			runPendingSample();
+			ns.verify(() -> NotificationService.notifyChargeConnected(any(Context.class),
+					argThat(speed -> speed.getTier() == ChargeSpeedTier.TRICKLE), eq(false)));
+		}
+	}
+
+	@Test
+	public void higherPowerOf_prefersTheStrongerReadingAndDropsUnknown() {
+		final ChargeSpeed unknown = ChargeSpeed.unknown();
+		final ChargeSpeed trickle = ChargeSpeed.fromMeasurements(400_000, 5_000);  // ~2 W
+		final ChargeSpeed fast = ChargeSpeed.fromMeasurements(4_000_000, 5_000);   // ~20 W
+
+		// Any real reading beats the seed unknown, regardless of order.
+		assertSame(trickle, PowerConnectionReceiver.higherPowerOf(unknown, trickle));
+		assertSame(trickle, PowerConnectionReceiver.higherPowerOf(trickle, unknown));
+		// The higher-power reading wins, so a ramp can't be lost to an earlier low sample.
+		assertSame(fast, PowerConnectionReceiver.higherPowerOf(trickle, fast));
+		assertSame(fast, PowerConnectionReceiver.higherPowerOf(fast, trickle));
+	}
+
+	@Test
+	public void isRamped_isTrueOnlyFromFastTierUp() {
+		assertFalse(PowerConnectionReceiver.isRamped(ChargeSpeed.unknown()));
+		assertFalse(PowerConnectionReceiver.isRamped(ChargeSpeed.fromMeasurements(400_000, 5_000)));   // ~2 W  trickle
+		assertFalse(PowerConnectionReceiver.isRamped(ChargeSpeed.fromMeasurements(1_400_000, 5_000))); // ~7 W  normal
+		assertTrue(PowerConnectionReceiver.isRamped(ChargeSpeed.fromMeasurements(4_000_000, 5_000)));  // ~20 W fast
+		assertTrue(PowerConnectionReceiver.isRamped(ChargeSpeed.fromMeasurements(8_000_000, 5_000)));  // ~40 W super fast
 	}
 
 	// --- helpers -------------------------------------------------------------
